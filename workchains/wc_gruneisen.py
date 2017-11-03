@@ -13,6 +13,7 @@ from aiida.orm import Code, CalculationFactory, load_node, DataFactory, DataFact
 from aiida.orm.data.base import Str, Float, Bool
 
 # Should be improved by some kind of WorkChainFactory
+# For now all workchains should be copied to aiida/workflows
 from aiida.workflows.wc_phonon import PhononPhonopy, get_path_using_seekpath, get_born_parameters
 
 ForceConstantsData = DataFactory('force_constants')

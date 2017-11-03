@@ -14,6 +14,7 @@ from aiida.orm.data.base import Str, Float, Bool
 from aiida.work.workchain import _If, _While
 
 # Should be improved by some kind of WorkChainFactory
+# For now all workchains should be copied to aiida/workflows
 from aiida.workflows.wc_optimize import OptimizeStructure
 
 ForceConstantsData = DataFactory('force_constants')
