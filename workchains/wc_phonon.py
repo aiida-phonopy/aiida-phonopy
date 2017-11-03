@@ -8,15 +8,23 @@ from aiida.work.workchain import WorkChain, ToContext
 from aiida.work.workfunction import workfunction
 
 from aiida.orm import Code, CalculationFactory, load_node, DataFactory
+from aiida.work.run import run, submit, async
 
 from aiida.orm.data.base import Str, Float, Bool
-from aiida.orm.data.force_sets import ForceSetsData
-from aiida.orm.data.force_constants import ForceConstantsData
-from aiida.orm.data.band_structure import BandStructureData
-from aiida.orm.data.phonon_dos import PhononDosData
-
-from aiida.workflows.wc_optimize import OptimizeStructure
 from aiida.work.workchain import _If, _While
+
+# Should be improved by some kind of WorkChainFactory
+from aiida.workflows.wc_optimize import OptimizeStructure
+
+ForceConstantsData = DataFactory('force_constants')
+ForceSetsData = DataFactory('force_sets')
+BandStructureData = DataFactory('band_structure')
+PhononDosData = DataFactory('phonon_dos')
+
+ParameterData = DataFactory('parameter')
+ArrayData = DataFactory('array')
+StructureData = DataFactory('structure')
+
 
 import numpy as np
 import seekpath

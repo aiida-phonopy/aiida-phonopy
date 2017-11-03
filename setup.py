@@ -23,12 +23,11 @@ setup(
         ],
         'aiida.parsers': [
             'phonopy = plugins.parsers.phonopy: PhonopyParser'
-#        ],
-#        'aiida.workflows': [
-#            'wc_phonon = workflows.wf_phonon:PhononPhonopy',
-#            'wc_gruneisen = workflows.wf_gruneisen:GruneisenPhonopy',
-#            'generate_inputs = workflows.generate_inputs:generate_inputs',
-#            'parse_optimize_calculation = workflows.parse_interface:parse_optimize_calculation',
+        ],
+        'aiida.workflows': [
+            'wc_optimize = workflows.wf_optimize: OptimizeStructure',
+        #    'wc_phonon = workflows.wf_phonon: PhononPhonopy',
+        #    'wc_gruneisen = workflows.wf_gruneisen: GruneisenPhonopy',
         ]
     }
 )

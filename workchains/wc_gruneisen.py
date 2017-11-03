@@ -6,12 +6,19 @@ if not is_dbenv_loaded():
 
 from aiida.work.workchain import WorkChain, ToContext
 from aiida.work.workfunction import workfunction
+from aiida.work.run import run, submit, async
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory
+from aiida.orm import Code, CalculationFactory, load_node, DataFactory, DataFactory, WorkflowFactory
 
 from aiida.orm.data.base import Str, Float, Bool
 
+# Should be improved by some kind of WorkChainFactory
 from aiida.workflows.wc_phonon import PhononPhonopy, get_path_using_seekpath, get_born_parameters
+
+ForceConstantsData = DataFactory('force_constants')
+ParameterData = DataFactory('parameter')
+ArrayData = DataFactory('array')
+StructureData = DataFactory('structure')
 
 import numpy as np
 from generate_inputs import *

@@ -8,7 +8,8 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
 
-from aiida.orm.utils import DataFactory
+from aiida.orm import DataFactory
+
 import numpy as np
 
 ForceSetsData = DataFactory('force_sets')

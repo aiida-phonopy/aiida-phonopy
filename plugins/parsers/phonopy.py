@@ -4,7 +4,7 @@ from aiida.orm.data.array import ArrayData
 
 from aiida.orm.data.parameter import ParameterData
 
-from aiida.orm.utils import DataFactory
+from aiida.orm import DataFactory
 
 ForceConstantsData = DataFactory('force_constants')
 
