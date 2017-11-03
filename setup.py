@@ -12,14 +12,14 @@ setup(
     setup_requires=['reentry'],
     reentry_register=True,
     entry_points={
+        'aiida.data': [
+            'band_structure = data.band_structure: BandStructureData',
+            'force_constants = data.force_constants: ForceConstantsData',
+            'force_sets = data.force_sets: ForceSetsData',
+            'phonon_dos = data.phonon_dos: PhononDosData'
+        ],
         'aiida.calculations': [
             'phonopy = plugins.jobs.phonopy: PhonopyCalculation'
-        ],
-        'aiida.data': [
-            'band_structure = data.band_structure: BandStructureData'
-            'force_constants = data.force_constants: ForceConstantsData'
-            'force_sets = data.force_sets: ForceSetsData'
-            'phonon_dos = data.phonon_dos: PhononDosData'
         ],
         'aiida.parsers': [
             'phonopy = plugins.parsers.phonopy: PhonopyParser'

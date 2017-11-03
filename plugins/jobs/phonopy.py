@@ -2,20 +2,23 @@ from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array import ArrayData
-from aiida.orm.data.force_sets import ForceSetsData
+#from aiida.orm.data.force_sets import ForceSetsData
 
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
 
+from aiida.orm.utils import DataFactory
 import numpy as np
+
+ForceSetsData = DataFactory('force_sets')
 
 # for future use
 def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
 
     from phonopy.structure.cells import get_primitive, get_supercell
     from phonopy.structure.symmetry import Symmetry
-    from phonopy.interface import get_default_physical_units
+     # from phonopy.interface import get_default_physical_units
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
 
     born_charges = nac_data.get_array('born_charges')
@@ -44,8 +47,8 @@ def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
     u_indep_atoms = [u2u[x] for x in s_indep_atoms]
     reduced_borns = born_charges[u_indep_atoms].copy()
 
-    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
-
+    #factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
+    factor = 14.0
     born_txt = ('{}\n'.format(factor))
     for num in epsilon.flatten():
         born_txt += ('{0:4.8f}'.format(num))
@@ -124,7 +127,6 @@ def parameters_to_input_file(parameters_object):
 class PhonopyCalculation(JobCalculation):
     """
     A basic plugin for calculating force constants using Phonopy.
-
     Requirement: the node should be able to import phonopy
     """
 
@@ -179,7 +181,6 @@ class PhonopyCalculation(JobCalculation):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
