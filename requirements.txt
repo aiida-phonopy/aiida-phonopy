@@ -2,5 +2,6 @@
 # Required packages for aiida-phonopy #
 #######################################
 
+numpy
 phonopy>=1.9.6
 aiida>=0.9
