@@ -170,7 +170,7 @@ class PhonopyCalculation(JobCalculation):
                 'docstring': "Use a node for the structure",
             },
             "nac_data": {
-                'valid_types': StructureData,
+                'valid_types': ParameterData,
                 'additional_parameter': None,
                 'linkname': 'nac_data',
                 'docstring': "Use a node for the Non-analitical corrections data",

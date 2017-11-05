@@ -52,11 +52,16 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5
-                                  # 'code': 'phonopy@boston'  # comment to use local phonopy
+                                  # Uncomment the following line to use phonopy remotely
+                                  # 'code': 'phonopy@boston'
                                   })
 
+code_to_use = 'VASP'
+#code_to_use = 'QE'
+#code_to_use = 'LAMMPS'
+
 # VASP SPECIFIC
-if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
+if code_to_use == 'VASP':
     incar_dict = {
         'NELMIN': 5,
         'NELM'  : 100,
@@ -81,7 +86,11 @@ if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
                     'shift': [0.0, 0.0, 0.0]}
 
     settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                              'forces': 'vasp544mpi@boston'},
+                              'forces': 'vasp544mpi@boston',
+                              # Uncomment the following line to calculate Born effective charges (VASP ONLY)
+                              # 'born_charges': 'vasp544mpi@boston'
+                              },
+
                      'parameters': incar_dict,
                      #'kpoints': kpoints_dict,
                      'kpoints_per_atom': 100,  # k-point density
@@ -92,7 +101,7 @@ if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
 
 
 # QE SPECIFIC
-if False:
+if code_to_use == 'QE':
     parameters_dict = {
         'CONTROL': {'calculation': 'scf',
                     'tstress': True,  #  Important that this stays to get stress
@@ -119,7 +128,7 @@ if False:
 
 
 # LAMMPS SPECIFIC
-if True:
+if code_to_use == 'LAMMPS':
     # GaN Tersoff potentials parameters (can be readed from a file if needed)
     tersoff_gan = {
         'Ga Ga Ga': '1.0 0.007874 1.846 1.918000 0.75000 -0.301300 1.0 1.0 1.44970 410.132 2.87 0.15 1.60916 535.199',

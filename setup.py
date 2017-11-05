@@ -26,8 +26,8 @@ setup(
         ],
         'aiida.workflows': [
             'wc_optimize = workflows.wf_optimize: OptimizeStructure',
-        #    'wc_phonon = workflows.wf_phonon: PhononPhonopy',
-        #    'wc_gruneisen = workflows.wf_gruneisen: GruneisenPhonopy',
+            'wc_phonon = workflows.wf_phonon: PhononPhonopy',
+            'wc_gruneisen = workflows.wf_gruneisen: GruneisenPhonopy',
         ]
     }
 )

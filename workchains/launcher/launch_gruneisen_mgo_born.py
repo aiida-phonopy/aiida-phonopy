@@ -53,43 +53,42 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5
-                                  # 'code': 'phonopy@boston'  # comment to use local phonopy
+                                   # Uncomment the following line to use phonopy remotely
+                                   # 'code': 'phonopy@boston'
                                   })
 
-# VASP settings
-if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
-    incar_dict = {
-        'NELMIN' : 5,
-        'NELM'   : 100,
-        'ENCUT'  : 400,
-        'ALGO'   : 38,
-        'ISMEAR' : 0,
-        'SIGMA'  : 0.02,
-        'GGA'    : 'PS'
-    }
 
-    es_settings = ParameterData(dict=incar_dict)
+# VASP SPECIFIC
+incar_dict = {
+    'NELMIN' : 5,
+    'NELM'   : 100,
+    'ENCUT'  : 400,
+    'ALGO'   : 38,
+    'ISMEAR' : 0,
+    'SIGMA'  : 0.02,
+    'GGA'    : 'PS'
+}
 
-    from pymatgen.io import vasp as vaspio
+es_settings = ParameterData(dict=incar_dict)
 
-    potcar = vaspio.Potcar(symbols=['Mg', 'O'],
-                           functional='PBE')
+from pymatgen.io import vasp as vaspio
 
-    # custom k-points
-    # supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-    kpoints_dict = {'type': 'Monkhorst',
-                    'points': [2, 2, 2],
-                    'shift': [0.0, 0.0, 0.0]}
+potcar = vaspio.Potcar(symbols=['Mg', 'O'],
+                       functional='PBE')
 
-    settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                              'forces': 'vasp544mpi@boston',
-                              'born_charges': 'vasp544mpi@boston'},
-                     'parameters': incar_dict,
-                     #'kpoints': kpoints_dict,
-                     'kpoints_per_atom': 1000,  # k-point density
-                     'pseudos': potcar.as_dict()}
+# custom k-points
+# supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
+kpoints_dict = {'type': 'Monkhorst',
+                'points': [2, 2, 2],
+                'shift': [0.0, 0.0, 0.0]}
 
-    es_settings = ParameterData(dict=settings_dict)
+settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
+                          'forces': 'vasp544mpi@boston',
+                          'born_charges': 'vasp544mpi@boston'}, # Calculate and use Born effective charges
+                 'parameters': incar_dict,
+                 #'kpoints': kpoints_dict,
+                 'kpoints_per_atom': 1000,  # k-point density
+                 'pseudos': potcar.as_dict()}
 
 
 # Machine

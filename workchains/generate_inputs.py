@@ -1,3 +1,7 @@
+# This file is used to generate inputs for the 3 different supported codes: VASP, QE and LAMMPS. This is implemented
+# in 3 functions: generate_vasp_params(), generate_qe_params() and generate_lammps_params().
+# generate_inputs() function at the end of the file decides which function to use according to the plugin
+
 from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()

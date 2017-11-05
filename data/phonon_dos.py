@@ -1,5 +1,8 @@
-from aiida.orm import Data
+from aiida import load_dbenv, is_dbenv_loaded
+if not is_dbenv_loaded():
+    load_dbenv()
 
+from aiida.orm import Data
 
 class PhononDosData(Data):
     """
@@ -30,7 +33,7 @@ class PhononDosData(Data):
 
     def get_dos(self):
         """
-        Return the force constants stored in the node as a numpy array
+        Return the density of states stored as a numpy array
         """
         import numpy
 
@@ -41,7 +44,7 @@ class PhononDosData(Data):
 
     def get_number_of_partial_dos(self, full=False):
         """
-        Return the force constants stored in the node as a numpy array
+        Return the number of partial density of states (corresponds to the number of atoms in the primitive cell)
         """
         import numpy
 
@@ -56,7 +59,7 @@ class PhononDosData(Data):
 
     def get_partial_dos(self, full=False):
         """
-        Return the force constants stored in the node as a numpy array
+        Return a numpy that contains the partial density of states of each atom in the primitive cell
         """
         import numpy
 
@@ -79,7 +82,6 @@ class PhononDosData(Data):
         array = numpy.load(self.get_abs_path(fname))
 
         return array
-
 
     def get_atom_labels(self, full=False):
         """

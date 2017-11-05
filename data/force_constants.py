@@ -1,3 +1,7 @@
+from aiida import load_dbenv, is_dbenv_loaded
+if not is_dbenv_loaded():
+    load_dbenv()
+
 from aiida.orm import Data
 
 
@@ -12,15 +16,14 @@ class ForceConstantsData(Data):
 
     def get_shape(self):
         """
-        Return the shape of an array (read from the value cached in the
-        properties for efficiency reasons).
+        Return the shape of the force constants. This correspond to the number of atoms
         :param name: The name of the array.
         """
         return self.get_attr("shape")
 
     def get_array(self):
         """
-        Return the force constants stored in the node as a numpy array
+        Return the force constants as a numpy array in phonopy format
         """
         import numpy
 
@@ -31,10 +34,10 @@ class ForceConstantsData(Data):
 
     def set_array(self, array):
         """
-        Store the force constants as a numpy array. Possibly overwrite the array
+        Store the force constants as a numpy array. Overwrites the array
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
-        :param array: The numpy array to store.
+        :param array: The numpy array containing the force constants to store.
         """
 
         import tempfile
@@ -59,7 +62,7 @@ class ForceConstantsData(Data):
 
     def get_epsilon(self):
         """
-        Return dielectric tensor stored in the node as a numpy array
+        Return dielectric tensor as a numpy array
         """
         import numpy
 
@@ -74,7 +77,7 @@ class ForceConstantsData(Data):
 
     def get_born_charges(self):
         """
-        Return born charges stored in the node as a numpy array
+        Return born charges as a numpy array
         """
         import numpy
 
@@ -97,9 +100,9 @@ class ForceConstantsData(Data):
 
     def set_born_charges(self, array):
         """
-        Store Born charges as a numpy array. Possibly overwrite the array
+        Store Born charges as a numpy array. Overwrites the array
         if it already existed.
-        Internally, it is stored as a force_constants.npy file in numpy format.
+        Internally, it is stored as a born_charges.npy file in numpy format.
         :param array: The numpy array to store.
         """
 
@@ -118,9 +121,9 @@ class ForceConstantsData(Data):
 
     def set_epsilon(self, array):
         """
-        Store the dielectric tensor as a numpy array. Possibly overwrite the array
+        Store the dielectric tensor as a numpy array. Overwrites the array
         if it already existed.
-        Internally, it is stored as a force_constants.npy file in numpy format.
+        Internally, it is stored as a epsilon.npy file in numpy format.
         :param array: The numpy array to store.
         """
 

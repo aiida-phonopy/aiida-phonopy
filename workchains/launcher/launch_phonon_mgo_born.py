@@ -57,40 +57,36 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   })
 
 # VASP SPECIFIC
-if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
-    incar_dict = {
-        'NELMIN' : 5,
-        'NELM'   : 100,
-        'ENCUT'  : 400,
-        'ALGO'   : 38,
-        'ISMEAR' : 0,
-        'SIGMA'  : 0.02,
-        'GGA'    : 'PS'
-    }
+incar_dict = {
+    'NELMIN' : 5,
+    'NELM'   : 100,
+    'ENCUT'  : 400,
+    'ALGO'   : 38,
+    'ISMEAR' : 0,
+    'SIGMA'  : 0.02,
+    'GGA'    : 'PS'
+}
 
-    es_settings = ParameterData(dict=incar_dict)
+es_settings = ParameterData(dict=incar_dict)
 
-    from pymatgen.io import vasp as vaspio
+from pymatgen.io import vasp as vaspio
 
-    potcar = vaspio.Potcar(symbols=['Mg', 'O'],
-                           functional='PBE')
+potcar = vaspio.Potcar(symbols=['Mg', 'O'],
+                       functional='PBE')
 
-    # custom k-points
-    # supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-    kpoints_dict = {'type': 'Monkhorst',
-                    'points': [2, 2, 2],
-                    'shift': [0.0, 0.0, 0.0]}
+# custom k-points
+# supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
+kpoints_dict = {'type': 'Monkhorst',
+                'points': [2, 2, 2],
+                'shift': [0.0, 0.0, 0.0]}
 
-    settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                              'forces': 'vasp544mpi@boston',
-                              'born_charges': 'vasp544mpi@boston'},
-                     'parameters': incar_dict,
-                     #'kpoints': kpoints_dict,
-                     'kpoints_per_atom': 100,  # k-point density
-                     'pseudos': potcar.as_dict()}
-
-    # pseudos = ParameterData(dict=potcar.as_dict())
-    es_settings = ParameterData(dict=settings_dict)
+settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
+                          'forces': 'vasp544mpi@boston',
+                          'born_charges': 'vasp544mpi@boston'},
+                 'parameters': incar_dict,
+                 #'kpoints': kpoints_dict,
+                 'kpoints_per_atom': 100,  # k-point density
+                 'pseudos': potcar.as_dict()}
 
 
 # CODE INDEPENDENT

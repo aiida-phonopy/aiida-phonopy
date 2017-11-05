@@ -1,3 +1,6 @@
+# To run this script use the wc_gruneisen pk number:
+# $ python plot_gruneisen pknumber
+
 from aiida import load_dbenv
 load_dbenv()
 

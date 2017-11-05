@@ -1,3 +1,5 @@
+# This file is meant to implement in the future the compatibility between the outputs of the different
+# plugins (units and formats) and phonon workchains.
 
 def parse_optimize_calculation(calc):
 

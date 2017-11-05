@@ -24,7 +24,6 @@ StructureData = DataFactory('structure')
 import numpy as np
 from generate_inputs import *
 
-
 def get_phonon(structure, force_constants, ph_settings):
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
@@ -115,7 +114,7 @@ class GruneisenPhonopy(WorkChain):
         spec.input("ph_settings", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
-        spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
+        # spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         #spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(1e-2))
 

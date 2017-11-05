@@ -1,15 +1,24 @@
+from aiida import load_dbenv, is_dbenv_loaded
+if not is_dbenv_loaded():
+    load_dbenv()
+
 from aiida.orm import Data
 
 
 class BandStructureData(Data):
     """
-    Store the band structure.
+    Store the band structure data
+
     """
 
     def __init__(self, *args, **kwargs):
         super(BandStructureData, self).__init__(*args, **kwargs)
 
     def get_number_of_bands(self):
+        """
+
+        :return: Number of bands
+        """
 
         if 'nbands' in self.get_attrs():
             return self.get_attr('nbands')
@@ -25,6 +34,12 @@ class BandStructureData(Data):
 
 
     def set_bands(self, ranges):
+        """
+        Set the list of q-points the form the path in the reciprocal space
+
+        :param ranges: a 3D array that contains a list q-points in phonopy format: array[n_paths:n_qpoints:3]
+        :return:
+        """
 
         import tempfile
         import numpy
@@ -41,6 +56,12 @@ class BandStructureData(Data):
         self._set_attr('npoints', len(ranges[0]))
 
     def set_labels(self, band_labels):
+        """
+        Set the labels of the high symmetry points in the reciprocal space that delimite the paths.
+
+        :param band_labels: Array (or list of lists) in seekpath format: array[n_paths:2]
+        :return:
+        """
 
         import tempfile
         import numpy
@@ -55,7 +76,7 @@ class BandStructureData(Data):
 
     def set_unitcell(self, unitcell):
         """
-        :param unitcell: Numpy Array that contains the unitcell matrix (Lattice vectors in columns)
+        :param unitcell: Numpy Array that contains the unitcell matrix (Lattice vectors in rows)
         :return:
         """
 
@@ -71,6 +92,14 @@ class BandStructureData(Data):
             self.add_path(f.name, 'unitcell.npy')
 
     def set_band_structure_phonopy(self, band_structure_phonopy):
+        """
+        Set the phonon band structure data obtained as output from phonopy. This includes the list of q-points,
+        q-points distances, and phonon frequencies. If q-points and distances are already set, this functions
+        checks consistency and stores only the phonon frequencies.
+
+        :param band_structure_phonopy: phonopy get_band_structure() function output.
+        :return:
+        """
 
         import tempfile
         import numpy
@@ -99,7 +128,15 @@ class BandStructureData(Data):
                 self.add_path(f.name, element[0])
 
     def set_band_structure_gruneisen(self, band_structure_gruneisen):
+        """
+        Set the mode Gruneisen band structure data obtained as output from phonopy. This includes the list of q-points,
+        q-points distances, and phonon frequencies and mode gruneisen parameter.
+        If q-points and distances are already set, this functions checks consistency and stores only
+        the phonon frequencies and mode Gruneisen parameters.
 
+        :param band_structure_phonopy: phonopy get_band_structure() function output.
+        :return:
+        """
         import tempfile
         import numpy
 
@@ -128,7 +165,9 @@ class BandStructureData(Data):
 
     def get_unitcell(self):
         """
-        Return the unitcell in the node as a numpy array
+        Returns the unitcell matrix as a numpy array (Lattice vectors in rows)
+
+        :return: numpy array containing the unit cell matrix
         """
         import numpy
 
@@ -141,7 +180,9 @@ class BandStructureData(Data):
 
     def get_distances(self, band=None):
         """
-        Return the distances in the node as a numpy array
+        Returns the distances as a numpy array
+
+        :return: numpy array containing the q-point distances (in Angstroms^-1)
         """
         import numpy as np
 
@@ -173,7 +214,9 @@ class BandStructureData(Data):
 
     def get_frequencies(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
+        Return the frequencies as a numpy array
+
+        :return: numpy array containing the phonon frequencies
         """
         import numpy
 
@@ -189,7 +232,9 @@ class BandStructureData(Data):
 
     def get_gamma(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
+        Return the mode Gruneisen parameters as a numpy array
+
+        :return: numpy array containing the mode Gruneisen parameters
         """
         import numpy
 
@@ -206,7 +251,7 @@ class BandStructureData(Data):
 
     def get_eigenvalues(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
+        Return the eigenvalues as a numpy array
         """
         import numpy
 
@@ -223,7 +268,9 @@ class BandStructureData(Data):
 
     def get_bands(self, band=None):
         """
-        Return the bands in the node as a numpy array
+        Return the bands as a numpy array
+
+        :return: numpy array containing a list of q-points in phonopy format: array[n_paths:n_points:3]
         """
         import numpy
 
@@ -240,7 +287,10 @@ class BandStructureData(Data):
 
     def get_band_ranges(self, band=None):
         """
-        Return the bands in the node as a numpy array
+        Return the band ranges (only the limiting q-points of each path). This is used in phonopy's
+        gruneisen  BandStructure class
+
+        :return: numpy array containing a list of 2 q-points for each path: array[n_paths:2:3]
         """
         import numpy
 
@@ -256,8 +306,11 @@ class BandStructureData(Data):
 
     def get_labels(self, band=None):
         """
-        Return the band labels in the node as a numpy array
+        Return the labels of the high symmetry points that limit each path as a numpy array
+
+        :return: numpy array containing a list of 2 labels for each path: array[n_paths:2]
         """
+
         import numpy
 
         fname = 'band_labels.npy'
