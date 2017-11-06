@@ -116,7 +116,7 @@ def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
         parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True})
 
-    if type == 'born_charges':
+    if type == 'born_charges':  # Not working yet! (under development)
         parameters['CONTROL'].update({'calculation': 'scf',
                                       'tstress': True,
                                       'tprnfor': True
