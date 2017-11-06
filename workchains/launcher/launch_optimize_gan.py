@@ -107,8 +107,8 @@ if code_to_use == 'QE':
 
     settings_dict = {'code': 'pw@stern_outside',
                      'parameters': parameters_dict,
-                     'kpoints_per_atom': 1000,  # k-point density
-                     'pseudos_family': 'pbe_ps'}
+                     'kpoints_density': 1000,  # k-point density
+                     'pseudos_family': 'pbe_test_family'}
 
     es_settings = ParameterData(dict=settings_dict)
 

@@ -86,7 +86,7 @@ settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
                           'forces': 'vasp544mpi@boston',
                           'born_charges': 'vasp544mpi@boston'}, # Calculate and use Born effective charges
                  'parameters': incar_dict,
-                 #'kpoints': kpoints_dict,
+                 #  'kpoints': kpoints_dict,  # optional explicit definition of kpoints mesh
                  'kpoints_per_atom': 1000,  # k-point density
                  'pseudos': potcar.as_dict()}
 

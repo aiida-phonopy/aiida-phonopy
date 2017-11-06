@@ -84,7 +84,7 @@ settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
                           'forces': 'vasp544mpi@boston',
                           'born_charges': 'vasp544mpi@boston'},
                  'parameters': incar_dict,
-                 #'kpoints': kpoints_dict,
+                 #'kpoints': kpoints_dict, # optional explicit definition of kpoints mesh
                  'kpoints_per_atom': 100,  # k-point density
                  'pseudos': potcar.as_dict()}
 

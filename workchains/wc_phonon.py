@@ -347,7 +347,7 @@ class PhononPhonopy(WorkChain):
 
     def optimize(self):
         print('start phonon {}'.format(self.pid))
-        print ('start optimize')
+
         future = submit(OptimizeStructure,
                         structure=self.inputs.structure,
                         machine=self.inputs.machine,

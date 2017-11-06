@@ -92,7 +92,7 @@ if code_to_use == 'VASP':
                               },
 
                      'parameters': incar_dict,
-                     #'kpoints': kpoints_dict,
+                     #  'kpoints': kpoints_dict, # optional explicit definition of kpoints mesh
                      'kpoints_per_atom': 100,  # k-point density
                      'pseudos': potcar.as_dict()}
 
@@ -110,8 +110,8 @@ if code_to_use == 'QE':
 
     settings_dict = {'code': 'pw@stern_outside',
                      'parameters': parameters_dict,
-                     'kpoints_per_atom': 1000,  # k-point density
-                     'pseudos_family': 'pbe_ps'}
+                     'kpoints_density': 1000,  # k-point density
+                     'pseudos_family': 'pbe_test_family'}
 
     es_settings = ParameterData(dict=settings_dict)
 

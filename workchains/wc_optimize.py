@@ -79,13 +79,14 @@ class OptimizeStructure(WorkChain):
 
     def optimize_cycle(self):
 
+        print ('start optimization')
+
         if not 'counter' in self.ctx:
             self.ctx.counter = 0
 
         self.ctx.counter +=1
 
         # self.ctx._get_dict()
-        print ('start optimization')
 
         if not 'optimize' in self.ctx:
             structure = self.inputs.structure
