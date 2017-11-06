@@ -28,7 +28,7 @@ Setup workchains
 The following files have to be copied (or linked) to aiida/workflows directory:
 
 * wc_optimize.py
-* wc_gruneise.py
+* wc_gruneisen.py
 * wc_phonon.py
 * generate_inputs.py
 * parse_interface.py
