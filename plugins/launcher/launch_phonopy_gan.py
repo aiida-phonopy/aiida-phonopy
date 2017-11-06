@@ -26,7 +26,7 @@ s = StructureData(cell=cell)
 
 for i, scaled_position in enumerate(scaled_positions):
     s.append_atom(position=np.dot(scaled_position, cell).tolist(),
-                          symbols=symbols[i])
+                  symbols=symbols[i])
 
 parameters = ParameterData(dict={'supercell': [[3,0,0],
                                                [0,3,0],
@@ -51,7 +51,7 @@ calc.description = "A much longer description"
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
-calc.use_data_sets(load_node(23913))
+calc.use_data_sets(load_node(23913))  # This node should contain a ForceSetsData object
 
 if False:
     subfolder, script_filename = calc.submit_test()
