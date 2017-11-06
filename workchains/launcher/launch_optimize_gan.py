@@ -56,8 +56,12 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   # 'code': 'phonopy@stern_outside'
                                   })
 
+code_to_use = 'VASP'
+#code_to_use = 'QE'
+#code_to_use = 'LAMMPS'
+
 # VASP SPECIFIC
-if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
+if code_to_use == 'VASP':
     incar_dict = {
         'NELMIN' : 5,
         'NELM'   : 100,
@@ -94,7 +98,7 @@ if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
 
 
 # QE SPECIFIC
-if False:
+if code_to_use == 'QE':
     parameters_dict = {
         'SYSTEM': {'ecutwfc': 30.,
                    'ecutrho': 200.,},
@@ -119,7 +123,7 @@ if False:
 
 
 # LAMMPS SPECIFIC
-if False:
+if code_to_use == 'LAMMPS':
     # GaN Tersoff
     tersoff_gan = {
         'Ga Ga Ga': '1.0 0.007874 1.846 1.918000 0.75000 -0.301300 1.0 1.0 1.44970 410.132 2.87 0.15 1.60916 535.199',
@@ -130,10 +134,6 @@ if False:
         'N  Ga N ': '1.0 0.766120 0.000 0.178493 0.20172 -0.045238 1.0 0.0 0.00000 0.00000 2.20 0.20 0.00000 0.00000',
         'N  N  Ga': '1.0 0.001632 0.000 65.20700 2.82100 -0.518000 1.0 0.0 0.00000 0.00000 2.90 0.20 0.00000 0.00000',
         'Ga N  Ga': '1.0 0.007874 1.846 1.918000 0.75000 -0.301300 1.0 0.0 0.00000 0.00000 2.87 0.15 0.00000 0.00000'}
-
-    # Silicon(C) Tersoff
-    # tersoff_si = {'Si  Si  Si ': '3.0 1.0 1.7322 1.0039e5 16.218 -0.59826 0.78734 1.0999e-6  1.7322  471.18  2.85  0.15  2.4799  1830.8'}
-
 
     potential = {'pair_style': 'tersoff',
                  'data': tersoff_gan}
