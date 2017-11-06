@@ -105,15 +105,6 @@ if code_to_use == 'QE':
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
 
-
-    # Kpoints
-    #kpoints_mesh = 2
-    #kpoints = KpointsData()
-    #kpoints.set_kpoints_mesh([kpoints_mesh, kpoints_mesh, kpoints_mesh])
-    #code = Code.get_from_string('pw@stern_outside')
-
-    pseudos = Str('pbe_ps')
-
     settings_dict = {'code': 'pw@stern_outside',
                      'parameters': parameters_dict,
                      'kpoints_per_atom': 1000,  # k-point density
