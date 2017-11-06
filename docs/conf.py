@@ -154,7 +154,7 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
+nitpicky = True
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
 nitpick_ignore = [
