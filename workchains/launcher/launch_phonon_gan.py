@@ -7,9 +7,9 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool
 
-VaspCalculation = CalculationFactory('vasp.vasp')
-PwCalculation = CalculationFactory('quantumespresso.pw')
-PhonopyCalculation = CalculationFactory('phonopy')
+#VaspCalculation = CalculationFactory('vasp.vasp')
+#PwCalculation = CalculationFactory('quantumespresso.pw')
+#PhonopyCalculation = CalculationFactory('phonopy')
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -53,8 +53,13 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   # 'code': 'phonopy@boston'  # comment to use local phonopy
                                   })
 
+
+#code_to_use = 'VASP'
+code_to_use = 'QE'
+#code_to_use = 'LAMMPS'
+
 # VASP SPECIFIC
-if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
+if code_to_use == 'VASP':
     incar_dict = {
         'NELMIN' : 5,
         'NELM'   : 100,
@@ -91,7 +96,7 @@ if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
 
 
 # QE SPECIFIC
-if False:
+if code_to_use == 'QE':
     parameters_dict = {
         'SYSTEM': {'ecutwfc': 30.,
                    'ecutrho': 200.,},
@@ -107,7 +112,7 @@ if False:
 
 
 # LAMMPS SPECIFIC
-if False:
+if code_to_use == 'LAMMPS':
     # GaN Tersoff potentials parameters (can be readed from a file if needed)
     tersoff_gan = {
         'Ga Ga Ga': '1.0 0.007874 1.846 1.918000 0.75000 -0.301300 1.0 1.0 1.44970 410.132 2.87 0.15 1.60916 535.199',

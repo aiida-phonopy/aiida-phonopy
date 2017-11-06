@@ -25,9 +25,9 @@ setup(
             'phonopy = plugins.parsers.phonopy: PhonopyParser'
         ],
         'aiida.workflows': [
-            'wc_optimize = workflows.wf_optimize: OptimizeStructure',
-            'wc_phonon = workflows.wf_phonon: PhononPhonopy',
-            'wc_gruneisen = workflows.wf_gruneisen: GruneisenPhonopy',
+            'wc_optimize = workchains.wf_optimize: OptimizeStructure',
+            #'wc_phonon = workchains.wf_phonon: PhononPhonopy',
+            #'wc_gruneisen = workchains.wf_gruneisen: GruneisenPhonopy',
         ]
     }
 )
