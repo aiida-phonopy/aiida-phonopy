@@ -1,6 +1,3 @@
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
 
 from aiida.orm import Data
 
