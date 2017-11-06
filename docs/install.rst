@@ -2,6 +2,14 @@
 Installation
 ============
 
+Use setup.py to install the plugin::
+
+   python setup.py install --user
+
+or PIP::
+
+   pip intall -e aiida-phonopy
+
 Requirements
 ------------
 
