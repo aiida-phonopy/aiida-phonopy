@@ -93,13 +93,11 @@ if True:   # Set TRUE to use VASP or FALSE to use Quantum Espresso
 # QE SPECIFIC
 if False:
     parameters_dict = {
-        'CONTROL': {'calculation': 'scf',
-                    'tstress': True,  #  Important that this stays to get stress
-                    'tprnfor': True,},
         'SYSTEM': {'ecutwfc': 30.,
                    'ecutrho': 200.,},
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
+
 
     # Kpoints
     #kpoints_mesh = 2

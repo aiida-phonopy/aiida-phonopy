@@ -103,9 +103,6 @@ if code_to_use == 'VASP':
 # QE SPECIFIC
 if code_to_use == 'QE':
     parameters_dict = {
-        'CONTROL': {'calculation': 'scf',
-                    'tstress': True,  #  Important that this stays to get stress
-                    'tprnfor': True,},
         'SYSTEM': {'ecutwfc': 30.,
                    'ecutrho': 200.,},
         'ELECTRONS': {'conv_thr': 1.e-6,}

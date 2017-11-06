@@ -8,7 +8,7 @@ Use setup.py to install the plugin::
 
 or PIP::
 
-   pip intall -e aiida-phonopy
+   pip intall aiida-phonopy --user
 
 Requirements
 ------------

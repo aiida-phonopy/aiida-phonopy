@@ -87,25 +87,44 @@ def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
     # Parameters
     parameters = dict(settings.dict.parameters)
 
+    parameters['CONTROL'] = {'calculation': 'scf'}
+    parameters['ELECTRONS'] = {'conv_thr': 1.e-8}
+
     if type == 'optimize':
         parameters['CONTROL'].update({'calculation': 'vc-relax'})
         parameters['CELL'] = {'press': pressure,
-                                 'press_conv_thr': 1.e-3,
+                              'press_conv_thr': 1.e-3,
                                  'cell_dynamics': 'bfgs',  # Quasi-Newton algorithm
-                                 'cell_dofree': 'all'}  # Degrees of movement
-        parameters['IONS'] = {'ion_dynamics': 'bfgs'}
+                              #   'cell_dofree': 'all'
+                              }  # Degrees of movement
+        parameters['IONS'] = {'ion_dynamics': 'bfgs',
+                              'ion_nstepe': 10}
 
         parameters['CONTROL'].update({'tstress': True,
-                                     'tprnfor': True,
-                                     'etot_conv_thr': 1.e-8,
-                                     'forc_conv_thr': 1.e-8})
+                                      'tprnfor': True,
+                                      'etot_conv_thr': 1.e-8,
+                                      'forc_conv_thr': 1.e-8})
+
+    if type == 'forces':
+        parameters['CONTROL'].update({'calculation': 'scf',
+                                      'tstress': True,
+                                      'tprnfor': True,
+                                      'etot_conv_thr': 1.e-8,
+                                      'forc_conv_thr': 1.e-8
+                                      })
+
+        parameters['CONTROL'].update({'tstress': True,
+                                      'tprnfor': True})
 
     if type == 'born_charges':
+        parameters['CONTROL'].update({'calculation': 'scf',
+                                      'tstress': True,
+                                      'tprnfor': True
+                                      })
         parameters['INPUTPH'] = {'epsil': True,
                                  'zeu': True}  # Degrees of movement
 
     inputs.parameters = ParameterData(dict=parameters)
-
 
     # Kpoints
     kpoints = KpointsData()
