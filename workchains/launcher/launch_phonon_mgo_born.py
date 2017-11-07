@@ -97,7 +97,6 @@ settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
                  'machine': machine_dict
                  }
 
-
 from aiida.workflows.wc_phonon import PhononPhonopy
 
 if True:
