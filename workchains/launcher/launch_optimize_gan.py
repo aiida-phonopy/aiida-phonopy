@@ -8,7 +8,7 @@ if not is_dbenv_loaded():
 from aiida.orm import CalculationFactory, DataFactory
 from aiida.work.run import run, submit, async
 from aiida.orm.data.structure import StructureData
-from aiida.orm.data.base import Str, Float, Bool
+from aiida.orm.data.base import Str, Float, Bool, Int
 
 #VaspCalculation = CalculationFactory('vasp.vasp')
 #PwCalculation = CalculationFactory('quantumespresso.pw')
@@ -56,8 +56,8 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   # 'code': 'phonopy@stern_outside'
                                   })
 
-code_to_use = 'VASP'
-#code_to_use = 'QE'
+#code_to_use = 'VASP'
+code_to_use = 'QE'
 #code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
@@ -105,9 +105,10 @@ if code_to_use == 'QE':
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
 
-    settings_dict = {'code': 'pw@stern_outside',
+    settings_dict = {'code': {'optimize': 'pw@boston_in',
+                              'forces': 'pw@boston_in'},
                      'parameters': parameters_dict,
-                     'kpoints_density': 1000,  # k-point density
+                     'kpoints_density': 0.5,  # k-point density
                      'pseudos_family': 'pbe_test_family'}
 
     es_settings = ParameterData(dict=settings_dict)
@@ -163,6 +164,7 @@ if True:
                   es_settings=es_settings,
                   # Optional settings
                   # pressure=Float(10.0),
+                  max_iterations=Int(1)
                   )
 
     print(results)
