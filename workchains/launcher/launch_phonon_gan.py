@@ -103,8 +103,8 @@ if code_to_use == 'QE':
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
 
-    settings_dict = {'code': {'optimize': 'pw@boston',
-                              'forces': 'pw@boston'},
+    settings_dict = {'code': {'optimize': 'pw@boston_in',
+                              'forces': 'pw@boston_in'},
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
                      'pseudos_family': 'pbe_test_family'}
