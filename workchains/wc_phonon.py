@@ -346,7 +346,7 @@ class PhononPhonopy(WorkChain):
         return self.inputs.optimize
 
     def optimize(self):
-        print('start phonon {}'.format(self.pid))
+        print('start phonon (pk={})'.format(self.pid))
 
         future = submit(OptimizeStructure,
                         structure=self.inputs.structure,
@@ -360,7 +360,7 @@ class PhononPhonopy(WorkChain):
             self.ctx._content['optimize'] = load_node(13047)
             return
 
-        print ('optimize workchain: {}'.format(future.pid))
+        print ('optimize workchain: (pk={})'.format(future.pid))
 
         return ToContext(optimized=future)
 
