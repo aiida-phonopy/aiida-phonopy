@@ -26,11 +26,10 @@ ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
-
 import numpy as np
-import seekpath
 
-from generate_inputs import *
+from generate_inputs import generate_inputs
+
 
 def generate_phonopy_params(code, structure, ph_settings, machine, force_sets):
     """
@@ -125,7 +124,7 @@ def create_forces_set(**kwargs):
 
     forces = []
     for i in range(data_sets.get_number_of_displacements()):
-        forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[0])
+        forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[-1])
 
     force_sets.set_forces(forces)
 
@@ -142,7 +141,7 @@ def add_nac_to_force_constants(force_constants, array_data):
     :return: force_constants: ForceConstants object
     """
 
-    force_constants_nac = ForceConstantsData(array=force_constants.get_array(),
+    force_constants_nac = ForceConstantsData(data=force_constants.get_data(),
                                              born_charges=array_data.get_array('born_charges'),
                                              epsilon=array_data.get_array('epsilon'))
 
@@ -178,12 +177,13 @@ def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     phonon.set_displacement_dataset(force_sets.get_force_sets())
     phonon.produce_force_constants()
 
-    force_constants = ForceConstantsData(array=phonon.get_force_constants())
+    force_constants = ForceConstantsData(data=phonon.get_force_constants())
 
     return {'force_constants': force_constants}
 
 
 def get_path_using_seekpath(phonopy_structure, band_resolution=30):
+    import seekpath
 
     cell = phonopy_structure.get_cell()
     scaled_positions = phonopy_structure.get_scaled_positions()
@@ -222,10 +222,12 @@ def get_born_parameters(phonon, born_unitcell, epsilon, symprec=1e-5):
 
     borns_, epsilon_ = symmetrize_borns_and_epsilon(born_unitcell, epsilon, cell,
                                                     symprec=symprec)
-    inv_smat = np.linalg.inv(smat)
+    #inv_smat = np.linalg.inv(smat)
     scell = get_supercell(cell, smat, symprec=symprec)
     u2u_map = scell.get_unitcell_to_unitcell_map()
-    pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
+    # pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
+
+    pcell = phonon.get_primitive()
     p2s_map = pcell.get_primitive_to_supercell_map()
     born_primitive = borns_[[u2u_map[i] for i in p2s_map]]
 
@@ -262,7 +264,7 @@ def get_properties_from_phonopy(structure, ph_settings, force_constants):
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
 
-    phonon.set_force_constants(force_constants.get_array())
+    phonon.set_force_constants(force_constants.get_data())
 
     if force_constants.epsilon_and_born_exist():
         print ('use born charges')
@@ -333,7 +335,6 @@ class PhononPhonopy(WorkChain):
     def define(cls, spec):
         super(PhononPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("machine", valid_type=ParameterData)
         spec.input("ph_settings", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
@@ -343,14 +344,14 @@ class PhononPhonopy(WorkChain):
         spec.outline(_If(cls.use_optimize)(cls.optimize), cls.create_displacement_calculations, cls.get_force_constants, cls.calculate_phonon_properties)
 
     def use_optimize(self):
+        print('start phonon {}'.format(self.pid))
         return self.inputs.optimize
 
     def optimize(self):
-        print('start phonon (pk={})'.format(self.pid))
-
+        print ('start optimize')
         future = submit(OptimizeStructure,
                         structure=self.inputs.structure,
-                        machine=self.inputs.machine,
+                        # machine=self.inputs.machine,
                         es_settings=self.inputs.es_settings,
                         pressure=self.inputs.pressure,
                         )
@@ -360,7 +361,7 @@ class PhononPhonopy(WorkChain):
             self.ctx._content['optimize'] = load_node(13047)
             return
 
-        print ('optimize workchain: (pk={})'.format(future.pid))
+        print ('optimize workchain: {}'.format(future.pid))
 
         return ToContext(optimized=future)
 
@@ -400,7 +401,7 @@ class PhononPhonopy(WorkChain):
         for label, supercell in supercells.iteritems():
 
             JobCalculation, calculation_input = generate_inputs(supercell,
-                                                                self.inputs.machine,
+                                                                # self.inputs.machine,
                                                                 self.inputs.es_settings,
                                                                 #pressure=self.input.pressure,
                                                                 type='forces')
@@ -416,7 +417,7 @@ class PhononPhonopy(WorkChain):
         if 'born_charges' in self.inputs.es_settings.dict.code:
             self.report('calculate born charges')
             JobCalculation, calculation_input = generate_inputs(self.ctx.final_structure,
-                                                                self.inputs.machine,
+                                                                # self.inputs.machine,
                                                                 self.inputs.es_settings,
                                                                 #pressure=self.input.pressure,
                                                                 type='born_charges')
@@ -433,7 +434,12 @@ class PhononPhonopy(WorkChain):
 
         wf_inputs = {}
         for i in range(self.ctx.number_of_displacements):
-            wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_array
+            # This has to be changed to make uniform plugin interface
+            try:
+                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_trajectory
+            except:
+                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_array
+
         wf_inputs['data_sets'] = self.ctx.data_sets
 
         self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
@@ -444,7 +450,7 @@ class PhononPhonopy(WorkChain):
             JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
                                                                         structure=self.ctx.final_structure,
                                                                         ph_settings=self.inputs.ph_settings,
-                                                                        machine=self.inputs.machine,
+                                                                        # machine=self.inputs.machine,
                                                                         force_sets=self.ctx.force_sets)
             future = submit(JobCalculation, **calculation_input)
             print 'phonopy FC calc:', future.pid

@@ -34,7 +34,7 @@ scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
                   (0.0000000,  0.5000000,  0.0000000),
                   (0.0000000,  0.0000000,  0.5000000)]
 
-symbols=['Mg', 'Mg', 'Mg' ,'Mg', 'O', 'O', 'O', 'O']
+symbols=['Mg', 'Mg', 'Mg', 'Mg', 'O', 'O', 'O', 'O']
 
 positions = np.dot(scaled_positions, cell)
 
@@ -42,6 +42,12 @@ for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
 
+# Machine
+machine_dict = {'resources': {'num_machines': 1,
+                              'parallel_env': 'mpi*',
+                              'tot_num_mpiprocs': 16},
+                'max_wallclock_seconds': 30 * 60,
+                }
 
 # PHONOPY settings
 ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
@@ -52,8 +58,9 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                                 [0.5, 0.5, 0.0]],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
-                                  'symmetry_precision': 1e-5
+                                  'symmetry_precision': 1e-5,
                                   # 'code': 'phonopy@boston'  # comment to use local phonopy
+                                  'machine': machine_dict
                                   })
 
 # VASP SPECIFIC
@@ -86,24 +93,16 @@ settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
                  'parameters': incar_dict,
                  #'kpoints': kpoints_dict, # optional explicit definition of kpoints mesh
                  'kpoints_per_atom': 100,  # k-point density
-                 'pseudos': potcar.as_dict()}
+                 'pseudos': potcar.as_dict(),
+                 'machine': machine_dict
+                 }
 
-
-# CODE INDEPENDENT
-machine_dict = {'resources': {'num_machines': 1,
-                              'parallel_env': 'mpi*',
-                              'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
-                }
-
-machine = ParameterData(dict=machine_dict)
 
 from aiida.workflows.wc_phonon import PhononPhonopy
 
 if True:
     result = run(PhononPhonopy,
                  structure=structure,
-                 machine=machine,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
@@ -115,7 +114,6 @@ if True:
 else:
     future = submit(PhononPhonopy,
                     structure=structure,
-                    machine=machine,
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     # Optional settings

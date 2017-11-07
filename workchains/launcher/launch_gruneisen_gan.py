@@ -42,6 +42,13 @@ for i, scaled_position in enumerate(scaled_positions):
                           symbols=symbols[i])
 
 
+# CODE INDEPENDENT
+machine_dict = {'resources': {'num_machines': 1,
+                              'parallel_env': 'mpi*',
+                              'tot_num_mpiprocs': 16},
+                'max_wallclock_seconds': 30 * 60,
+                }
+
 # PHONOPY settings
 ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                                 [0,2,0],
@@ -54,6 +61,7 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   'symmetry_precision': 1e-5
                                   # Uncomment the following line to use phonopy remotely
                                   # 'code': 'phonopy@boston'
+                                  # 'machine': machine_dict
                                   })
 
 #code_to_use = 'VASP'
@@ -94,7 +102,8 @@ if code_to_use == 'VASP':
                      'parameters': incar_dict,
                      #  'kpoints': kpoints_dict, # optional explicit definition of kpoints mesh
                      'kpoints_per_atom': 100,  # k-point density
-                     'pseudos': potcar.as_dict()}
+                     'pseudos': potcar.as_dict(),
+                     'machine': machine_dict}
 
     # pseudos = ParameterData(dict=potcar.as_dict())
     es_settings = ParameterData(dict=settings_dict)
@@ -112,7 +121,8 @@ if code_to_use == 'QE':
                               'forces': 'pw@boston_in'},
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
-                     'pseudos_family': 'pbe_test_family'}
+                     'pseudos_family': 'pbe_test_family',
+                      'machine': machine_dict}
 
     es_settings = ParameterData(dict=settings_dict)
 
@@ -144,26 +154,17 @@ if code_to_use == 'LAMMPS':
     settings_dict = {'code': {'optimize': 'lammps_optimize@boston',
                               'forces': 'lammps_force@boston'},
                      'parameters': parameters,
-                     'potential': potential}
+                     'potential': potential,
+                     'machine': machine_dict}
 
     es_settings = ParameterData(dict=settings_dict)
 
-
-# CODE INDEPENDENT
-machine_dict = {'resources': {'num_machines': 1,
-                              'parallel_env': 'mpi*',
-                              'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
-                }
-
-machine = ParameterData(dict=machine_dict)
 
 from aiida.workflows.wc_gruneisen import GruneisenPhonopy
 
 if True:
     result = run(GruneisenPhonopy,
                  structure=structure,
-                 machine=machine,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
@@ -175,7 +176,6 @@ if True:
 else:
     future = submit(GruneisenPhonopy,
                     structure=structure,
-                    machine=machine,
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     # Optional settings

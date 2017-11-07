@@ -1,21 +1,15 @@
+from aiida.orm.data.array import ArrayData
 
-from aiida.orm import Data
 
-
-class BandStructureData(Data):
+class BandStructureData(ArrayData):
     """
-    Store the band structure data
-
+    Store the band structure.
     """
 
     def __init__(self, *args, **kwargs):
         super(BandStructureData, self).__init__(*args, **kwargs)
 
     def get_number_of_bands(self):
-        """
-
-        :return: Number of bands
-        """
 
         if 'nbands' in self.get_attrs():
             return self.get_attr('nbands')
@@ -29,76 +23,39 @@ class BandStructureData(Data):
         else:
             return None
 
+    def set_bands(self, bands):
 
-    def set_bands(self, ranges):
-        """
-        Set the list of q-points the form the path in the reciprocal space
-
-        :param ranges: a 3D array that contains a list q-points in phonopy format: array[n_paths:n_qpoints:3]
-        :return:
-        """
-
-        import tempfile
         import numpy
 
-        ranges = numpy.array(ranges)
+        bands = numpy.array(bands)
 
-        with tempfile.NamedTemporaryFile() as f:
-            numpy.save(f, ranges)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, 'bands.npy')
+        self.set_array('bands', bands)
 
-        self._set_attr('nbands', len(ranges))
-        self._set_attr('npoints', len(ranges[0]))
+        self._set_attr('nbands', len(bands))
+        self._set_attr('npoints', len(bands[0]))
 
     def set_labels(self, band_labels):
-        """
-        Set the labels of the high symmetry points in the reciprocal space that delimite the paths.
 
-        :param band_labels: Array (or list of lists) in seekpath format: array[n_paths:2]
-        :return:
-        """
-
-        import tempfile
         import numpy
 
         band_labels = numpy.array(band_labels)
 
-        with tempfile.NamedTemporaryFile() as f:
-            numpy.save(f, band_labels)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, 'band_labels.npy')
+        self.set_array('band_labels', band_labels)
 
     def set_unitcell(self, unitcell):
         """
-        :param unitcell: Numpy Array that contains the unitcell matrix (Lattice vectors in rows)
+        :param unitcell: Numpy Array that contains the unitcell matrix (Lattice vectors in columns)
         :return:
         """
 
-        import tempfile
         import numpy
 
         unitcell = numpy.array(unitcell)
 
-        with tempfile.NamedTemporaryFile() as f:
-            numpy.save(f, unitcell)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, 'unitcell.npy')
+        self.set_array('unitcell', unitcell)
 
     def set_band_structure_phonopy(self, band_structure_phonopy):
-        """
-        Set the phonon band structure data obtained as output from phonopy. This includes the list of q-points,
-        q-points distances, and phonon frequencies. If q-points and distances are already set, this functions
-        checks consistency and stores only the phonon frequencies.
 
-        :param band_structure_phonopy: phonopy get_band_structure() function output.
-        :return:
-        """
-
-        import tempfile
         import numpy
 
         q_points = numpy.array(band_structure_phonopy[0])
@@ -112,29 +69,12 @@ class BandStructureData(Data):
 
         numpy.testing.assert_array_almost_equal(distances, self.get_distances(), decimal=4)
 
-        for element in {
-                        # 'q_points.npy': numpy.array(band_structure_phonopy[0]),
-                        # 'distances.npy': numpy.array(band_structure_phonopy[1]),
-                        'frequencies.npy':numpy.array(band_structure_phonopy[2]),
-                        }.items():
-
-            with tempfile.NamedTemporaryFile() as f:
-                numpy.save(f, element[1])
-                f.flush()  # Important to flush here, otherwise the next copy command
-                # will just copy an empty file
-                self.add_path(f.name, element[0])
+        # self.set_array('q_points', numpy.array(band_structure_phonopy[0]))
+        # self.set_array('distances', numpy.array(band_structure_phonopy[1]))
+        self.set_array('frequencies', numpy.array(band_structure_phonopy[2]))
 
     def set_band_structure_gruneisen(self, band_structure_gruneisen):
-        """
-        Set the mode Gruneisen band structure data obtained as output from phonopy. This includes the list of q-points,
-        q-points distances, and phonon frequencies and mode gruneisen parameter.
-        If q-points and distances are already set, this functions checks consistency and stores only
-        the phonon frequencies and mode Gruneisen parameters.
 
-        :param band_structure_phonopy: phonopy get_band_structure() function output.
-        :return:
-        """
-        import tempfile
         import numpy
 
         q_points = numpy.array([band[0] for band in band_structure_gruneisen._paths])
@@ -148,38 +88,20 @@ class BandStructureData(Data):
 
         numpy.testing.assert_array_almost_equal(distances, self.get_distances(), decimal=4)
 
-        for element in {'gamma.npy': numpy.array([band[2] for band in band_structure_gruneisen._paths]),
-                        'eigenvalues.npy': numpy.array([band[3] for band in band_structure_gruneisen._paths]),
-                        'frequencies.npy': numpy.array([band[4] for band in band_structure_gruneisen._paths]),
-                        }.items():
-
-            with tempfile.NamedTemporaryFile() as f:
-                numpy.save(f, element[1])
-                f.flush()  # Important to flush here, otherwise the next copy command
-                # will just copy an empty file
-                self.add_path(f.name, element[0])
-
+        self.set_array('gamma', numpy.array([band[2] for band in band_structure_gruneisen._paths]))
+        self.set_array('eigenvalues', numpy.array([band[3] for band in band_structure_gruneisen._paths]))
+        self.set_array('frequencies', numpy.array([band[4] for band in band_structure_gruneisen._paths]))
 
     def get_unitcell(self):
         """
-        Returns the unitcell matrix as a numpy array (Lattice vectors in rows)
-
-        :return: numpy array containing the unit cell matrix
+        Return the unitcell in the node as a numpy array
         """
-        import numpy
 
-        fname = 'unitcell.npy'
-        if fname not in self.get_folder_list():
-            return None
-
-        array = numpy.load(self.get_abs_path(fname))
-        return array
+        return self.get_array('unitcell')
 
     def get_distances(self, band=None):
         """
-        Returns the distances as a numpy array
-
-        :return: numpy array containing the q-point distances (in Angstroms^-1)
+        Return the distances between q-points calculated from bands
         """
         import numpy as np
 
@@ -211,83 +133,53 @@ class BandStructureData(Data):
 
     def get_frequencies(self, band=None):
         """
-        Return the frequencies as a numpy array
-
-        :return: numpy array containing the phonon frequencies
+        Return the frequencies in the node as a numpy array
         """
-        import numpy
 
-        fname = 'frequencies.npy'
-        if fname not in self.get_folder_list():
-            return None
+        frequencies = self.get_array('frequencies')
 
-        array = numpy.load(self.get_abs_path(fname))
         if band is not None:
-            array = array[band]
+            frequencies = frequencies[band]
 
-        return array
+        return frequencies
 
     def get_gamma(self, band=None):
         """
-        Return the mode Gruneisen parameters as a numpy array
-
-        :return: numpy array containing the mode Gruneisen parameters
+        Return the frequencies in the node as a numpy array
         """
-        import numpy
 
-        fname = 'gamma.npy'
-        if fname not in self.get_folder_list():
-            return None
-
-        array = numpy.load(self.get_abs_path(fname))
+        gamma =  self.get_array('gamma')
 
         if band is not None:
-            array = array[band]
+            gamma = gamma[band]
 
-        return array
+        return gamma
 
     def get_eigenvalues(self, band=None):
         """
-        Return the eigenvalues as a numpy array
+        Return the frequencies in the node as a numpy array
         """
-        import numpy
+        eigenvalues = self.get_array('eigenvalues')
 
-        fname = 'eigenvalues.npy'
-        if fname not in self.get_folder_list():
-            return None
-
-
-        array = numpy.load(self.get_abs_path(fname))
         if band is not None:
-            array = array[band]
+            eigenvalues = eigenvalues[band]
 
-        return array
+        return eigenvalues
 
     def get_bands(self, band=None):
         """
-        Return the bands as a numpy array
-
-        :return: numpy array containing a list of q-points in phonopy format: array[n_paths:n_points:3]
+        Return the bands in the node as a numpy array
         """
-        import numpy
+        bands = self.get_array('bands')
 
-        fname = 'bands.npy'
-        if fname not in self.get_folder_list():
-            return None
-
-        array = numpy.load(self.get_abs_path(fname))
         if band is not None:
-            array = array[band]
+            bands = bands[band]
 
-
-        return array
+        return bands
 
     def get_band_ranges(self, band=None):
         """
-        Return the band ranges (only the limiting q-points of each path). This is used in phonopy's
-        gruneisen  BandStructure class
-
-        :return: numpy array containing a list of 2 q-points for each path: array[n_paths:2:3]
+        Return the bands in the node as a numpy array
         """
         import numpy
 
@@ -300,27 +192,17 @@ class BandStructureData(Data):
 
         return band_ranges
 
-
     def get_labels(self, band=None):
         """
-        Return the labels of the high symmetry points that limit each path as a numpy array
-
-        :return: numpy array containing a list of 2 labels for each path: array[n_paths:2]
+        Return the band labels in the node as a numpy array
         """
 
-        import numpy
-
-        fname = 'band_labels.npy'
-
-        if fname not in self.get_folder_list():
-            return None
-
-        array = numpy.load(self.get_abs_path(fname))
+        band_labels = self.get_array('band_labels')
 
         if band is not None:
-            array = array[band]
+            band_labels = band_labels[band]
 
-        return array
+        return band_labels
 
     def get_plot_helpers(self, style='latex'):
 
@@ -375,35 +257,3 @@ class BandStructureData(Data):
             positions.append([self.get_distances(band=i)[0] for i in index] + [self.get_distances(band=index[-1])[-1]])
 
         return labels, indices, widths, ranges, positions
-
-
-    def get_formatted_labels_matplotlib(self):
-        distances = self.get_distances()
-        labels_array = self.get_labels()
-
-        substitutions = {'GAMMA': u'\u0393'
-                         }
-
-        substitutions = {'GAMMA': u'$\Gamma$'
-                         }
-
-        def replace_list(text_string, substitutions):
-
-            for item in substitutions.iteritems():
-                text_string = text_string.replace(item[0], item[1])
-
-            return text_string
-
-        labels = []
-        labels_positions = []
-        for i, freq in enumerate(distances):
-            if labels_array[i][0] == labels_array[i-1][1]:
-                labels.append(replace_list(labels_array[i][0],substitutions))
-            else:
-                labels.append(replace_list(labels_array[i-1][1]+'/'+labels_array[i][0], substitutions))
-            labels_positions.append(distances[i][0])
-        labels_positions.append(distances[-1][-1])
-        labels.append(replace_list(labels_array[-1][1], substitutions))
-        labels[0] = replace_list(labels_array[0][0], substitutions)
-
-        return labels, labels_positions

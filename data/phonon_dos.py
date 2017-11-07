@@ -1,158 +1,97 @@
+from aiida.orm.data.array import ArrayData
 
-from aiida.orm import Data
 
-class PhononDosData(Data):
+class ForceSetsData(ArrayData):
     """
-    Store the phonon DOS on disk as a numpy array. It requires numpy to be installed.
+    Store the force constants on disk as a numpy array. It requires numpy to be installed.
     """
 
     def __init__(self, *args, **kwargs):
-        super(PhononDosData, self).__init__(*args, **kwargs)
+        super(ForceSetsData, self).__init__(*args, **kwargs)
         self._cached_arrays = {}
 
-    def _get_equivalent_atom_list(self):
-        import numpy
-        fname = 'partial_dos.npy'
-        partial_dos = numpy.load(self.get_abs_path(fname))
-        partial_symbols = self.get_attr("atom_labels")
-
-        # Check atom equivalences
-        list = range(len(partial_dos))
-        delete_list = []
-        for i, dos_i in enumerate(partial_dos):
-            for j, dos_j in enumerate(partial_dos):
-                if i < j:
-                    if numpy.allclose(dos_i, dos_j, rtol=1, atol=1e-8) and partial_symbols[i] == partial_symbols[j]:
-                        dos_i += dos_j
-                        delete_list.append(j)
-
-        return numpy.delete(range(len(partial_dos)), delete_list)
-
-    def get_dos(self):
+    def get_number_of_atoms(self):
         """
-        Return the density of states stored as a numpy array
+        Return the shape of an array (read from the value cached in the
+        properties for efficiency reasons).
+        :param name: The name of the array.
+        """
+        return self.get_attr("natom")
+
+    def get_number_of_displacements(self):
+        """
+        Return the shape of an array (read from the value cached in the
+        properties for efficiency reasons).
+        :param name: The name of the array.
+        """
+        return self.get_attr("ndisplacements")
+
+    def get_data_sets(self):
+        """
+        Return the force constants stored in the node as a numpy array
         """
         import numpy
 
-        fname = 'dos.npy'
+        natom = self.get_attr("natom")
+        ndisplacements = self.get_attr("ndisplacements")
 
-        array = numpy.load(self.get_abs_path(fname))
-        return array
+        direction = self.get_array('direction')
+        number = self.get_array('number')
+        displacement = self.get_array('displacement')
 
-    def get_number_of_partial_dos(self, full=False):
+        first_atoms = []
+        for i in range(ndisplacements):
+            first_atoms.append({'direction': direction[i],
+                                'number': number[i],
+                                'displacement': displacement[i]})
+
+        return {'natom': natom, 'first_atoms': first_atoms}
+
+    def get_force_sets(self):
         """
-        Return the number of partial density of states (corresponds to the number of atoms in the primitive cell)
-        """
-        import numpy
-
-        fname = 'partial_dos.npy'
-
-        array = numpy.load(self.get_abs_path(fname))
-
-        if full:
-            return len(array)
-
-        return len(array[self._get_equivalent_atom_list()])
-
-    def get_partial_dos(self, full=False):
-        """
-        Return a numpy that contains the partial density of states of each atom in the primitive cell
+        Return the force constants stored in the node as a numpy array
         """
         import numpy
 
-        fname = 'partial_dos.npy'
+        natom = self.get_attr("natom")
+        ndisplacements = self.get_attr("ndisplacements")
 
-        array = numpy.load(self.get_abs_path(fname))
+        direction = self.get_array('direction')
+        number = self.get_array('number')
+        displacement = self.get_array('displacement')
+        forces = self.get_array('forces')
 
-        if full:
-            return array
-        return array[self._get_equivalent_atom_list()]
+        first_atoms = []
+        for i in range(ndisplacements):
+            first_atoms.append({'directions': direction[i],
+                                'number': number[i],
+                                'forces': forces[i],
+                                'displacement': displacement[i]})
 
-    def get_frequencies(self):
-        """
-        Return the frequencies stored in the node as a numpy array
-        """
+        return {'natom': natom, 'first_atoms': first_atoms}
+
+    # {'natom': 64, 'first_atoms': [{'direction': [1, 0, 0], 'number': 0, 'displacement': array([0.01, 0., 0.])}]}
+
+    def set_data_sets(self, data_sets):
+
         import numpy
 
-        fname = 'frequencies.npy'
+        self._set_attr('natom', data_sets['natom'])
+        self._set_attr('ndisplacements', len(data_sets['first_atoms']))
 
-        array = numpy.load(self.get_abs_path(fname))
+        direction = []
+        number = []
+        displacement = []
+        for first_atoms in data_sets['first_atoms']:
+            direction.append(first_atoms['direction'])
+            number.append(first_atoms['number'])
+            displacement.append(first_atoms['displacement'])
 
-        return array
+        self.set_array('direction', numpy.array(direction))
+        self.set_array('number', numpy.array(number))
+        self.set_array('displacement', numpy.array(displacement))
 
-    def get_atom_labels(self, full=False):
-        """
-        Store the phonon dos as a numpy array.
-        :param array: The numpy array to store.
-        """
+    def set_forces(self, forces):
+
         import numpy
-
-        labels = self.get_attr("atom_labels")
-
-        if full:
-            return labels
-        return numpy.array(labels)[self._get_equivalent_atom_list()].tolist()
-
-    def set_atom_labels(self, labels):
-        """
-        Store the phonon dos as a numpy array.
-        :param array: The numpy array to store.
-        """
-        self._set_attr("atom_labels", labels)
-
-
-
-    def set_dos(self, array):
-        """
-        Store the phonon dos as a numpy array.
-        :param array: The numpy array to store.
-        """
-
-        import tempfile
-        import numpy
-
-        fname = "dos.npy"
-        with tempfile.NamedTemporaryFile() as f:
-            # Store in a temporary file, and then add to the node
-            numpy.save(f, array)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, fname)
-
-
-    def set_frequencies(self, array):
-        """
-        Store the frequencies as a numpy array.
-        :param array: The numpy array to store.
-        """
-
-        import tempfile
-        import numpy
-
-        fname = "frequencies.npy"
-        with tempfile.NamedTemporaryFile() as f:
-            # Store in a temporary file, and then add to the node
-            numpy.save(f, array)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, fname)
-
-
-    def set_partial_dos(self, array):
-        """
-        Store the partial dos as a numpy array.
-        :param array: The numpy array to store.
-        """
-
-        import tempfile
-        import numpy
-
-        fname = "partial_dos.npy"
-        with tempfile.NamedTemporaryFile() as f:
-            # Store in a temporary file, and then add to the node
-            numpy.save(f, array)
-            f.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.add_path(f.name, fname)
-
-        self._set_attr("n_partial_dos", len(array))
+        self.set_array('forces', numpy.array(forces))

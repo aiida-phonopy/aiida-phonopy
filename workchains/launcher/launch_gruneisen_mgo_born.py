@@ -42,6 +42,13 @@ for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
 
+# Machine
+machine_dict = {'resources': {'num_machines': 1,
+                              'parallel_env': 'mpi*',
+                              'tot_num_mpiprocs': 16},
+                'max_wallclock_seconds': 30 * 60,
+                }
+
 
 # PHONOPY settings
 ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
@@ -52,9 +59,10 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                                 [0.5, 0.5, 0.0]],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
-                                  'symmetry_precision': 1e-5
+                                  'symmetry_precision': 1e-5,
                                    # Uncomment the following line to use phonopy remotely
                                    # 'code': 'phonopy@boston'
+                                  'machine': machine_dict
                                   })
 
 
@@ -88,24 +96,15 @@ settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
                  'parameters': incar_dict,
                  #  'kpoints': kpoints_dict,  # optional explicit definition of kpoints mesh
                  'kpoints_per_atom': 1000,  # k-point density
-                 'pseudos': potcar.as_dict()}
+                 'pseudos': potcar.as_dict(),
+                 'machine': machine_dict}
 
-
-# Machine
-machine_dict = {'resources': {'num_machines': 1,
-                              'parallel_env': 'mpi*',
-                              'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
-                }
-
-machine = ParameterData(dict=machine_dict)
 
 from aiida.workflows.wc_gruneisen import GruneisenPhonopy
 
 if True:
     result = run(GruneisenPhonopy,
                  structure=structure,
-                 machine=machine,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
@@ -117,7 +116,6 @@ if True:
 else:
     future = submit(GruneisenPhonopy,
                     structure=structure,
-                    machine=machine,
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     # Optional settings

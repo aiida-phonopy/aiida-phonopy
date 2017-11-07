@@ -110,11 +110,10 @@ class GruneisenPhonopy(WorkChain):
     def define(cls, spec):
         super(GruneisenPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("machine", valid_type=ParameterData)
         spec.input("ph_settings", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
-        # spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
+        spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         #spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(1e-2))
 
@@ -122,7 +121,7 @@ class GruneisenPhonopy(WorkChain):
 
     def create_unit_cell_expansions(self):
 
-        print('start Gruneisen (pk={})'.format(self.pid))
+        print('start Gruneisen {}'.format(self.pid))
         print ('start create cell expansions')
 
         # For testing
@@ -148,7 +147,7 @@ class GruneisenPhonopy(WorkChain):
                             )
 
             calcs[expansions[0]] = future
-            print ('phonon workchain: {} (pk={})'.format(expansions[0], future.pid))
+            print ('phonon workchain: {} {}'.format(expansions[0], future.pid))
 
         return ToContext(**calcs)
 

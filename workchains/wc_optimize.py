@@ -5,6 +5,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.work.workchain import WorkChain, ToContext
+from aiida.work.workfunction import workfunction
 from aiida.work.run import run, submit, async
 
 from aiida.orm.data.base import Str, Float, Bool, Int
@@ -19,8 +20,46 @@ StructureData = DataFactory('structure')
 
 
 import numpy as np
-from generate_inputs import *
-from parse_interface import *
+from generate_inputs import generate_inputs
+from parse_interface import parse_optimize_calculation
+
+@workfunction
+def standardize_cell(structure):
+    import spglib
+    from phonopy.structure.atoms import Atoms as PhonopyAtoms
+    from phonopy.structure.atoms import atom_data
+
+
+    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
+                        positions=[site.position for site in structure.sites],
+                        cell=structure.cell)
+
+    structure_data = (structure.cell,
+                      bulk.get_scaled_positions(),
+                      bulk.get_atomic_numbers())
+
+    #lattice, refined_positions, numbers = spglib.refine_cell(structure_data, symprec=1e-5)
+    lattice, standardized_positions, numbers = spglib.standardize_cell(structure_data,
+                                                                       symprec=1e-5,
+                                                                       to_primitive=False,
+                                                                       no_idealize=False)
+
+    symbols = [atom_data[i][1] for i in numbers]
+
+    # print lattice, standardized_positions, numbers
+    # print [site.kind_name for site in structure.sites]
+    standardized_bulk = PhonopyAtoms(symbols=symbols,
+                                     scaled_positions=standardized_positions,
+                                     cell=lattice)
+
+    # create new aiida structure object
+    standarized = StructureData(cell=standardized_bulk.get_cell())
+    for position, symbol in zip(standardized_bulk.get_positions(), standardized_bulk.get_chemical_symbols()):
+        standarized.append_atom(position=position,
+                                      symbols=symbol)
+
+    return {'standardized_structure': standarized}
+
 
 class OptimizeStructure(WorkChain):
     """
@@ -31,13 +70,14 @@ class OptimizeStructure(WorkChain):
     def define(cls, spec):
         super(OptimizeStructure, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("machine", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("tolerance_forces", valid_type=Float, required=False, default=Float(1e-5))
         spec.input("tolerance_stress", valid_type=Float, required=False, default=Float(1e-2))
         spec.input("max_iterations", valid_type=Int, required=False, default=Int(3))
+        # should be Bool but it doesn't work! bug?
+        spec.input("standarize_cell", valid_type=Int, required=False, default=Int(0))
 
         spec.outline(cls.optimize_cycle, _While(cls.not_converged)(cls.optimize_cycle), cls.get_data)
 
@@ -79,22 +119,25 @@ class OptimizeStructure(WorkChain):
 
     def optimize_cycle(self):
 
-        print ('start optimization')
-
         if not 'counter' in self.ctx:
             self.ctx.counter = 0
 
         self.ctx.counter +=1
 
         # self.ctx._get_dict()
+        print ('start optimization')
 
         if not 'optimize' in self.ctx:
             structure = self.inputs.structure
         else:
             structure = self.ctx.optimize.out.output_structure
 
+        if self.inputs.standarize_cell:
+        #if False:
+            structure = standardize_cell(structure)['standardized_structure']
+
         JobCalculation, calculation_input = generate_inputs(structure,
-                                                            self.inputs.machine,
+                                                            # self.inputs.machine,
                                                             self.inputs.es_settings,
                                                             pressure=self.inputs.pressure,
                                                             type='optimize',

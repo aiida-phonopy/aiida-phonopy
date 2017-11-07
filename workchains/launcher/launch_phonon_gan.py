@@ -38,6 +38,12 @@ for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
 
+# Machine
+machine_dict = {'resources': {'num_machines': 1,
+                              'parallel_env': 'mpi*',
+                              'tot_num_mpiprocs': 16},
+                'max_wallclock_seconds': 30 * 60,
+                }
 
 # PHONOPY settings
 ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
@@ -48,11 +54,11 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                                 [0.0, 0.0, 1.0]],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
-                                  'symmetry_precision': 1e-5
+                                  'symmetry_precision': 1e-5,
                                   # Uncomment the following line to use phonopy remotely
                                   # 'code': 'phonopy@boston'  # comment to use local phonopy
+                                  'machine': machine_dict
                                   })
-
 
 #code_to_use = 'VASP'
 code_to_use = 'QE'
@@ -89,7 +95,9 @@ if code_to_use == 'VASP':
                      'parameters': incar_dict,
                      #'kpoints': kpoints_dict,
                      'kpoints_per_atom': 100,  # k-point density
-                     'pseudos': potcar.as_dict()}
+                     'pseudos': potcar.as_dict(),
+                     'machine': machine_dict
+                     }
 
     # pseudos = ParameterData(dict=potcar.as_dict())
     es_settings = ParameterData(dict=settings_dict)
@@ -107,7 +115,9 @@ if code_to_use == 'QE':
                               'forces': 'pw@boston_in'},
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
-                     'pseudos_family': 'pbe_test_family'}
+                     'pseudos_family': 'pbe_test_family',
+                     'machine': machine_dict
+                     }
 
     es_settings = ParameterData(dict=settings_dict)
 
@@ -139,26 +149,18 @@ if code_to_use == 'LAMMPS':
     settings_dict = {'code': {'optimize': 'lammps_optimize@boston',
                               'forces': 'lammps_force@boston'},
                      'parameters': parameters,
-                     'potential': potential}
+                     'potential': potential,
+                     'machine': machine_dict
+                     }
 
     es_settings = ParameterData(dict=settings_dict)
 
-
-# CODE INDEPENDENT
-machine_dict = {'resources': {'num_machines': 1,
-                              'parallel_env': 'mpi*',
-                              'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
-                }
-
-machine = ParameterData(dict=machine_dict)
 
 from aiida.workflows.wc_phonon import PhononPhonopy
 
 if True:
     result = run(PhononPhonopy,
                  structure=structure,
-                 machine=machine,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
@@ -170,7 +172,6 @@ if True:
 else:
     future = submit(PhononPhonopy,
                     structure=structure,
-                    machine=machine,
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     # Optional settings
