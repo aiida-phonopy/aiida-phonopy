@@ -59,7 +59,7 @@ for j, index in enumerate(indices):
     plt.xlim(ranges[j])
     plt.xticks(positions[j], labels[j], rotation='horizontal')
 
-plt.suptitle('Phonon band structure')
+plt.suptitle('Phonon band structure (primitive cell)')
 plt.figtext(0.5, 0.02, 'Wave vector', ha='center')
 
 # Mode Gruneisen parameter band structure
@@ -91,7 +91,7 @@ for j, index in enumerate(indices):
     plt.xlim(ranges[j])
     plt.xticks(positions[j], labels[j], rotation='horizontal')
 
-plt.suptitle('Mode Gruneisen parameter')
+plt.suptitle('Mode Gruneisen parameter (primitive cell)')
 plt.figtext(0.5, 0.02, 'Wave vector', ha='center')
 
 
