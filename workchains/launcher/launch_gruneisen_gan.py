@@ -56,8 +56,8 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   # 'code': 'phonopy@boston'
                                   })
 
-code_to_use = 'VASP'
-#code_to_use = 'QE'
+#code_to_use = 'VASP'
+code_to_use = 'QE'
 #code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
@@ -108,7 +108,8 @@ if code_to_use == 'QE':
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
 
-    settings_dict = {'code': 'pw@stern_outside',
+    settings_dict = {'code': {'optimize': 'pw@boston_in',
+                              'forces': 'pw@boston_in'},
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
                      'pseudos_family': 'pbe_test_family'}
