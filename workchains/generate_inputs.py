@@ -18,7 +18,6 @@ from aiida.orm.data.upf import UpfData
 PhonopyCalculation = CalculationFactory('phonopy')
 
 
-
 # Function obtained from aiida's quantumespresso plugin. Copied here for convinence
 def get_pseudos(structure, family_name):
     """

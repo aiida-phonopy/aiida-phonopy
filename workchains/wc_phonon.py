@@ -31,14 +31,13 @@ import numpy as np
 from generate_inputs import generate_inputs
 
 
-def generate_phonopy_params(code, structure, ph_settings, machine, force_sets):
+def generate_phonopy_params(code, structure, ph_settings, force_sets):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
     :param code: Code object of phonopy
     :param structure: StructureData Object that constains the crystal structure unit cell
     :param ph_settings: ParametersData object containing a dictionary with the phonopy input data
-    :param machine: ParametersData object containing a dictionary with the computational resources information
     :param force_sets: ForceSetssData object containing the atomic forces and displacement information
     :return: Calculation process object, input dictionary
     """
@@ -57,8 +56,8 @@ def generate_phonopy_params(code, structure, ph_settings, machine, force_sets):
     inputs.parameters = ph_settings
 
     # resources
-    inputs._options.resources = machine.dict.resources
-    inputs._options.max_wallclock_seconds = machine.dict.max_wallclock_seconds
+    inputs._options.resources = ph_settings.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = ph_settings.dict.machine['max_wallclock_seconds']
 
     # data_sets
     inputs.data_sets = force_sets
@@ -403,7 +402,7 @@ class PhononPhonopy(WorkChain):
             JobCalculation, calculation_input = generate_inputs(supercell,
                                                                 # self.inputs.machine,
                                                                 self.inputs.es_settings,
-                                                                #pressure=self.input.pressure,
+                                                                # pressure=self.input.pressure,
                                                                 type='forces')
 
             calculation_input._label = label
@@ -419,7 +418,7 @@ class PhononPhonopy(WorkChain):
             JobCalculation, calculation_input = generate_inputs(self.ctx.final_structure,
                                                                 # self.inputs.machine,
                                                                 self.inputs.es_settings,
-                                                                #pressure=self.input.pressure,
+                                                                # pressure=self.input.pressure,
                                                                 type='born_charges')
             future = submit(JobCalculation, **calculation_input)
             print ('born_charges: {}'.format(future.pid))
