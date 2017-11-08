@@ -40,7 +40,7 @@ def get_phonon(structure, force_constants, ph_settings):
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
 
-    phonon.set_force_constants(force_constants.get_array())
+    phonon.set_force_constants(force_constants.get_data())
 
     if force_constants.epsilon_and_born_exist():
         phonon.set_nac_params(get_born_parameters(phonon,
@@ -128,9 +128,9 @@ class GruneisenPhonopy(WorkChain):
         # For testing
         testing = False
         if testing:
-            self.ctx._content['plus'] = load_node(9842)
-            self.ctx._content['origin'] = load_node(9839)
-            self.ctx._content['minus'] = load_node(9845)
+            self.ctx._content['plus'] = load_node(1462)
+            self.ctx._content['origin'] = load_node(1459)
+            self.ctx._content['minus'] = load_node(1465)
             return
 
         calcs = {}
