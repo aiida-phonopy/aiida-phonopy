@@ -14,10 +14,10 @@ setup(
     include_package_data=True,
     entry_points={
         'aiida.data': [
-            'band_structure = aiida_phonopy.data.band_structure: BandStructureData',
-            'force_constants = aiida_phonopy.data.force_constants: ForceConstantsData',
-            'force_sets = aiida_phonopy.data.force_sets: ForceSetsData',
-            'phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
+            'phonopy.band_structure = aiida_phonopy.data.band_structure: BandStructureData',
+            'phonopy.force_constants = aiida_phonopy.data.force_constants: ForceConstantsData',
+            'phonopy.force_sets = aiida_phonopy.data.force_sets: ForceSetsData',
+            'phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
         ],
         'aiida.calculations': [
             'phonopy = aiida_phonopy.plugins.jobs.phonopy: PhonopyCalculation'

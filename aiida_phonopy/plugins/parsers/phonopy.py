@@ -6,7 +6,7 @@ from aiida.orm.data.parameter import ParameterData
 
 from aiida.orm import DataFactory
 
-ForceConstantsData = DataFactory('force_constants')
+ForceConstantsData = DataFactory('phonopy.force_constants')
 
 import numpy as np
 

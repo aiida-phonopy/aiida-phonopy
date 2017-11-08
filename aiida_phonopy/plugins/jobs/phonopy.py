@@ -12,7 +12,7 @@ from aiida.orm import DataFactory
 
 import numpy as np
 
-ForceSetsData = DataFactory('force_sets')
+ForceSetsData = DataFactory('phonopy.force_sets')
 
 # for future use
 def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):

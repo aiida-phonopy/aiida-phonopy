@@ -8,7 +8,7 @@ from aiida.work.workchain import WorkChain, ToContext
 from aiida.work.workfunction import workfunction
 from aiida.work.run import run, submit, async
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, DataFactory, WorkflowFactory
+from aiida.orm import load_node, DataFactory, WorkflowFactory
 
 from aiida.orm.data.base import Str, Float, Bool
 
@@ -16,7 +16,7 @@ from aiida.orm.data.base import Str, Float, Bool
 # For now all workchains should be copied to aiida/workflows
 from aiida_phonopy.workchains.phonon import get_path_using_seekpath, get_born_parameters
 
-ForceConstantsData = DataFactory('force_constants')
+ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')

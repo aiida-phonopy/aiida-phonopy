@@ -13,7 +13,7 @@ from aiida.work.workchain import _If, _While
 
 from aiida.orm import DataFactory
 
-ForceConstantsData = DataFactory('force_constants')
+ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')

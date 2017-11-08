@@ -17,10 +17,10 @@ from aiida.work.workchain import _If, _While
 # For now all workchains should be copied to aiida/workflows
 # from aiida.workflows.wc_optimize import OptimizeStructure
 
-ForceConstantsData = DataFactory('force_constants')
-ForceSetsData = DataFactory('force_sets')
-BandStructureData = DataFactory('band_structure')
-PhononDosData = DataFactory('phonon_dos')
+ForceConstantsData = DataFactory('phonopy.force_constants')
+ForceSetsData = DataFactory('phonopy.force_sets')
+BandStructureData = DataFactory('phonopy.band_structure')
+PhononDosData = DataFactory('phonopy.phonon_dos')
 
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
