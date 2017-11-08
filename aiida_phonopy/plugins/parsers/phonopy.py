@@ -81,7 +81,7 @@ class PhonopyParser(Parser):
             #array_data = ArrayData()
             #array_data.set_array('force_constants', force_constants)
 
-            new_nodes_list.append(('force_constants', ForceConstantsData(array=force_constants)))
+            new_nodes_list.append(('force_constants', ForceConstantsData(data=force_constants)))
         except KeyError:  # keys not found in json
             pass
 

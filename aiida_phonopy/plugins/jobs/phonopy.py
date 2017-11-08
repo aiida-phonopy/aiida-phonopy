@@ -65,11 +65,7 @@ def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
 
 def get_FORCE_SETS_txt(data_sets_object):
 
-    try:
-        data_sets_array = data_sets_object.get_array('force_sets')
-        data_sets = dict(data_sets_array[None][0])
-    except AttributeError:
-        data_sets = data_sets_object.get_force_sets()
+    data_sets = data_sets_object.get_force_sets()
 
 #    data_list = []
 #    for name in names:
