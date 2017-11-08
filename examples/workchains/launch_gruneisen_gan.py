@@ -7,7 +7,6 @@ if not is_dbenv_loaded():
 
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.work.run import run, submit, async
-from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool
 
 #VaspCalculation = CalculationFactory('vasp.vasp')
@@ -16,6 +15,7 @@ from aiida.orm.data.base import Str, Float, Bool
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
+StructureData = DataFactory('structure')
 
 
 # Define structure
@@ -122,7 +122,7 @@ if code_to_use == 'QE':
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
                      'pseudos_family': 'pbe_test_family',
-                      'machine': machine_dict}
+                     'machine': machine_dict}
 
     es_settings = ParameterData(dict=settings_dict)
 

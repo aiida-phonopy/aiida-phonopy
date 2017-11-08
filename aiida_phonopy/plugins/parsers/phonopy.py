@@ -1,12 +1,10 @@
 from aiida.parsers.parser import Parser
 from aiida.parsers.exceptions import OutputParsingError
-from aiida.orm.data.array import ArrayData
-
-from aiida.orm.data.parameter import ParameterData
 
 from aiida.orm import DataFactory
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
+ParameterData = DataFactory('parameter')
 
 import numpy as np
 

@@ -1,8 +1,4 @@
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.structure import StructureData
-from aiida.orm.data.array import ArrayData
-#from aiida.orm.data.force_sets import ForceSetsData
 
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -14,12 +10,15 @@ import numpy as np
 
 ForceSetsData = DataFactory('phonopy.force_sets')
 
+ForceConstantsData = DataFactory('phonopy.force_constants')
+ParameterData = DataFactory('parameter')
+StructureData = DataFactory('structure')
+
 # for future use
 def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
 
     from phonopy.structure.cells import get_primitive, get_supercell
     from phonopy.structure.symmetry import Symmetry
-     # from phonopy.interface import get_default_physical_units
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
 
     born_charges = nac_data.get_array('born_charges')

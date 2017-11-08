@@ -100,7 +100,6 @@ def phonopy_gruneisen(phonon_plus_structure,
     mesh_array.set_array('eigenvalues', eigenvalues_mesh)
     mesh_array.set_array('weights', weights_mesh)
 
-
     return {'band_structure': band_structure, 'mesh': mesh_array}
 
 
@@ -123,7 +122,7 @@ class GruneisenPhonopy(WorkChain):
 
     def create_unit_cell_expansions(self):
 
-        print('start Gruneisen {}'.format(self.pid))
+        print('start Gruneisen (pk={})'.format(self.pid))
         print ('start create cell expansions')
 
         # For testing
@@ -141,7 +140,6 @@ class GruneisenPhonopy(WorkChain):
 
             future = submit(PhononPhonopy,
                             structure=self.inputs.structure,
-                            machine=self.inputs.machine,
                             ph_settings=self.inputs.ph_settings,
                             es_settings=self.inputs.es_settings,
                             pressure=Float(expansions[1]),
