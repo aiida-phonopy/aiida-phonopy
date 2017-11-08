@@ -11,23 +11,27 @@ setup(
     requires=['phonopy', 'numpy'],
     setup_requires=['reentry'],
     reentry_register=True,
+    include_package_data=True,
     entry_points={
         'aiida.data': [
-            'band_structure = data.band_structure: BandStructureData',
-            'force_constants = data.force_constants: ForceConstantsData',
-            'force_sets = data.force_sets: ForceSetsData',
-            'phonon_dos = data.phonon_dos: PhononDosData'
+            'band_structure = aiida_phonopy.data.band_structure: BandStructureData',
+            'force_constants = aiida_phonopy.data.force_constants: ForceConstantsData',
+            'force_sets = aiida_phonopy.data.force_sets: ForceSetsData',
+            'phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
         ],
         'aiida.calculations': [
-            'phonopy = plugins.jobs.phonopy: PhonopyCalculation'
+            'phonopy = aiida_phonopy.plugins.jobs.phonopy: PhonopyCalculation'
         ],
         'aiida.parsers': [
-            'phonopy = plugins.parsers.phonopy: PhonopyParser'
+            'phonopy = aiida_phonopy.plugins.parsers.phonopy: PhonopyParser'
         ],
         'aiida.workflows': [
-            # 'wc_optimize = workchains.wf_optimize: OptimizeStructure',
-            #'wc_phonon = workchains.wf_phonon: PhononPhonopy',
-            #'wc_gruneisen = workchains.wf_gruneisen: GruneisenPhonopy',
+             'phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure',
+             'phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy',
+             'phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy'
+         #    'phonopy.optimize = workchains.wf_optimize: OptimizeStructure',
+         #   'phonopy.phonon = workchains.wf_phonon: PhononPhonopy',
+         #   'phonopy.gruneisen = workchains.wf_gruneisen: GruneisenPhonopy',
         ]
     }
 )

@@ -5,7 +5,7 @@ Also stores the mode Gruneisen parameters data in Gruneisen calculation.
 
 Special setters are provided to store the data directly from phonopy objects:
 
-.. automodule:: data.band_structure
+.. automodule:: aiida_phonopy.data.band_structure
 .. autoclass:: BandStructureData()
    :members: set_bands, set_labels, set_unitcell, set_band_structure_phonopy, set_band_structure_gruneisen
 

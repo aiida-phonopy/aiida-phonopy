@@ -7,7 +7,7 @@ of the non analytical corrections in the phonon calculation. get_epsilon
 
 Setters and getters are provided to store and get the data in phonopy format:
 
-.. automodule:: data.force_constants
+.. automodule:: aiida_phonopy.data.force_constants
 .. autoclass:: ForceConstantsData()
    :members: set_array, get_array, set_epsilon, get_epsilon, get_born_charges
 
