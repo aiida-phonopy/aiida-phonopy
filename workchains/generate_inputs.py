@@ -18,6 +18,7 @@ from aiida.orm.data.upf import UpfData
 PhonopyCalculation = CalculationFactory('phonopy')
 
 
+
 # Function obtained from aiida's quantumespresso plugin. Copied here for convinence
 def get_pseudos(structure, family_name):
     """
@@ -54,7 +55,7 @@ def get_pseudos(structure, family_name):
     return pseudos
 
 
-def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
+def generate_qe_params(structure, settings, pressure=0.0, type=None):
 
     """
     Generate the input paramemeters needed to run a calculation for PW (Quantum Espresso)
@@ -80,34 +81,31 @@ def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
     # structure
     inputs.structure = structure
 
-    inputs._options.resources = machine.dict.resources
-    inputs._options.max_wallclock_seconds = machine.dict.max_wallclock_seconds
-
+    # machine
+    inputs._options.resources = settings.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
     # Parameters
     parameters = dict(settings.dict.parameters)
 
     parameters['CONTROL'] = {'calculation': 'scf'}
-    parameters['ELECTRONS'] = {'conv_thr': 1.e-8}
 
     if type == 'optimize':
-        parameters['CONTROL'].update({'calculation': 'vc-relax'})
+        parameters['CONTROL'].update({'calculation': 'vc-relax',
+                                      'tstress': True,
+                                      'tprnfor': True,
+                                      'etot_conv_thr': 1.e-8,
+                                      'forc_conv_thr': 1.e-8})
         parameters['CELL'] = {'press': pressure,
                               'press_conv_thr': 1.e-3,
-                                 'cell_dynamics': 'bfgs',  # Quasi-Newton algorithm
+                               'cell_dynamics': 'bfgs',  # Quasi-Newton algorithm
                               #   'cell_dofree': 'all'
                               }  # Degrees of movement
         parameters['IONS'] = {'ion_dynamics': 'bfgs',
                               'ion_nstepe': 10}
 
-        parameters['CONTROL'].update({'tstress': True,
-                                      'tprnfor': True,
-                                      'etot_conv_thr': 1.e-8,
-                                      'forc_conv_thr': 1.e-8})
-
     if type == 'forces':
-        parameters['CONTROL'].update({'calculation': 'scf',
-                                      'tstress': True,
+        parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True,
                                       'etot_conv_thr': 1.e-8,
                                       'forc_conv_thr': 1.e-8
@@ -116,9 +114,8 @@ def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
         parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True})
 
-    if type == 'born_charges':  # Not working yet! (under development)
-        parameters['CONTROL'].update({'calculation': 'scf',
-                                      'tstress': True,
+    if type == 'born_charges':
+        parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True
                                       })
         parameters['INPUTPH'] = {'epsil': True,
@@ -158,13 +155,12 @@ def generate_qe_params(structure, machine, settings, pressure=0.0, type=None):
     return PwCalculation.process(), inputs
 
 
-def generate_lammps_params(structure, machine, settings, pressure=0.0, type=None):
+def generate_lammps_params(structure, settings, pressure=0.0, type=None):
     """
     Generate the input paramemeters needed to run a calculation for LAMMPS
 
-    :param structure:  aiida StructureData object
-    :param machine: aiida ParametersData object containing a dictionary with the computational resources information
-    :param settings: aiida ParametersData object containing a dictionary with the LAMMPS parameters
+    :param structure: StructureData object
+    :param settings: ParametersData object containing a dictionary with the LAMMPS parameters
     :return: Calculation process object, input dictionary
     """
 
@@ -178,8 +174,8 @@ def generate_lammps_params(structure, machine, settings, pressure=0.0, type=None
     inputs = LammpsCalculation.process().get_inputs_template()
     inputs.code = Code.get_from_string(code)
 
-    inputs._options.resources = machine.dict.resources
-    inputs._options.max_wallclock_seconds = machine.dict.max_wallclock_seconds
+    inputs._options.resources = settings.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
     inputs.structure = structure
     inputs.potential = ParameterData(dict=settings.dict.potential)
@@ -193,12 +189,11 @@ def generate_lammps_params(structure, machine, settings, pressure=0.0, type=None
     return LammpsCalculation.process(), inputs
 
 
-def generate_vasp_params(structure, machine, settings, type=None, pressure=0.0):
+def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     """
     Generate the input paramemeters needed to run a calculation for VASP
 
     :param structure:  StructureData object containing the crystal structure
-    :param machine:  ParametersData object containing a dictionary with the computational resources information
     :param settings:  ParametersData object containing a dictionary with the INCAR parameters
     :return: Calculation process object, input dictionary
     """
@@ -221,8 +216,9 @@ def generate_vasp_params(structure, machine, settings, type=None, pressure=0.0):
     # structure
     inputs.structure = structure
 
-    inputs._options.resources = machine.dict.resources
-    inputs._options.max_wallclock_seconds = machine.dict.max_wallclock_seconds
+    # machine
+    inputs._options.resources = settings.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)
@@ -313,7 +309,7 @@ def generate_vasp_params(structure, machine, settings, type=None, pressure=0.0):
             'type': 'data',
             'params': {}}]
 
-        # Kpoints
+    # Kpoints
     from pymatgen.io import vasp as vaspio
 
     if 'kpoints_per_atom' in settings.get_dict():
@@ -350,24 +346,24 @@ def generate_vasp_params(structure, machine, settings, type=None, pressure=0.0):
 
     inputs.settings = ParameterData(dict=settings)
 
-
     return VaspCalculation.process(), inputs
 
-
-def generate_inputs(structure, machine, es_settings, type=None, pressure=0.0):
+def generate_inputs(structure,  es_settings, type=None, pressure=0.0, machine=None):
 
     if type is None:
         plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
+
     else:
         plugin = Code.get_from_string(es_settings.dict.code[type]).get_attr('input_plugin')
 
-    # Choose the proper function according to calculation plugin
     if plugin in ['vasp.vasp']:
-        return generate_vasp_params(structure, machine, es_settings, type=type, pressure=pressure)
+        return generate_vasp_params(structure, es_settings, type=type, pressure=pressure)
+
     elif plugin in ['quantumespresso.pw']:
-        return generate_qe_params(structure, machine, es_settings, type=type, pressure=pressure)
+        return generate_qe_params(structure, es_settings, type=type, pressure=pressure)
+
     elif plugin in ['lammps.force', 'lammps.optimize', 'lammps.md']:
-        return generate_lammps_params(structure, machine, es_settings, type=type, pressure=pressure)
+        return generate_lammps_params(structure, es_settings, type=type, pressure=pressure)
     else:
-        print 'No supported plugin'
+        print ('No supported plugin')
         exit()
