@@ -289,7 +289,7 @@ def get_properties_from_phonopy(structure, ph_settings, force_constants):
     dos = PhononDosData(frequencies=total_dos[0],
                         dos=total_dos[1]*normalization_factor,
                         partial_dos=partial_dos[1]*normalization_factor,
-                        atom_labels=np.array(phonon.primitive.symbols))
+                        atom_labels=np.array(phonon.unitcell.get_chemical_symbols()))
 
     # THERMAL PROPERTIES (per primtive cell)
     phonon.set_thermal_properties()
