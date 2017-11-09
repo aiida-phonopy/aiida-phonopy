@@ -18,7 +18,7 @@ class ForceConstantsCalculation(BasePhonopyCalculation, JobCalculation):
         self._default_parser = "phonopy"
         self._additional_cmdline_params += ['--writefc']
 
-        self._internal_retrieve_list = [self._INOUT_FORCE_CONSTANTS]
+        self._internal_retrieve_list += [self._INOUT_FORCE_CONSTANTS]
 
     @classproperty
     def _use_methods(cls):

@@ -31,8 +31,9 @@ class BasePhonopyCalculation(object):
     _OUTPUT_DOS = 'partial_dos.dat'
     _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
 
-    # initialize additional files that should always be retrieved for the specific plugin
+    # initialize with default files that should always be retrieved, additional files are added in the specific plugin
     _internal_retrieve_list = []
+    #_internal_retrieve_list += ['FORCE_CONSTANTS']
 
     # Initialize list of commands to be specified for each specific plugin
     _additional_cmdline_params = []
@@ -176,8 +177,7 @@ class BasePhonopyCalculation(object):
         calcinfo.remote_copy_list = remote_copy_list
 
         # Retrieve files
-        #calcinfo.retrieve_list += ['FORCE_CONSTANTS']
-        calcinfo.retrieve_list += self._internal_retrieve_list
+        calcinfo.retrieve_list = self._internal_retrieve_list
 
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = [self._INPUT_FILE_NAME] + self._additional_cmdline_params

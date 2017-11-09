@@ -45,7 +45,7 @@ class PhonopyParser(Parser):
         new_nodes_list = []
 
         if self._calc._INOUT_FORCE_CONSTANTS in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME)
+            outfile = out_folder.get_abs_path(self._calc._INOUT_FORCE_CONSTANTS)
             object_force_constants = parse_FORCE_CONSTANTS(outfile)
             new_nodes_list.append(('force_constants', object_force_constants))
 
@@ -54,8 +54,8 @@ class PhonopyParser(Parser):
             dos_object = parse_partial_DOS(outfile, self._calc.inp.structure)
             new_nodes_list.append(('dos', dos_object))
 
-        if self._calc._OUTPUT_TP in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_TP)
+        if self._calc._OUTPUT_THERMAL_PROPERTIES in list_of_files:
+            outfile = out_folder.get_abs_path(self._calc._OUTPUT_THERMAL_PROPERTIES)
             tp_object = parse_thermal_properties(outfile)
             new_nodes_list.append(('thermal_properties', tp_object))
 

@@ -56,7 +56,7 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
                                   # Uncomment the following line to use phonopy remotely
-                                  'code': 'phonopy@boston_in',  # comment to use local phonopy
+                                  'code': 'phonopy_fc@boston_in',  # comment to use local phonopy
                                   'machine': machine_dict
                                   })
 
@@ -166,7 +166,7 @@ if True:
                  ph_settings=ph_settings,
                  # Optional settings
                  pressure=Float(0.0),
-                 optimize=Bool(True),
+                 optimize=Bool(False),
                  )
 
     print (result)

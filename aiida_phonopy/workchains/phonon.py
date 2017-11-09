@@ -42,7 +42,9 @@ def generate_phonopy_params(code, structure, ph_settings, force_sets):
     :param force_sets: ForceSetssData object containing the atomic forces and displacement information
     :return: Calculation process object, input dictionary
     """
-    PhonopyCalculation = CalculationFactory('phonopy')
+    
+    plugin = code.get_attr('input_plugin')
+    PhonopyCalculation = CalculationFactory(plugin)
 
     # The inputs
     inputs = PhonopyCalculation.process().get_inputs_template()

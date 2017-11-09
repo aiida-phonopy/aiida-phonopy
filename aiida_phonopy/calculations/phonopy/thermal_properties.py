@@ -18,7 +18,7 @@ class ThermalPropertiesCalculation(BasePhonopyCalculation, JobCalculation):
         self._default_parser = "phonopy"
         self._additional_cmdline_params += ['-t']
 
-        self._internal_retrieve_list = [self._OUTPUT_THERMAL_PROPERTIES]
+        self._internal_retrieve_list += [self._OUTPUT_THERMAL_PROPERTIES]
 
     @classproperty
     def _use_methods(cls):
