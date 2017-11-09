@@ -89,6 +89,7 @@ class BasePhonopyCalculation(object):
                 be returned by get_inputdata_dict (without the Code!)
         """
 
+
         try:
             parameters_data = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
@@ -139,7 +140,6 @@ class BasePhonopyCalculation(object):
         with open(cell_filename, 'w') as infile:
             infile.write(cell_txt)
 
-
         if data_sets is not None:
             force_sets_txt = get_FORCE_SETS_txt(data_sets)
             force_sets_filename = tempfolder.get_abs_path(self._INPUT_FORCE_SETS)
@@ -147,7 +147,7 @@ class BasePhonopyCalculation(object):
                 infile.write(force_sets_txt)
 
         if force_constants is not None:
-            force_constants_txt = get_FORCE_CONSTANTS_txt(data_sets)
+            force_constants_txt = get_FORCE_CONSTANTS_txt(force_constants)
             force_constants_filename = tempfolder.get_abs_path(self._INOUT_FORCE_CONSTANTS)
             with open(force_constants_filename, 'w') as infile:
                 infile.write(force_constants_txt)

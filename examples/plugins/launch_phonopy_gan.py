@@ -8,7 +8,7 @@ ParameterData = DataFactory('parameter')
 import numpy as np
 import os
 
-codename = 'phonopy@stern'
+codename = 'phonopy_fc@stern_in'
 code = Code.get_from_string(codename)
 
 cell = [[ 3.1900000572, 0,           0],

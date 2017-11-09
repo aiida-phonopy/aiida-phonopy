@@ -176,7 +176,8 @@ def get_poscar_txt(structure):
 def get_phonopy_conf_file_txt(parameters_object):
     parameters = parameters_object.get_dict()
     input_file = 'DIM = {} {} {}\n'.format(*np.diag(parameters['supercell']))
-    input_file += 'PRIMITIVE_AXIS = {} {} {}  {} {} {}  {} {} {}'.format(
+    input_file += 'PRIMITIVE_AXIS = {} {} {}  {} {} {}  {} {} {}\n'.format(
         *np.array(parameters['primitive']).reshape((1, 9))[0])
+    input_file += 'MP = {} {} {}\n'.format(*parameters['mesh'])
     return input_file
 
