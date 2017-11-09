@@ -20,18 +20,18 @@ setup(
             'phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
         ],
         'aiida.calculations': [
-            'phonopy = aiida_phonopy.plugins.jobs.phonopy: PhonopyCalculation'
+            'phonopy.force_constants = aiida_phonopy.calculations.force_constants: ForceConstantsCalculation',
+            'phonopy.dos = aiida_phonopy.calculations.dos: ForceConstantsCalculation',
+            'phonopy.thermal_properties = aiida_phonopy.calculations.thermal_properties: ThermalPropertiesCalculation'
+
         ],
         'aiida.parsers': [
-            'phonopy = aiida_phonopy.plugins.parsers.phonopy: PhonopyParser'
+            'phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser'
         ],
         'aiida.workflows': [
              'phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure',
              'phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy',
              'phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy'
-         #    'phonopy.optimize = workchains.wf_optimize: OptimizeStructure',
-         #   'phonopy.phonon = workchains.wf_phonon: PhononPhonopy',
-         #   'phonopy.gruneisen = workchains.wf_gruneisen: GruneisenPhonopy',
         ]
     }
 )
