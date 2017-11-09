@@ -20,9 +20,9 @@ setup(
             'phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
         ],
         'aiida.calculations': [
-            'phonopy.force_constants = aiida_phonopy.calculations.force_constants: ForceConstantsCalculation',
-            'phonopy.dos = aiida_phonopy.calculations.dos: ForceConstantsCalculation',
-            'phonopy.thermal_properties = aiida_phonopy.calculations.thermal_properties: ThermalPropertiesCalculation'
+            'phonopy.force_constants = aiida_phonopy.calculations.phonopy.force_constants: ForceConstantsCalculation',
+            'phonopy.dos = aiida_phonopy.calculations.phonopy.dos: DosCalculation',
+            'phonopy.thermal_properties = aiida_phonopy.calculations.phonopy.thermal_properties: ThermalPropertiesCalculation'
 
         ],
         'aiida.parsers': [
