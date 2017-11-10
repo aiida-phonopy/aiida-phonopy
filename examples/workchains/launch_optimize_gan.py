@@ -10,10 +10,6 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool, Int
 
-#VaspCalculation = CalculationFactory('vasp.vasp')
-#PwCalculation = CalculationFactory('quantumespresso.pw')
-#PhonopyCalculation = CalculationFactory('phonopy')
-
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
 
