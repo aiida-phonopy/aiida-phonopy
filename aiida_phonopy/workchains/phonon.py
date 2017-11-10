@@ -68,6 +68,18 @@ def generate_phonopy_params(code, structure, ph_settings, force_sets):
     return PhonopyCalculation.process(), inputs
 
 
+def wf_like_calculation(work_function):
+    """
+    This function defines decorator to emulate the output stored in self.ctx of remote calculation
+    in local workfunctions
+    :param work_function: @workfunction decorated function
+    :return: corresponding workcalculation function
+    """
+    def work_calculation(*args, **kwargs):
+        return work_function(*args, **kwargs).values()[0].get_inputs_dict().values()[0]
+    return work_calculation
+
+
 @workfunction
 def create_supercells_with_displacements_using_phonopy(structure, ph_settings):
     """
@@ -150,6 +162,7 @@ def add_nac_to_force_constants(force_constants, array_data):
     return {'force_constants': force_constants_nac}
 
 
+@wf_like_calculation
 @workfunction
 def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     """
@@ -390,13 +403,13 @@ class PhononPhonopy(WorkChain):
         testing = False
         if testing:
             from aiida.orm import load_node
-            nodes = [13147, 13152, 13157, 13162]  # VASP
+            nodes = [3086, 3089, 3092, 3095]  # VASP
             labels = ['structure_1', 'structure_0', 'structure_3', 'structure_2']
             for pk, label in zip(nodes, labels):
                 future = load_node(pk)
                 self.ctx._content[label] = future
 
-            self.ctx._content['born_charges'] = load_node(13167)
+            #self.ctx._content['born_charges'] = load_node(13167)
             return
 
         # Forces
@@ -452,7 +465,6 @@ class PhononPhonopy(WorkChain):
             JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
                                                                         structure=self.ctx.final_structure,
                                                                         ph_settings=self.inputs.ph_settings,
-                                                                        # machine=self.inputs.machine,
                                                                         force_sets=self.ctx.force_sets)
             future = submit(JobCalculation, **calculation_input)
             print 'phonopy FC calc:', future.pid
@@ -472,10 +484,7 @@ class PhononPhonopy(WorkChain):
         print ('calculate phonon properties')
         self.report('calculate phonon properties')
 
-        try:
-            force_constants = self.ctx.phonopy_output['force_constants']
-        except TypeError:
-            force_constants = self.ctx.phonopy_output.out.force_constants
+        force_constants = self.ctx.phonopy_output.out.force_constants
 
         if 'born_charges' in self.ctx:
             force_constants = add_nac_to_force_constants(force_constants, self.ctx.born_charges.out.output_array)['force_constants']
