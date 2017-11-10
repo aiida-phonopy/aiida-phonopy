@@ -61,7 +61,7 @@ class BasePhonopyCalculation(object):
             "force_constants": {
                 'valid_types': ForceConstantsData,
                 'additional_parameter': None,
-                'linkname': 'data_sets',
+                'linkname': 'force_constants',
                 'docstring': ("Use a node that specifies the data_sets "
                               "for the namelists"),
             },
@@ -105,20 +105,9 @@ class BasePhonopyCalculation(object):
         except KeyError:
             raise InputValidationError("no code is specified for this calculation")
 
-        try:
-            nac_data = inputdict.pop(self.get_linkname('nac_data'))
-        except KeyError:
-            nac_data = None
-
-        try:
-            data_sets = inputdict.pop(self.get_linkname('data_sets'))
-        except KeyError:
-            data_sets = None
-
-        try:
-            force_constants = inputdict.pop(self.get_linkname('force_constants'))
-        except KeyError:
-            force_constants = None
+        nac_data = inputdict.pop(self.get_linkname('nac_data'), None)
+        data_sets = inputdict.pop(self.get_linkname('data_sets'), None)
+        force_constants = inputdict.pop(self.get_linkname('force_constants'), None)
 
         if data_sets is None and force_constants is None:
             raise InputValidationError("no force_sets nor force_constants are specified for this calculation")
@@ -151,7 +140,7 @@ class BasePhonopyCalculation(object):
             force_constants_filename = tempfolder.get_abs_path(self._INOUT_FORCE_CONSTANTS)
             with open(force_constants_filename, 'w') as infile:
                 infile.write(force_constants_txt)
-            self._additional_cmdline_params += ['--read_fc']
+            self._additional_cmdline_params += ['--readfc']
 
         # For future use (not actually used, test only)
         if nac_data is not None:

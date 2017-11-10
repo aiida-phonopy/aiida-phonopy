@@ -15,7 +15,7 @@ class DosCalculation(BasePhonopyCalculation, JobCalculation):
     def _init_internal_params(self):
         super(DosCalculation, self)._init_internal_params()
 
-        self._default_parser = "phonopy"
+        self._default_parser = 'phonopy'
         self._additional_cmdline_params += ['--pdos=0']
 
         self._internal_retrieve_list += [self._OUTPUT_DOS]
