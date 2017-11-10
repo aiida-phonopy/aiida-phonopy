@@ -2,11 +2,6 @@
 # in 3 functions: generate_vasp_params(), generate_qe_params() and generate_lammps_params().
 # generate_inputs() function at the end of the file decides which function to use according to the plugin
 
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
-
-
 from aiida.work.run import run, submit, async
 from aiida.orm import Code, CalculationFactory
 from aiida.orm.data.parameter import ParameterData
@@ -14,7 +9,6 @@ from aiida.orm.data.array import ArrayData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
-
 
 # Function obtained from aiida's quantumespresso plugin. Copied here for convinence
 def get_pseudos(structure, family_name):

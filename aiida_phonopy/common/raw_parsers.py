@@ -1,4 +1,3 @@
-
 from aiida.orm import DataFactory
 
 import numpy as np

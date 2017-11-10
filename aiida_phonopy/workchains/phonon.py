@@ -70,7 +70,7 @@ def generate_phonopy_params(code, structure, ph_settings, force_sets):
 
 def wf_like_calculation(work_function):
     """
-    This function defines decorator to emulate the output stored in self.ctx of remote calculation
+    This function defines decorator to emulate the output stored in self.ctx of remote calculations
     in local workfunctions
     :param work_function: @workfunction decorated function
     :return: corresponding workcalculation function
