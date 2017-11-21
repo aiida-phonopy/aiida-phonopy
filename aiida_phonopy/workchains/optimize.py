@@ -29,7 +29,6 @@ def standardize_cell(structure):
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy.structure.atoms import atom_data
 
-
     bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
@@ -132,8 +131,8 @@ class OptimizeStructure(WorkChain):
             structure = self.inputs.structure
         else:
             structure = parse_optimize_calculation(self.ctx.optimize)['output_structure']
+
         if self.inputs.standarize_cell:
-        #if False:
             structure = standardize_cell(structure)['standardized_structure']
 
         JobCalculation, calculation_input = generate_inputs(structure,
@@ -143,12 +142,12 @@ class OptimizeStructure(WorkChain):
                                                             type='optimize',
                                                             )
 
-        # calculation_input._label = 'optimize'
-        #future = submit(JobCalculation, **calculation_input)
-        #self.report('optimize calculation pk = {}'.format(future.pid))
+        calculation_input._label = 'optimize'
+        future = submit(JobCalculation, **calculation_input)
+        self.report('optimize calculation pk = {}'.format(future.pid))
 
-        #return ToContext(optimize=future)
-        self.ctx.optimize = load_node(5487)
+        return ToContext(optimize=future)
+        # self.ctx.optimize = load_node(5487)  # for testing purposes
 
     def get_data(self):
         print ('get_job')
