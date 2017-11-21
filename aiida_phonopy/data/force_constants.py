@@ -1,5 +1,5 @@
 from aiida.orm.data.array import ArrayData
-
+import numpy
 
 class ForceConstantsData(ArrayData):
     """
@@ -24,7 +24,6 @@ class ForceConstantsData(ArrayData):
         Internally, it is stored as a force_constants.npy file in numpy format.
         :param array: The numpy array to store.
         """
-        import numpy
 
         self.set_array('force_constants', numpy.array(force_constants))
 
@@ -56,9 +55,8 @@ class ForceConstantsData(ArrayData):
         Internally, it is stored as a force_constants.npy file in numpy format.
         :param array: The numpy array to store.
         """
-        import numpy
 
-        self.set_array('_born_charges', numpy.array(born_charges))
+        self.set_array('born_charges', numpy.array(born_charges))
 
     def set_epsilon(self, epsilon):
         """
@@ -67,6 +65,5 @@ class ForceConstantsData(ArrayData):
         Internally, it is stored as a force_constants.npy file in numpy format.
         :param array: The numpy array to store.
         """
-        import numpy
 
-        self.set_array('_born_charges', numpy.array(epsilon))
+        self.set_array('epsilon', numpy.array(epsilon))

@@ -11,7 +11,7 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.base import Str, Float, Bool, Int
 from aiida.work.workchain import _If, _While
 
-from aiida.orm import DataFactory
+from aiida.orm import DataFactory, load_node
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
@@ -77,7 +77,7 @@ class OptimizeStructure(WorkChain):
         spec.input("tolerance_stress", valid_type=Float, required=False, default=Float(1e-2))
         spec.input("max_iterations", valid_type=Int, required=False, default=Int(3))
         # should be Bool but it doesn't work! bug?
-        spec.input("standarize_cell", valid_type=Int, required=False, default=Int(0))
+        spec.input("standarize_cell", valid_type=Bool, required=False, default=Bool(False))
 
         spec.outline(cls.optimize_cycle, _While(cls.not_converged)(cls.optimize_cycle), cls.get_data)
 
@@ -89,7 +89,7 @@ class OptimizeStructure(WorkChain):
         #forces = output_array.get_array('forces')
         #stresses = output_array.get_array('stress')
 
-        parsed_data = parse_optimize_calculation(self.ctx.get('optimize'))
+        parsed_data = parse_optimize_calculation(self.ctx.optimize)
         forces = parsed_data['forces']
         stresses = parsed_data['stresses']
 
@@ -131,8 +131,7 @@ class OptimizeStructure(WorkChain):
         if not 'optimize' in self.ctx:
             structure = self.inputs.structure
         else:
-            structure = self.ctx.optimize.out.output_structure
-
+            structure = parse_optimize_calculation(self.ctx.optimize)['output_structure']
         if self.inputs.standarize_cell:
         #if False:
             structure = standardize_cell(structure)['standardized_structure']
@@ -145,17 +144,18 @@ class OptimizeStructure(WorkChain):
                                                             )
 
         # calculation_input._label = 'optimize'
-        future = submit(JobCalculation, **calculation_input)
-        self.report('optimize calculation pk = {}'.format(future.pid))
+        #future = submit(JobCalculation, **calculation_input)
+        #self.report('optimize calculation pk = {}'.format(future.pid))
 
-        return ToContext(optimize=future)
+        #return ToContext(optimize=future)
+        self.ctx.optimize = load_node(5487)
 
     def get_data(self):
         print ('get_job')
 
         # self.ctx.structure = self.ctx.get('optimize').out.output_structure
 
-        self.out('optimized_structure', self.ctx.optimize.out.output_structure)
+        self.out('optimized_structure', parse_optimize_calculation(self.ctx.optimize)['output_structure'])
         self.out('optimized_structure_data', self.ctx.optimize.out.output_parameters)
 
         return

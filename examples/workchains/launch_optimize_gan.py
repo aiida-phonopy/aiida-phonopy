@@ -76,25 +76,12 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    es_settings = ParameterData(dict=incar_dict)
-
-    from pymatgen.io import vasp as vaspio
-
-    potcar = vaspio.Potcar(symbols=['Ga', 'N'],
-                           functional='PBE')
-
-    # custom k-points
-    # supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-    kpoints_dict = {'type': 'Monkhorst',
-                    'points': [2, 2, 2],
-                    'shift': [0.0, 0.0, 0.0]}
-
-    settings_dict = {'code': {'optimize': 'vasp541mpi@boston',
-                              'forces': 'vasp541mpi@boston'},
+    settings_dict = {'code': {'optimize': 'vasp@stern_in',
+                              'forces': 'vasp@stern_in'},
                      'parameters': incar_dict,
-                     #'kpoints': kpoints_dict,
-                     'kpoints_per_atom': 100,  # k-point density
-                     'pseudos': potcar.as_dict(),
+                     'kpoints_density': 0.5,  # k-point density,
+                     'pseudos_family': 'pbe_test_family',
+                     'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
                      }
 
@@ -111,8 +98,8 @@ if code_to_use == 'QE':
         'ELECTRONS': {'conv_thr': 1.e-6,}
     }
 
-    settings_dict = {'code': {'optimize': 'pw@boston_in',
-                              'forces': 'pw@boston_in'},
+    settings_dict = {'code': {'optimize': 'pw6@boston_in',
+                              'forces': 'pw6@boston_in'},
                      'parameters': parameters_dict,
                      'kpoints_density': 0.5,  # k-point density
                      'pseudos_family': 'pbe_test_family',
@@ -154,7 +141,6 @@ if code_to_use == 'LAMMPS':
                      }
 
     es_settings = ParameterData(dict=settings_dict)
-
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 

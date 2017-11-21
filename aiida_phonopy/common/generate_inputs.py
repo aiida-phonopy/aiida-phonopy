@@ -3,15 +3,16 @@
 # generate_inputs() function at the end of the file decides which function to use according to the plugin
 
 from aiida.work.run import run, submit, async
-from aiida.orm import Code, CalculationFactory
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.array import ArrayData
-from aiida.orm.data.structure import StructureData
-from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.upf import UpfData
+from aiida.orm import Code, CalculationFactory, DataFactory
+# from aiida.orm.data.upf import UpfData
+
+
+KpointsData = DataFactory("array.kpoints")
+ParameterData = DataFactory('parameter')
+StructureData = DataFactory('structure')
 
 # Function obtained from aiida's quantumespresso plugin. Copied here for convinence
-def get_pseudos(structure, family_name):
+def get_pseudos_qe(structure, family_name):
     """
     Set the pseudo to use for all atomic kinds, picking pseudos from the
     family with name family_name.
@@ -121,27 +122,7 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
 
     inputs.kpoints = kpoints
 
-    # Pseudopotentials
-    ######## TEST: Manual import #########
-    manual_pseudo = False
-    if manual_pseudo:
-        # Pseudopotentials (test)
-        pseudo_dir = '/Users/abel/software/espresso/pbe/'
-        raw_pseudos = [
-            pseudo_dir + "Ga.pbe-dn-rrkjus_psl.1.0.0.UPF",
-            pseudo_dir + "N.pbe-n-rrkjus_psl.1.0.0.UPF"]
-
-        pseudos = {}
-
-        for file_path in raw_pseudos:
-            pseudo, created = UpfData.get_or_create(file_path, use_first=True)
-            pseudos.update({pseudo.element: pseudo})
-
-        inputs.pseudo = pseudos
-        return PwCalculation.process(), inputs
-    ######## END TEST #########
-
-    inputs.pseudo = get_pseudos(structure, settings.dict.pseudos_family)
+    inputs.pseudo = get_pseudos_qe(structure, settings.dict.pseudos_family)
 
     return PwCalculation.process(), inputs
 
@@ -180,6 +161,38 @@ def generate_lammps_params(structure, settings, pressure=0.0, type=None):
     return LammpsCalculation.process(), inputs
 
 
+def get_pseudos_vasp(structure, family_name, folder_path=None):
+    """
+    Set the pseudo to use for all atomic kinds, picking pseudos from the
+    family with name family_name.
+
+    :note: The structure must already be set.
+
+    :param family_name: the name of the group containing the pseudos
+    """
+    import numpy as np
+
+    PawData = DataFactory('vasp.paw')
+
+    unique_symbols = np.unique([site.kind_name for site in structure.sites]).tolist()
+
+    paw_cls = PawData()
+    if folder_path is not None:
+        paw_cls.import_family(folder_path,
+                              familyname=family_name,
+                              family_desc='This is a test family',
+                              # store=True,
+                              stop_if_existing=False
+                              )
+
+    pseudos = {}
+    for symbol in unique_symbols:
+        pseudos[symbol] = paw_cls.load_paw(family=family_name,
+                                           symbol=symbol)[0]
+
+    return pseudos
+
+
 def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     """
     Generate the input paramemeters needed to run a calculation for VASP
@@ -202,7 +215,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
     # code
     inputs.code = Code.get_from_string(code)
-
 
     # structure
     inputs.structure = structure
@@ -269,83 +281,29 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
-    inputs.incar = ParameterData(dict=incar)
+    inputs.parameters = ParameterData(dict=incar)
 
     # POTCAR (pseudo potentials)
-    inputs.potcar = ParameterData(dict=settings.dict.pseudos)
+    inputs.paw = get_pseudos_vasp(structure, settings.dict.pseudos_family,
+                                  folder_path=settings.dict.family_folder)
 
-    settings_parse = {'PARSER_INSTRUCTIONS': []}
-    pinstr = settings_parse['PARSER_INSTRUCTIONS']
-    pinstr += [{
-            'instr': 'array_data_parser',
-            'type': 'data',
-            'params': {}},
-        {
-            'instr': 'output_parameters',
-            'type': 'data',
-            'params': {}},
-        {
-            'instr': 'dummy_error_parser',
-            'type': 'error',
-            'params': {}},
-        {
-            'instr': 'default_structure_parser',
-            'type': 'structure',
-            'params': {}}
-    ]
-
-    if type == 'born_charges':
-        pinstr += [{
-            'instr': 'born_data_parser',
-            'type': 'data',
-            'params': {}}]
 
     # Kpoints
-    from pymatgen.io import vasp as vaspio
+    kpoints = KpointsData()
+    kpoints.set_cell_from_structure(structure)
+    kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
+    inputs.kpoints = kpoints
 
-    if 'kpoints_per_atom' in settings.get_dict():
-        kpoints_pg = vaspio.Kpoints.automatic_density(structure.get_pymatgen_structure(), settings.dict.kpoints_per_atom)
-    else:
-        kpoints_pg = vaspio.Kpoints(comment='aiida generated',
-                                    style=settings.dict.kpoints['type'],
-                                    kpts=(settings.dict.kpoints['points'],),
-                                    kpts_shift=settings.dict.kpoints['shift'])
-
-    inputs.kpoints = ParameterData(dict=kpoints_pg.as_dict())
-
-    # Parser settings
-    settings = {'PARSER_INSTRUCTIONS': []}
-    pinstr = settings['PARSER_INSTRUCTIONS']
-
-    pinstr.append({
-        'instr': 'array_data_parser',
-        'type': 'data',
-        'params': {}
-    })
-    pinstr.append({
-        'instr': 'output_parameters',
-        'type': 'data',
-        'params': {}
-    })
-
-    # additional files to return
-    settings.setdefault(
-        'ADDITIONAL_RETRIEVE_LIST', [
-            'vasprun.xml',
-        ]
-    )
-
-    inputs.settings = ParameterData(dict=settings)
+    #VaspCalculation.process().set_parser_name('vasp.pymatgen')
 
     return VaspCalculation.process(), inputs
 
 def generate_inputs(structure,  es_settings, type=None, pressure=0.0, machine=None):
 
-    if type is None:
-        plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
-
-    else:
+    try:
         plugin = Code.get_from_string(es_settings.dict.code[type]).get_attr('input_plugin')
+    except:
+        plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
 
     if plugin in ['vasp.vasp']:
         return generate_vasp_params(structure, es_settings, type=type, pressure=pressure)

@@ -52,8 +52,8 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
                                   # Uncomment the following line to use phonopy remotely
-                                  'code': 'phonopy_fc@boston_in',  # this uses phonopy.force_constants plugin
-                                  'machine': machine_dict
+                                  # 'code': 'phonopy_fc@boston_in',  # this uses phonopy.force_constants plugin
+                                  # 'machine': machine_dict
                                   })
 
 #code_to_use = 'VASP'
@@ -72,30 +72,16 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    es_settings = ParameterData(dict=incar_dict)
-
-    from pymatgen.io import vasp as vaspio
-
-    potcar = vaspio.Potcar(symbols=['Ga', 'N'],
-                           functional='PBE')
-
-    # custom k-points
-    # supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-    kpoints_dict = {'type': 'Monkhorst',
-                    'points': [2, 2, 2],
-                    'shift': [0.0, 0.0, 0.0]}
-
-    settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                              'forces': 'vasp544mpi@boston',
-                              'born_charges': 'vasp544mpi@boston'},
+    settings_dict = {'code': {'optimize': 'vasp@stern_in',
+                              'forces': 'vasp@stern_in',
+                              'born_charges': 'vasp@stern_in'},
                      'parameters': incar_dict,
-                     #'kpoints': kpoints_dict,
-                     'kpoints_per_atom': 100,  # k-point density
-                     'pseudos': potcar.as_dict(),
+                     'kpoints_density': 0.5,  # k-point density,
+                     'pseudos_family': 'pbe_test_family',
+                     'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
                      }
 
-    # pseudos = ParameterData(dict=potcar.as_dict())
     es_settings = ParameterData(dict=settings_dict)
 
 
@@ -162,7 +148,7 @@ if True:
                  ph_settings=ph_settings,
                  # Optional settings
                  pressure=Float(0.0),
-                 optimize=Bool(False),
+                 optimize=Bool(True),
                  )
 
     print (result)

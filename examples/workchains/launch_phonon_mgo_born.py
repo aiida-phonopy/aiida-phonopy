@@ -55,7 +55,7 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                                 [0.5, 0.5, 0.0]],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
-                                  'symmetry_precision': 1e-5,
+                                  'symmetry_precision': 1e-5
                                   # Uncomment to use phonopy remotely
                                   # 'code': 'phonopy_fc@boston'  # this uses phonopy.force_constants plugin
                                   # 'machine': machine_dict
@@ -68,32 +68,21 @@ incar_dict = {
     'ENCUT'  : 400,
     'ALGO'   : 38,
     'ISMEAR' : 0,
-    'SIGMA'  : 0.02,
+    'SIGMA'  : 0.01,
     'GGA'    : 'PS'
 }
 
-es_settings = ParameterData(dict=incar_dict)
-
-from pymatgen.io import vasp as vaspio
-
-potcar = vaspio.Potcar(symbols=['Mg', 'O'],
-                       functional='PBE')
-
-# custom k-points
-# supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-kpoints_dict = {'type': 'Monkhorst',
-                'points': [2, 2, 2],
-                'shift': [0.0, 0.0, 0.0]}
-
-settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                          'forces': 'vasp544mpi@boston',
-                          'born_charges': 'vasp544mpi@boston'},
+settings_dict = {'code': {'optimize': 'vasp@stern_in',
+                          'forces': 'vasp@stern_in',
+                          'born_charges': 'vasp@stern_in'},
                  'parameters': incar_dict,
-                 #'kpoints': kpoints_dict, # optional explicit definition of kpoints mesh
-                 'kpoints_per_atom': 100,  # k-point density
-                 'pseudos': potcar.as_dict(),
+                 'kpoints_density': 0.5,  # k-point density,
+                 'pseudos_family': 'pbe_test_family',
+                 'family_folder': '/Users/abel/VASP/test_paw/',
                  'machine': machine_dict
                  }
+
+es_settings = ParameterData(dict=settings_dict)
 
 PhononPhonopy = WorkflowFactory('phonopy.phonon')
 

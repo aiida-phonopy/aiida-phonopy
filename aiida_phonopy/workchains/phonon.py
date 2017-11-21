@@ -157,7 +157,7 @@ def add_nac_to_force_constants(force_constants, array_data):
 
     force_constants_nac = ForceConstantsData(data=force_constants.get_data(),
                                              born_charges=array_data.get_array('born_charges'),
-                                             epsilon=array_data.get_array('epsilon'))
+                                             epsilon=array_data.get_array('dielectric_tensor'))
 
     return {'force_constants': force_constants_nac}
 
@@ -373,7 +373,7 @@ class PhononPhonopy(WorkChain):
         # For testing
         testing = False
         if testing:
-            self.ctx._content['optimize'] = load_node(13047)
+            self.ctx._content['optimize'] = load_node(4095)
             return
 
         print ('optimize workchain: {}'.format(future.pid))
@@ -403,13 +403,13 @@ class PhononPhonopy(WorkChain):
         testing = False
         if testing:
             from aiida.orm import load_node
-            nodes = [3086, 3089, 3092, 3095]  # VASP
-            labels = ['structure_1', 'structure_0', 'structure_3', 'structure_2']
+            nodes = [4115, 4118]  # VASP
+            labels = ['structure_1', 'structure_0']
             for pk, label in zip(nodes, labels):
                 future = load_node(pk)
                 self.ctx._content[label] = future
 
-            #self.ctx._content['born_charges'] = load_node(13167)
+            self.ctx._content['single_point'] = load_node(4208)
             return
 
         # Forces
@@ -437,8 +437,8 @@ class PhononPhonopy(WorkChain):
                                                                 # pressure=self.input.pressure,
                                                                 type='born_charges')
             future = submit(JobCalculation, **calculation_input)
-            print ('born_charges: {}'.format(future.pid))
-            calcs['born_charges'] = future
+            print ('single_point: {}'.format(future.pid))
+            calcs['single_point'] = future
 
         return ToContext(**calcs)
 
@@ -486,8 +486,9 @@ class PhononPhonopy(WorkChain):
 
         force_constants = self.ctx.phonopy_output.out.force_constants
 
-        if 'born_charges' in self.ctx:
-            force_constants = add_nac_to_force_constants(force_constants, self.ctx.born_charges.out.output_array)['force_constants']
+        print self.ctx._get_dict()
+        if 'single_point' in self.ctx:
+            force_constants = add_nac_to_force_constants(force_constants, self.ctx.single_point.out.born_charges)['force_constants']
 
         phonon_properties = get_properties_from_phonopy(structure=self.ctx.final_structure,
                                                         ph_settings=self.inputs.ph_settings,
