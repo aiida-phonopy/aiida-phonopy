@@ -11,6 +11,7 @@ ForceSetsData = DataFactory('phonopy.force_sets')
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
+ArrayData = DataFactory('array')
 
 from aiida_phonopy.common.raw_parsers import get_BORN_txt, get_FORCE_CONSTANTS_txt, get_FORCE_SETS_txt, \
     get_phonopy_conf_file_txt, get_poscar_txt
@@ -27,6 +28,10 @@ class BasePhonopyCalculation(object):
     _INPUT_NAC = 'BORN'
 
     _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
+
+    _OUTPUT_DOS = 'partial_dos.dat'
+    _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
+    _OUTPUT_BAND_STRUCTURE = 'band.yaml'
 
 
     # initialize with default files that should always be retrieved, additional files are added in the specific plugin
@@ -71,7 +76,7 @@ class BasePhonopyCalculation(object):
                 'docstring': "Use a node for the structure",
             },
             "nac_data": {
-                'valid_types': ParameterData,
+                'valid_types': ArrayData,
                 'additional_parameter': None,
                 'linkname': 'nac_data',
                 'docstring': "Use a node for the Non-analitical corrections data",
@@ -142,13 +147,12 @@ class BasePhonopyCalculation(object):
                 infile.write(force_constants_txt)
             self._additional_cmdline_params += ['--readfc']
 
-        # For future use (not actually used, test only)
         if nac_data is not None:
             born_txt = get_BORN_txt(structure, parameters_data, nac_data)
             nac_filename = tempfolder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)
-
+            self._additional_cmdline_params += ['--nac']
 
 
         # ============================ calcinfo ================================

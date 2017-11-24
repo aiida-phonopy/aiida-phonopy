@@ -80,7 +80,7 @@ for dos, symbol in zip(partial_dos, partial_symbols):
     plt.plot(frequency, dos, label='{}'.format(symbol))
 
 plt.legend()
-#plt.show()
+# plt.show()
 
 # Thermal properties
 thermal = wc.out.thermal_properties
@@ -88,7 +88,7 @@ thermal = wc.out.thermal_properties
 free_energy = thermal.get_array('free_energy')
 entropy = thermal.get_array('entropy')
 temperature = thermal.get_array('temperature')
-cv = thermal.get_array('cv')
+cv = thermal.get_array('heat_capacity')
 
 plt.figure(3)
 

@@ -12,16 +12,14 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
     A basic plugin for calculating phonon properties using Phonopy.
     """
 
-    _OUTPUT_DOS = 'partial_dos.dat'
-    _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
-
     def _init_internal_params(self):
         super(PhonopyCalculation, self)._init_internal_params()
 
         self._default_parser = 'phonopy'
 
         self._internal_retrieve_list += [self._OUTPUT_DOS,
-                                         self._OUTPUT_THERMAL_PROPERTIES]
+                                         self._OUTPUT_THERMAL_PROPERTIES,
+                                         self._OUTPUT_BAND_STRUCTURE]
 
         self._calculation_cmd = ['--pdos=0', '-t']
 
@@ -36,7 +34,7 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
         retdict['bands'] = {
             'valid_types': BandStructureData,
             'additional_parameter': None,
-            'linkname': 'kpoints',
+            'linkname': 'bands',
             'docstring': "Use the node defining the band structure to use",
         }
 

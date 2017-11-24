@@ -92,6 +92,17 @@ class BandStructureData(ArrayData):
         self.set_array('eigenvalues', numpy.array([band[3] for band in band_structure_gruneisen._paths]))
         self.set_array('frequencies', numpy.array([band[4] for band in band_structure_gruneisen._paths]))
 
+    def set_frequencies(self, frequencies):
+        """
+        Return the frequencies in the node as a numpy array
+        """
+
+        import numpy
+
+        frequencies = numpy.array(frequencies)
+
+        self.set_array('frequencies', frequencies)
+
     def get_unitcell(self):
         """
         Return the unitcell in the node as a numpy array

@@ -56,7 +56,7 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
                                   # Uncomment to use remote phonopy to calculate the Force constants
-                                  # 'code': 'phonopy@stern_outside'
+                                  # 'code_fc': 'phonopy@stern_outside'
                                   # 'machine': machine_dict
                                   })
 

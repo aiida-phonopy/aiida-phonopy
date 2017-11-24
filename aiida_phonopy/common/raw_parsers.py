@@ -7,6 +7,7 @@ ArrayData = DataFactory('array')
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 PhononDosData = DataFactory('phonopy.phonon_dos')
+BandStructureData = DataFactory('phonopy.band_structure')
 
 
 # PARSE FILES TO DATA
@@ -25,13 +26,25 @@ def parse_FORCE_CONSTANTS(filename):
     return ForceConstantsData(data=force_constants)
 
 
-def parse_partial_DOS(filename, structure):
+def parse_partial_DOS(filename, structure, parameters):
     partial_dos = np.loadtxt(filename)
 
-    dos = PhononDosData(frequencies=partial_dos[0],
+    from phonopy.structure.atoms import Atoms as PhonopyAtoms
+    from phonopy import Phonopy
+
+    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
+                        positions=[site.position for site in structure.sites],
+                        cell=structure.cell)
+
+    phonon = Phonopy(bulk,
+                     supercell_matrix=parameters.dict.supercell,
+                     primitive_matrix=parameters.dict.primitive,
+                     symprec=parameters.dict.symmetry_precision)
+
+    dos = PhononDosData(frequencies=partial_dos.T[0],
                         dos=np.sum(partial_dos[:, 1:], axis=1),
                         partial_dos=partial_dos[:, 1:].T,
-                        atom_labels=[site.kind_name for site in structure.sites])
+                        atom_labels=phonon.get_primitive().get_chemical_symbols())
 
     return dos
 
@@ -60,6 +73,31 @@ def parse_thermal_properties(filename):
     return tp_object
 
 
+def parse_band_structure(filename, input_bands):
+    import yaml
+
+    frequencies = []
+    with open(filename, 'r') as stream:
+        bands = dict(yaml.load(stream))
+
+    for k in bands['phonon']:
+
+        frequencies.append([b['frequency'] for b in k['band']])
+
+    nb = input_bands.get_number_of_bands()
+
+    frequencies = np.array(frequencies)
+    print (frequencies.shape)
+    frequencies = frequencies.reshape((nb, -1, frequencies.shape[1]))
+
+    band_structure = BandStructureData(frequencies=frequencies,
+                                       bands=input_bands.get_bands(),
+                                       labels=input_bands.get_labels(),
+                                       unitcell=input_bands.get_unitcell())
+
+    return band_structure
+
+
 
 # WRITE DATA TO TEXT
 
@@ -72,8 +110,8 @@ def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
     epsilon = nac_data.get_array('epsilon')
 
     print ('inside born parameters')
-    pmat = parameters['primitive']
-    smat = parameters['supercell']
+    pmat = parameters.dict.primitive
+    smat = parameters.dict.supercell
 
     ucell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                          positions=[site.position for site in structure.sites],
@@ -98,12 +136,12 @@ def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
     factor = 14.0
     born_txt = ('{}\n'.format(factor))
     for num in epsilon.flatten():
-        born_txt += ('{0:4.8f}'.format(num))
+        born_txt += ('{0:4.8f} '.format(num))
     born_txt += ('\n')
 
     for atom in reduced_borns:
-        for num in atom:
-            born_txt += ('{0:4.8f}'.format(num))
+        for num in atom.flatten():
+            born_txt += ('{0:4.8f} '.format(num))
         born_txt += ('\n')
     born_txt += ('{}\n'.format(factor))
 
@@ -179,8 +217,15 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
         *np.array(parameters['primitive']).reshape((1, 9))[0])
     input_file += 'MP = {} {} {}\n'.format(*parameters['mesh'])
 
+    input_file += 'BAND = '
     if bands is not None:
-        input_file += 'BANDS = ' + ' '.join(np.array(bands.get_band_ranges().flatten(), dtype=str))
+        for i, band in enumerate(bands.get_band_ranges()):
+            input_file += ' '.join(np.array(band.flatten(), dtype=str))
+            if i < bands.get_number_of_bands() - 1:
+                input_file += ','
+
+        input_file += '\n'
+        input_file += 'BAND_POINTS = {}'.format(bands.get_number_of_points())
 
     return input_file
 
