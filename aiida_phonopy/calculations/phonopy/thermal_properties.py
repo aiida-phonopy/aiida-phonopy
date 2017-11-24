@@ -12,6 +12,8 @@ class ThermalPropertiesCalculation(BasePhonopyCalculation, JobCalculation):
     Requirement: the node should be able to import phonopy
     """
 
+    _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
+
     def _init_internal_params(self):
         super(ThermalPropertiesCalculation, self)._init_internal_params()
 

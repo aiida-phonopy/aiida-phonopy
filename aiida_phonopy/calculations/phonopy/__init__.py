@@ -18,7 +18,7 @@ from aiida_phonopy.common.raw_parsers import get_BORN_txt, get_FORCE_CONSTANTS_t
 class BasePhonopyCalculation(object):
     """
     A basic plugin for calculating force constants using Phonopy.
-    Requirement: the node should be able to import phonopy
+    Requirement: the node should be able to import phonopy if NAC is used
     """
 
     _INPUT_FILE_NAME = 'phonopy.conf'
@@ -28,8 +28,6 @@ class BasePhonopyCalculation(object):
 
     _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
 
-    _OUTPUT_DOS = 'partial_dos.dat'
-    _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
 
     # initialize with default files that should always be retrieved, additional files are added in the specific plugin
     _internal_retrieve_list = []
@@ -37,6 +35,7 @@ class BasePhonopyCalculation(object):
 
     # Initialize list of commands to be specified for each specific plugin
     _additional_cmdline_params = []
+    _calculation_cmd = []
 
     @classproperty
     def _baseclass_use_methods(cls):
@@ -108,6 +107,7 @@ class BasePhonopyCalculation(object):
         nac_data = inputdict.pop(self.get_linkname('nac_data'), None)
         data_sets = inputdict.pop(self.get_linkname('data_sets'), None)
         force_constants = inputdict.pop(self.get_linkname('force_constants'), None)
+        bands = inputdict.pop(self.get_linkname('bands'), None)
 
         if data_sets is None and force_constants is None:
             raise InputValidationError("no force_sets nor force_constants are specified for this calculation")
@@ -119,7 +119,7 @@ class BasePhonopyCalculation(object):
         # =================== prepare the python input files =====================
 
         cell_txt = get_poscar_txt(structure)
-        input_txt = get_phonopy_conf_file_txt(parameters_data)
+        input_txt = get_phonopy_conf_file_txt(parameters_data, bands=bands)
 
         input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
         with open(input_filename, 'w') as infile:
@@ -168,9 +168,12 @@ class BasePhonopyCalculation(object):
         # Retrieve files
         calcinfo.retrieve_list = self._internal_retrieve_list
 
-        codeinfo = CodeInfo()
-        codeinfo.cmdline_params = [self._INPUT_FILE_NAME] + self._additional_cmdline_params
-        codeinfo.code_uuid = code.uuid
-        codeinfo.withmpi = False
-        calcinfo.codes_info = [codeinfo]
+        calcinfo.codes_info = []
+        for property_cmd in self._calculation_cmd:
+            codeinfo = CodeInfo()
+            codeinfo.cmdline_params = [self._INPUT_FILE_NAME] + self._additional_cmdline_params + [property_cmd]
+            codeinfo.code_uuid = code.uuid
+            codeinfo.withmpi = False
+            calcinfo.codes_info += [codeinfo]
+
         return calcinfo

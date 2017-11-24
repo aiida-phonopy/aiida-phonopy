@@ -172,11 +172,15 @@ def get_poscar_txt(structure):
     return poscar_txt
 
 
-def get_phonopy_conf_file_txt(parameters_object):
+def get_phonopy_conf_file_txt(parameters_object, bands=None):
     parameters = parameters_object.get_dict()
     input_file = 'DIM = {} {} {}\n'.format(*np.diag(parameters['supercell']))
     input_file += 'PRIMITIVE_AXIS = {} {} {}  {} {} {}  {} {} {}\n'.format(
         *np.array(parameters['primitive']).reshape((1, 9))[0])
     input_file += 'MP = {} {} {}\n'.format(*parameters['mesh'])
+
+    if bands is not None:
+        input_file += 'BANDS = ' + ' '.join(np.array(bands.get_band_ranges().flatten(), dtype=str))
+
     return input_file
 

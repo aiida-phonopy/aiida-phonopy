@@ -22,7 +22,8 @@ setup(
         'aiida.calculations': [
             'phonopy.force_constants = aiida_phonopy.calculations.phonopy.force_constants: ForceConstantsCalculation',
             'phonopy.dos = aiida_phonopy.calculations.phonopy.dos: DosCalculation',
-            'phonopy.thermal_properties = aiida_phonopy.calculations.phonopy.thermal_properties: ThermalPropertiesCalculation'
+            'phonopy.thermal_properties = aiida_phonopy.calculations.phonopy.thermal_properties: ThermalPropertiesCalculation',
+            'phonopy.phonopy = aiida_phonopy.calculations.phonopy.phonopy: PhonopyCalculation'
         ],
         'aiida.parsers': [
             'phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser'

@@ -50,7 +50,6 @@ class PhononDosData(ArrayData):
         """
         Return the force constants stored in the node as a numpy array
         """
-
         partial_dos = self.get_array('partial_dos')
 
         if full:
@@ -64,7 +63,6 @@ class PhononDosData(ArrayData):
 
         return  self.get_array('frequencies')
 
-
     def get_atom_labels(self, full=False):
         """
         Store the phonon dos as a numpy array.
@@ -73,7 +71,6 @@ class PhononDosData(ArrayData):
         import numpy
 
         labels = self.get_attr("atom_labels")
-
         if full:
             return labels
         return numpy.array(labels)[self._get_equivalent_atom_list()].tolist()

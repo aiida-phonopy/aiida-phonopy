@@ -146,18 +146,19 @@ def create_forces_set(**kwargs):
 
 
 @workfunction
-def add_nac_to_force_constants(force_constants, array_data):
+def add_nac_to_force_constants(force_constants, born_charges, array_data):
     """
     Create a new ForceConstants object with Born charges info from VASP array output included
 
     :param force_constants: original force constants
-    :param array_data: ArrayData object that contains the dielectric tensor and Born charges
+    :param born_charges: ArrayData object that contains the born effective charges
+    :param array_data: ArrayData object that contains the dielectric tensor
     :return: force_constants: ForceConstants object
     """
 
     force_constants_nac = ForceConstantsData(data=force_constants.get_data(),
-                                             born_charges=array_data.get_array('born_charges'),
-                                             epsilon=array_data.get_array('dielectric_tensor'))
+                                             born_charges=born_charges.get_array('born_charges'),
+                                             epsilon=array_data.get_array('dielectric_tensor')[-1])
 
     return {'force_constants': force_constants_nac}
 
@@ -303,7 +304,7 @@ def get_properties_from_phonopy(structure, ph_settings, force_constants):
 
     dos = PhononDosData(frequencies=total_dos[0],
                         dos=total_dos[1]*normalization_factor,
-                        partial_dos=partial_dos[1]*normalization_factor,
+                        partial_dos=np.array(partial_dos[1:])*normalization_factor,
                         atom_labels=np.array(phonon.unitcell.get_chemical_symbols()))
 
     # THERMAL PROPERTIES (per primtive cell)
@@ -488,7 +489,9 @@ class PhononPhonopy(WorkChain):
 
         print self.ctx._get_dict()
         if 'single_point' in self.ctx:
-            force_constants = add_nac_to_force_constants(force_constants, self.ctx.single_point.out.born_charges)['force_constants']
+            force_constants = add_nac_to_force_constants(force_constants,
+                                                         self.ctx.single_point.out.born_charges,
+                                                         self.ctx.single_point.out.output_array)['force_constants']
 
         phonon_properties = get_properties_from_phonopy(structure=self.ctx.final_structure,
                                                         ph_settings=self.inputs.ph_settings,

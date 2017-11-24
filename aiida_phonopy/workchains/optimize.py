@@ -76,7 +76,7 @@ class OptimizeStructure(WorkChain):
         spec.input("tolerance_stress", valid_type=Float, required=False, default=Float(1e-2))
         spec.input("max_iterations", valid_type=Int, required=False, default=Int(3))
         # should be Bool but it doesn't work! bug?
-        spec.input("standarize_cell", valid_type=Bool, required=False, default=Bool(False))
+        spec.input("standarize_cell", valid_type=Bool, required=False, default=Bool(True))
 
         spec.outline(cls.optimize_cycle, _While(cls.not_converged)(cls.optimize_cycle), cls.get_data)
 
@@ -122,7 +122,7 @@ class OptimizeStructure(WorkChain):
         if not 'counter' in self.ctx:
             self.ctx.counter = 0
 
-        self.ctx.counter +=1
+        self.ctx.counter += 1
 
         # self.ctx._get_dict()
         print ('start optimization')

@@ -202,6 +202,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     :return: Calculation process object, input dictionary
     """
 
+
     if type is None:
         code = settings.dict.code
     else:
@@ -211,7 +212,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
     VaspCalculation = CalculationFactory(plugin)
 
-    inputs = VaspCalculation.process().get_inputs_template()
+    class VaspCalculation2(VaspCalculation):
+            _default_parser = 'vasp.pymatgen'
+
+    inputs = VaspCalculation2.process().get_inputs_template()
 
     # code
     inputs.code = Code.get_from_string(code)
@@ -293,8 +297,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     kpoints.set_cell_from_structure(structure)
     kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
     inputs.kpoints = kpoints
-
-    #VaspCalculation.process().set_parser_name('vasp.pymatgen')
 
     return VaspCalculation.process(), inputs
 
