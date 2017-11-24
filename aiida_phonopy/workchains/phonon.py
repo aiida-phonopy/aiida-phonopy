@@ -158,7 +158,7 @@ def add_nac_to_force_constants(force_constants, born_charges, array_data):
 
     force_constants_nac = ForceConstantsData(data=force_constants.get_data(),
                                              born_charges=born_charges.get_array('born_charges'),
-                                             epsilon=array_data.get_array('dielectric_tensor')[-1])
+                                             epsilon=array_data.get_array('epsilon')[-1])
 
     return {'force_constants': force_constants_nac}
 
@@ -357,7 +357,10 @@ class PhononPhonopy(WorkChain):
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
 
-        spec.outline(_If(cls.use_optimize)(cls.optimize), cls.create_displacement_calculations, cls.get_force_constants, cls.calculate_phonon_properties)
+        spec.outline(_If(cls.use_optimize)(cls.optimize),
+                     cls.create_displacement_calculations,
+                     cls.get_force_constants,
+                     cls.calculate_phonon_properties)
 
     def use_optimize(self):
         print('start phonon (pk={})'.format(self.pid))
@@ -487,11 +490,11 @@ class PhononPhonopy(WorkChain):
 
         force_constants = self.ctx.phonopy_output.out.force_constants
 
-        print self.ctx._get_dict()
+        # print self.ctx._get_dict()
         if 'single_point' in self.ctx:
-            force_constants = add_nac_to_force_constants(force_constants,
-                                                         self.ctx.single_point.out.born_charges,
-                                                         self.ctx.single_point.out.output_array)['force_constants']
+            force_constants = add_nac_to_force_constants(force_constants=force_constants,
+                                                         born_charges=self.ctx.single_point.out.born_charges,
+                                                         array_data=self.ctx.single_point.out.output_array)['force_constants']
 
         phonon_properties = get_properties_from_phonopy(structure=self.ctx.final_structure,
                                                         ph_settings=self.inputs.ph_settings,
