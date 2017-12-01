@@ -42,13 +42,13 @@ for i, scaled_position in enumerate(scaled_positions):
 machine_dict = {'resources': {'num_machines': 1,
                               'parallel_env': 'mpi*',
                               'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
+                'max_wallclock_seconds': 3600 * 10,
                 }
 
 # PHONOPY settings
-ph_settings = ParameterData(dict={'supercell': [[2,0,0],
-                                                [0,2,0],
-                                                [0,0,2]],
+ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+                                                [0, 2, 0],
+                                                [0, 0, 2]],
                                   'primitive': [[1.0, 0.0, 0.0],
                                                 [0.0, 1.0, 0.0],
                                                 [0.0, 0.0, 1.0]],

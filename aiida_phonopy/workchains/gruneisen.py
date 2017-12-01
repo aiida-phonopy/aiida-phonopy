@@ -42,11 +42,15 @@ def get_phonon(structure, force_constants, ph_settings):
 
     phonon.set_force_constants(force_constants.get_data())
 
-    if force_constants.epsilon_and_born_exist():
-        phonon.set_nac_params(get_born_parameters(phonon,
-                                                  force_constants.get_born_charges(),
-                                                  force_constants.get_epsilon(),
-                                                  ph_settings.dict.symmetry_precision))
+    try:
+        if force_constants.epsilon_and_born_exist():
+            phonon.set_nac_params(get_born_parameters(phonon,
+                                                      force_constants.get_born_charges(),
+                                                      force_constants.get_epsilon(),
+                                                      ph_settings.dict.symmetry_precision))
+    except:
+        pass
+
     return phonon
 
 @workfunction

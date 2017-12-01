@@ -41,7 +41,7 @@ for i, scaled_position in enumerate(scaled_positions):
 machine_dict = {'resources': {'num_machines': 1,
                               'parallel_env': 'mpi*',
                               'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 30 * 60,
+                'max_wallclock_seconds': 3600 * 10,
                 }
 
 
