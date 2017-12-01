@@ -1,37 +1,13 @@
 from setuptools import setup, find_packages
 
-setup(
-    name='aiida-phonopy',
-    version='0.1',
-    description='AiiDA plugin for running phonon calculations using phonopy',
-    author='Abel Carreras',
-    author_email='abelcarreras83@gmail.com',
-    license='MIT license',
-    packages=find_packages(exclude=['aiida']),
-    requires=['phonopy', 'numpy'],
-    setup_requires=['reentry'],
-    reentry_register=True,
-    include_package_data=True,
-    entry_points={
-        'aiida.data': [
-            'phonopy.band_structure = aiida_phonopy.data.band_structure: BandStructureData',
-            'phonopy.force_constants = aiida_phonopy.data.force_constants: ForceConstantsData',
-            'phonopy.force_sets = aiida_phonopy.data.force_sets: ForceSetsData',
-            'phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData'
-        ],
-        'aiida.calculations': [
-            'phonopy.force_constants = aiida_phonopy.calculations.phonopy.force_constants: ForceConstantsCalculation',
-            'phonopy.dos = aiida_phonopy.calculations.phonopy.dos: DosCalculation',
-            'phonopy.thermal_properties = aiida_phonopy.calculations.phonopy.thermal_properties: ThermalPropertiesCalculation',
-            'phonopy.phonopy = aiida_phonopy.calculations.phonopy.phonopy: PhonopyCalculation'
-        ],
-        'aiida.parsers': [
-            'phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser'
-        ],
-        'aiida.workflows': [
-             'phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure',
-             'phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy',
-             'phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy'
-        ]
-    }
-)
+import json
+
+if __name__ == '__main__':
+    with open('setup.json', 'r') as info:
+        kwargs = json.load(info)
+
+    setup(reentry_register=True,
+          include_package_data=True,
+          packages=find_packages(exclude=['aiida']),
+          **kwargs
+          )
