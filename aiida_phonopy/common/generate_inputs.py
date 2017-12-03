@@ -58,10 +58,11 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
     :return: Calculation process object, input dictionary
     """
 
-    if type is None:
-        code = settings.dict.code
-    else:
+    try:
         code = settings.dict.code[type]
+    except:
+        code = settings.dict.code
+
 
     plugin = Code.get_from_string(code).get_attr('input_plugin')
     PwCalculation = CalculationFactory(plugin)
@@ -136,10 +137,11 @@ def generate_lammps_params(structure, settings, pressure=0.0, type=None):
     :return: Calculation process object, input dictionary
     """
 
-    if type is None:
-        code = settings.dict.code
-    else:
+    try:
         code = settings.dict.code[type]
+    except:
+        code = settings.dict.code
+
 
     plugin = Code.get_from_string(code).get_attr('input_plugin')
     LammpsCalculation = CalculationFactory(plugin)
@@ -202,11 +204,11 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     :return: Calculation process object, input dictionary
     """
 
-
-    if type is None:
-        code = settings.dict.code
-    else:
+    try:
         code = settings.dict.code[type]
+    except:
+        code = settings.dict.code
+
 
     plugin = Code.get_from_string(code).get_attr('input_plugin')
 

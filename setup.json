@@ -18,7 +18,8 @@
       "phonopy.band_structure = aiida_phonopy.data.band_structure: BandStructureData",
       "phonopy.force_constants = aiida_phonopy.data.force_constants: ForceConstantsData",
       "phonopy.force_sets = aiida_phonopy.data.force_sets: ForceSetsData",
-      "phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData"
+      "phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData",
+      "phonopy.nac = aiida_phonopy.data.nac: NacData"
     ],
     "aiida.calculations": [
       "phonopy.force_constants = aiida_phonopy.calculations.phonopy.force_constants: ForceConstantsCalculation",

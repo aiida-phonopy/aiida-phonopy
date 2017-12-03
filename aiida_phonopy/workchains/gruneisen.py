@@ -26,7 +26,7 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 import numpy as np
 
 
-def get_phonon(structure, force_constants, ph_settings):
+def get_phonon(structure, force_constants, ph_settings, nac_data=None):
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
 
@@ -42,38 +42,51 @@ def get_phonon(structure, force_constants, ph_settings):
 
     phonon.set_force_constants(force_constants.get_data())
 
-    try:
-        if force_constants.epsilon_and_born_exist():
-            phonon.set_nac_params(get_born_parameters(phonon,
-                                                      force_constants.get_born_charges(),
-                                                      force_constants.get_epsilon(),
-                                                      ph_settings.dict.symmetry_precision))
-    except:
-        pass
+
+    if nac_data is not None:
+            phonon.set_nac_params(get_born_parameters(phonon, nac_data))
 
     return phonon
 
 @workfunction
-def phonopy_gruneisen(phonon_plus_structure,
-                      phonon_plus_fc,
-                      phonon_minus_structure,
-                      phonon_minus_fc,
-                      phonon_origin_structure,
-                      phonon_origin_fc,
-                      ph_settings):
+def phonopy_gruneisen(**kwargs):
+
     from phonopy import PhonopyGruneisen
+
+    phonon_plus_structure = kwargs.pop('phonon_plus_structure')
+    phonon_plus_fc = kwargs.pop('phonon_plus_fc')
+    phonon_minus_structure = kwargs.pop('phonon_minus_structure')
+    phonon_minus_fc = kwargs.pop('phonon_minus_fc')
+    phonon_origin_structure = kwargs.pop('phonon_origin_structure')
+    phonon_origin_fc = kwargs.pop('phonon_origin_fc')
+    ph_settings = kwargs.pop('ph_settings')
+    band_structure = kwargs.pop('band_structure')
+
+    if 'phonon_plus_nac' in kwargs:
+        phonon_plus_nac = kwargs.pop('phonon_plus_nac')
+        phonon_minus_nac = kwargs.pop('phonon_plus_nac')
+        phonon_origin_nac = kwargs.pop('phonon_plus_nac')
+    else:
+        phonon_plus_nac = None
+        phonon_minus_nac = None
+        phonon_origin_nac = None
+
+
 
     phonon_plus = get_phonon(phonon_plus_structure,
                              phonon_plus_fc,
-                             ph_settings)
+                             ph_settings,
+                             nac_data=phonon_plus_nac)
 
     phonon_minus = get_phonon(phonon_minus_structure,
                               phonon_minus_fc,
-                              ph_settings)
+                              ph_settings,
+                              nac_data=phonon_minus_nac)
 
     phonon_origin = get_phonon(phonon_origin_structure,
                                phonon_origin_fc,
-                               ph_settings)
+                               ph_settings,
+                               nac_data=phonon_origin_nac)
 
     gruneisen = PhonopyGruneisen(phonon_origin,  # equilibrium
                                  phonon_plus,  # plus
@@ -82,7 +95,7 @@ def phonopy_gruneisen(phonon_plus_structure,
     gruneisen.set_mesh(ph_settings.dict.mesh, is_gamma_center=False, is_mesh_symmetry=True)
 
     # BAND STRUCTURE
-    band_structure = get_path_using_seekpath(phonon_origin.get_primitive())
+    # band_structure = get_path_using_seekpath(phonon_origin.get_primitive())
     gruneisen.set_band_structure(band_structure.get_band_ranges(),
                                  band_structure.get_number_of_points())
 
@@ -161,13 +174,30 @@ class GruneisenPhonopy(WorkChain):
         print ('calculate gruneisen')
         print self.ctx.plus, self.ctx.minus, self.ctx.origin
 
+        input_gruneisen = {'phonon_plus_structure' : self.ctx.plus.out.final_structure,
+                           'phonon_plus_fc' : self.ctx.plus.out.force_constants,
+                           'phonon_minus_structure' : self.ctx.minus.out.final_structure,
+                           'phonon_minus_fc': self.ctx.minus.out.force_constants,
+                           'phonon_origin_structure' : self.ctx.origin.out.final_structure,
+                           'phonon_origin_fc' : self.ctx.origin.out.force_constants,
+                           'ph_settings' : self.inputs.ph_settings,
+                           'band_structure' : self.ctx.origin.out.band_structure}
+
+        if 'nac_data' in self.ctx.origin.get_outputs():
+            input_gruneisen.update({'phonon_plus_nac' : self.ctx.plus.out.nac,
+                                    'phonon_minus_nac': self.ctx.minus.out.nac,
+                                    'phonon_origin_nac': self.ctx.origin.out.nac})
+
+        gruneisen_results = phonopy_gruneisen(**input_gruneisen)
+
         gruneisen_results = phonopy_gruneisen(phonon_plus_structure=self.ctx.plus.out.final_structure,
                                               phonon_plus_fc=self.ctx.plus.out.force_constants,
                                               phonon_minus_structure=self.ctx.minus.out.final_structure,
                                               phonon_minus_fc=self.ctx.minus.out.force_constants,
                                               phonon_origin_structure=self.ctx.origin.out.final_structure,
                                               phonon_origin_fc=self.ctx.origin.out.force_constants,
-                                              ph_settings=self.inputs.ph_settings)
+                                              ph_settings=self.inputs.ph_settings,
+                                              band_structure=self.ctx.origin.out.band_structure)
 
         self.out('band_structure', gruneisen_results['band_structure'])
         self.out('mesh', gruneisen_results['mesh'])

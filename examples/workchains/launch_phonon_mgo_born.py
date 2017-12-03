@@ -58,7 +58,7 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'symmetry_precision': 1e-5,
                                   # Uncomment to use phonopy remotely
                                   #'code_fc': 'phonopy_fc@boston',  # this uses phonopy.force_constants plugin
-                                  'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
+                                  # 'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
                                   'machine': machine_dict
                                   })
 
@@ -73,9 +73,7 @@ incar_dict = {
     'GGA'    : 'PS'
 }
 
-settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                          'forces': 'vasp@stern_in',
-                          'born_charges': 'vasp@stern_in'},
+settings_dict = {'code': 'vasp@stern',
                  'parameters': incar_dict,
                  'kpoints_density': 0.5,  # k-point density,
                  'pseudos_family': 'pbe_test_family',

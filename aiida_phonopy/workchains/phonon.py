@@ -21,6 +21,7 @@ ForceConstantsData = DataFactory('phonopy.force_constants')
 ForceSetsData = DataFactory('phonopy.force_sets')
 BandStructureData = DataFactory('phonopy.band_structure')
 PhononDosData = DataFactory('phonopy.phonon_dos')
+NacData = DataFactory('phonopy.nac')
 
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
@@ -99,6 +100,14 @@ def wf_like_calculation(work_function):
     return work_calculation
 
 
+def phonopy_bulk_from_structure(structure):
+    from phonopy.structure.atoms import Atoms as PhonopyAtoms
+    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
+                        positions=[site.position for site in structure.sites],
+                        cell=structure.cell)
+    return bulk
+
+
 @workfunction
 def create_supercells_with_displacements_using_phonopy(structure, ph_settings):
     """
@@ -109,16 +118,10 @@ def create_supercells_with_displacements_using_phonopy(structure, ph_settings):
     :param phonopy_input: ParametersData object containing a dictionary with the data needed for phonopy
     :return: A set of StructureData Objects containing the supercells with displacements
     """
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
-    import numpy as np
 
     # Generate phonopy phonon object
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-
-    phonon = Phonopy(bulk,
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
                      supercell_matrix=ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
@@ -193,15 +196,11 @@ def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     :param force_sets: ForceSetsData object that contains the atomic forces and displacements info (datasets dict in phonopy)
     :return: ForceConstantsData object containing the 2nd order force constants calculated with phonopy
     """
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
 
     # Generate phonopy phonon object
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
 
-    phonon = Phonopy(bulk,
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
@@ -221,9 +220,13 @@ def get_nac_from_data(**kwargs):
     """
     Worfunction to extract nac ArrayData object from calc
     """
-    nac_data = ArrayData()
-    nac_data.set_array('born_charges', kwargs.pop('born_charges').get_array('born_charges'))
-    nac_data.set_array('epsilon', kwargs.pop('epsilon').get_array('epsilon')[-1])
+
+    nac_data = NacData(born_charges=kwargs.pop('born_charges').get_array('born_charges'),
+                       epsilon=kwargs.pop('epsilon').get_array('epsilon')[-1])
+
+    # nac_data = ArrayData()
+    # nac_data.set_array('born_charges', kwargs.pop('born_charges').get_array('born_charges'))
+    # nac_data.set_array('epsilon', kwargs.pop('epsilon').get_array('epsilon')[-1])
 
     return {'nac_data': nac_data}
 
@@ -257,22 +260,10 @@ def get_path_using_seekpath2(phonopy_structure, band_resolution=30):
     return band_structure
 
 
-def get_path_using_seekpath(structure, ph_settings, band_resolution=30):
+def get_path_using_seekpath(structure, band_resolution=30):
     import seekpath
 
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
-    from phonopy import Phonopy
-
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-
-    phonon = Phonopy(bulk,
-                     supercell_matrix=ph_settings.dict.supercell,
-                     primitive_matrix=ph_settings.dict.primitive,
-                     symprec=ph_settings.dict.symmetry_precision)
-
-    phonopy_structure = phonon.get_primitive()
+    phonopy_structure = phonopy_bulk_from_structure(structure)
     cell = phonopy_structure.get_cell()
     scaled_positions = phonopy_structure.get_scaled_positions()
     numbers = phonopy_structure.get_atomic_numbers()
@@ -299,9 +290,29 @@ def get_path_using_seekpath(structure, ph_settings, band_resolution=30):
     return band_structure
 
 
+def get_primitive(structure, ph_settings):
+
+    from phonopy import Phonopy
+
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+                     supercell_matrix=ph_settings.dict.supercell,
+                     primitive_matrix=ph_settings.dict.primitive,
+                     symprec=ph_settings.dict.symmetry_precision)
+
+    primitive_phonopy = phonon.get_primitive()
+
+    primitive_cell = primitive_phonopy.get_cell()
+    symbols = primitive_phonopy.get_chemical_symbols()
+    positions = primitive_phonopy.get_positions()
+
+    primitive_structure = StructureData(cell=primitive_cell)
+    for symbol, position in zip(symbols, positions):
+        primitive_structure.append_atom(position=position, symbols=symbol)
+
+    return primitive_structure
 
 
-def get_born_parameters(phonon, born_unitcell, epsilon, symprec=1e-5):
+def get_born_parameters_old(phonon, born_unitcell, epsilon, symprec=1e-5):
     from phonopy.interface import get_default_physical_units
     from phonopy.interface.vasp import symmetrize_borns_and_epsilon
     from phonopy.structure.cells import get_supercell, get_primitive
@@ -328,6 +339,62 @@ def get_born_parameters(phonon, born_unitcell, epsilon, symprec=1e-5):
                 'dielectric': epsilon}
 
     return non_anal
+
+
+def get_born_parameters(phonon, nac_data):
+    from phonopy.interface import get_default_physical_units
+
+    epsilon = nac_data.get_epsilon()
+    born_primitive = nac_data.get_born_charges()
+
+    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
+
+    non_anal = {'born': born_primitive,
+                'factor': factor,
+                'dielectric': epsilon}
+
+    return non_anal
+
+
+def get_born_parameters_from_data(phonon, nac, symprec=1e-5):
+    from phonopy.interface import get_default_physical_units
+    from phonopy.interface.vasp import symmetrize_borns_and_epsilon
+    from phonopy.structure.cells import get_supercell, get_primitive
+
+    pmat = phonon.get_primitive_matrix()
+    smat = phonon.get_supercell_matrix()
+    cell = phonon.get_unitcell()
+    born_nac = nac.get_born()
+    epsilon = nac.get_epsilon()
+
+    nac_cell = phonopy_bulk_from_structure(nac.get_structure())
+
+
+    borns_, epsilon_ = symmetrize_borns_and_epsilon(born_nac,
+                                                    epsilon,
+                                                    nac_cell,
+                                                    symprec=symprec)
+
+    np.dot(nac_cell, cell)
+
+    #inv_smat = np.linalg.inv(smat)
+    scell = get_supercell(cell, smat, symprec=symprec)
+    u2u_map = scell.get_unitcell_to_unitcell_map()
+    # pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
+
+    pcell = phonon.get_primitive()
+    p2s_map = pcell.get_primitive_to_supercell_map()
+    born_primitive = borns_[[u2u_map[i] for i in p2s_map]]
+
+    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
+
+    non_anal = {'born': born_primitive,
+                'factor': factor,
+                'dielectric': epsilon}
+
+    return non_anal
+
+
 
 @wf_like_calculation
 @workfunction
@@ -364,10 +431,7 @@ def get_properties_from_phonopy(**kwargs):
     if 'nac_data' in kwargs:
         print ('use born charges')
         nac_data = kwargs.pop('nac_data')
-        born_parameters = get_born_parameters(phonon,
-                                              nac_data.get_array('born_charges'),
-                                              nac_data.get_array('epsilon'),
-                                              ph_settings.dict.symmetry_precision)
+        born_parameters = get_born_parameters(phonon, nac_data)
 
         phonon.set_nac_params(born_parameters)
 
@@ -439,6 +503,7 @@ class PhononPhonopy(WorkChain):
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      cls.create_displacement_calculations,
@@ -479,6 +544,9 @@ class PhononPhonopy(WorkChain):
         else:
             self.ctx.final_structure = self.inputs.structure
 
+        # get bands and primitive cell
+        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure, self.inputs.ph_settings)
+
         supercells = create_supercells_with_displacements_using_phonopy(self.ctx.final_structure,
                                                                         self.inputs.ph_settings)
 
@@ -517,9 +585,9 @@ class PhononPhonopy(WorkChain):
             calcs[label] = future
 
         # Born charges
-        if 'born_charges' in self.inputs.es_settings.dict.code:
+        if bool(self.inputs.use_nac):
             self.report('calculate born charges')
-            JobCalculation, calculation_input = generate_inputs(self.ctx.final_structure,
+            JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
                                                                 # self.inputs.machine,
                                                                 self.inputs.es_settings,
                                                                 # pressure=self.input.pressure,
@@ -549,7 +617,7 @@ class PhononPhonopy(WorkChain):
 
         if 'code_fc' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')
-            code_label = self.inputs.ph_settings.get_dict()['code_fc']
+            code_label = self.inputs.ph_settings.get_dict()['code']
             JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
                                                                         structure=self.ctx.final_structure,
                                                                         ph_settings=self.inputs.ph_settings,
@@ -575,7 +643,7 @@ class PhononPhonopy(WorkChain):
         force_constants = self.ctx.phonopy_output.out.force_constants
         self.out('force_constants', force_constants)
 
-        bands = get_path_using_seekpath(self.ctx.final_structure, self.inputs.ph_settings, band_resolution=30)
+        bands = get_path_using_seekpath(self.ctx.primitive_structure, band_resolution=30)
 
         phonopy_inputs = {'structure': self.ctx.final_structure,
                           'ph_settings': self.inputs.ph_settings,
@@ -586,6 +654,7 @@ class PhononPhonopy(WorkChain):
             nac_data = get_nac_from_data(born_charges=self.ctx.single_point.out.born_charges,
                                          epsilon=self.ctx.single_point.out.output_array)
             phonopy_inputs.update(nac_data)
+            self.out('nac_data', nac_data['nac_data'])
 
         if 'code' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')

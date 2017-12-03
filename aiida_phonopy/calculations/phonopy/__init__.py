@@ -139,6 +139,8 @@ class BasePhonopyCalculation(object):
             force_sets_filename = tempfolder.get_abs_path(self._INPUT_FORCE_SETS)
             with open(force_sets_filename, 'w') as infile:
                 infile.write(force_sets_txt)
+            self._additional_cmdline_params += ['--writefc']
+            self._internal_retrieve_list += ['FORCE_CONSTANTS']
 
         if force_constants is not None:
             force_constants_txt = get_FORCE_CONSTANTS_txt(force_constants)
@@ -153,7 +155,6 @@ class BasePhonopyCalculation(object):
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)
             self._additional_cmdline_params += ['--nac']
-
 
         # ============================ calcinfo ================================
 
