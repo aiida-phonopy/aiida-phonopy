@@ -136,7 +136,7 @@ class GruneisenPhonopy(WorkChain):
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
-        #spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
+        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(1e-2))
 
         spec.outline(cls.create_unit_cell_expansions, cls.calculate_gruneisen)
@@ -155,9 +155,9 @@ class GruneisenPhonopy(WorkChain):
             return
 
         calcs = {}
-        for expansions in {'plus': float(self.inputs.stress_displacement),
-                           'origin': 0.0,
-                           'minus': -float(self.inputs.stress_displacement)}.items():
+        for expansions in {'plus': float(self.inputs.pressure) + float(self.inputs.stress_displacement),
+                           'origin': float(self.inputs.pressure),
+                           'minus': float(self.inputs.pressure) - float(self.inputs.stress_displacement)}.items():
 
             future = submit(PhononPhonopy,
                             structure=self.inputs.structure,
