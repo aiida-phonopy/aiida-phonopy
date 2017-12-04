@@ -1,6 +1,7 @@
+###################################################
 # To run this script use the wc_phonon pk number:
 # $ python plot_phonon.py pknumber
-
+###################################################
 
 from aiida import load_dbenv
 load_dbenv()

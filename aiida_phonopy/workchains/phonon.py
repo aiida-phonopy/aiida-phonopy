@@ -232,35 +232,6 @@ def get_nac_from_data(**kwargs):
     return {'nac_data': nac_data}
 
 
-def get_path_using_seekpath2(phonopy_structure, band_resolution=30):
-    import seekpath
-
-    cell = phonopy_structure.get_cell()
-    scaled_positions = phonopy_structure.get_scaled_positions()
-    numbers = phonopy_structure.get_atomic_numbers()
-
-    structure = (cell, scaled_positions, numbers)
-    path_data = seekpath.get_path(structure)
-
-    labels = path_data['point_coords']
-
-    band_ranges = []
-    for set in path_data['path']:
-        band_ranges.append([labels[set[0]], labels[set[1]]])
-
-    bands =[]
-    for q_start, q_end in band_ranges:
-        band = []
-        for i in range(band_resolution+1):
-            band.append(np.array(q_start) + (np.array(q_end) - np.array(q_start)) / band_resolution * i)
-        bands.append(band)
-
-    band_structure = BandStructureData(bands=bands,
-                                       labels=path_data['path'],
-                                       unitcell=phonopy_structure.get_cell())
-    return band_structure
-
-
 def get_path_using_seekpath(structure, band_resolution=30):
     import seekpath
 
@@ -290,7 +261,7 @@ def get_path_using_seekpath(structure, band_resolution=30):
                                        unitcell=phonopy_structure.get_cell())
     return band_structure
 
-
+@workfunction
 def get_primitive(structure, ph_settings):
 
     from phonopy import Phonopy
@@ -310,36 +281,7 @@ def get_primitive(structure, ph_settings):
     for symbol, position in zip(symbols, positions):
         primitive_structure.append_atom(position=position, symbols=symbol)
 
-    return primitive_structure
-
-
-def get_born_parameters_old(phonon, born_unitcell, epsilon, symprec=1e-5):
-    from phonopy.interface import get_default_physical_units
-    from phonopy.interface.vasp import symmetrize_borns_and_epsilon
-    from phonopy.structure.cells import get_supercell, get_primitive
-
-    pmat = phonon.get_primitive_matrix()
-    smat = phonon.get_supercell_matrix()
-    cell = phonon.get_unitcell()
-
-    borns_, epsilon_ = symmetrize_borns_and_epsilon(born_unitcell, epsilon, cell,
-                                                    symprec=symprec)
-    #inv_smat = np.linalg.inv(smat)
-    scell = get_supercell(cell, smat, symprec=symprec)
-    u2u_map = scell.get_unitcell_to_unitcell_map()
-    # pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
-
-    pcell = phonon.get_primitive()
-    p2s_map = pcell.get_primitive_to_supercell_map()
-    born_primitive = borns_[[u2u_map[i] for i in p2s_map]]
-
-    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
-
-    non_anal = {'born': born_primitive,
-                'factor': factor,
-                'dielectric': epsilon}
-
-    return non_anal
+    return {'primitive_structure': primitive_structure}
 
 
 def get_born_parameters(phonon, nac_data):
@@ -415,14 +357,9 @@ def get_properties_from_phonopy(**kwargs):
     force_constants = kwargs.pop('force_constants')
     bands = kwargs.pop('bands')
 
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
 
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-
-    phonon = Phonopy(bulk,
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
                      supercell_matrix=ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
@@ -538,15 +475,12 @@ class PhononPhonopy(WorkChain):
         print ('create displacements')
         self.report('create displacements')
 
-        # print self.ctx._get_dict()
-
         if 'optimized' in self.ctx:
             self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
         else:
             self.ctx.final_structure = self.inputs.structure
 
-        # get bands and primitive cell
-        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure, self.inputs.ph_settings)
+        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure, self.inputs.ph_settings)['primitive_structure']
 
         supercells = create_supercells_with_displacements_using_phonopy(self.ctx.final_structure,
                                                                         self.inputs.ph_settings)

@@ -51,7 +51,6 @@ class ForceSetsData(ArrayData):
         """
         Return the force constants stored in the node as a numpy array
         """
-        import numpy
 
         natom = self.get_attr("natom")
         ndisplacements = self.get_attr("ndisplacements")
@@ -83,9 +82,13 @@ class ForceSetsData(ArrayData):
         number = []
         displacement = []
         for first_atoms in data_sets['first_atoms']:
-            direction.append(first_atoms['direction'])
             number.append(first_atoms['number'])
             displacement.append(first_atoms['displacement'])
+            if 'direction' in first_atoms:
+                direction.append(first_atoms['direction'])
+            else:
+                direction.append([])
+
 
         self.set_array('direction', numpy.array(direction))
         self.set_array('number', numpy.array(number))
@@ -95,3 +98,16 @@ class ForceSetsData(ArrayData):
 
         import numpy
         self.set_array('forces', numpy.array(forces))
+
+    def read_from_phonopy_file(self, filename):
+        """
+        Read the force constants from a phonopy FORCE_SETS file
+        :param filename: FORCE_SETS file name
+        """
+
+        from phonopy.file_IO import parse_FORCE_SETS
+
+        data_sets = parse_FORCE_SETS(filename=filename)
+
+        self.set_data_sets(data_sets)
+        self.set_forces([displacement['forces'] for displacement in data_sets['first_atoms']])

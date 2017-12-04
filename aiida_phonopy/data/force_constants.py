@@ -27,7 +27,7 @@ class ForceConstantsData(ArrayData):
 
         self.set_array('force_constants', numpy.array(force_constants))
 
-    def read_from_file(self, filename):
+    def read_from_phonopy_file(self, filename):
         """
         Read the force constants from a phonopy FORCE_CONSTANTS file
         :param filename: FORCE_CONSTANTS file name
