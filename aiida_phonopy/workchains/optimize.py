@@ -150,9 +150,6 @@ class OptimizeStructure(WorkChain):
         # self.ctx.optimize = load_node(5487)  # for testing purposes
 
     def get_data(self):
-        print ('get_job')
-
-        # self.ctx.structure = self.ctx.get('optimize').out.output_structure
 
         self.out('optimized_structure', parse_optimize_calculation(self.ctx.optimize)['output_structure'])
         self.out('optimized_structure_data', self.ctx.optimize.out.output_parameters)

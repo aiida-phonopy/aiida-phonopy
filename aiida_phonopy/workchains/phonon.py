@@ -221,7 +221,8 @@ def get_nac_from_data(**kwargs):
     Worfunction to extract nac ArrayData object from calc
     """
 
-    nac_data = NacData(born_charges=kwargs.pop('born_charges').get_array('born_charges'),
+    nac_data = NacData(structure=kwargs.pop('structure'),
+                       born_charges=kwargs.pop('born_charges').get_array('born_charges'),
                        epsilon=kwargs.pop('epsilon').get_array('epsilon')[-1])
 
     # nac_data = ArrayData()
@@ -526,7 +527,7 @@ class PhononPhonopy(WorkChain):
         # For testing
         testing = False
         if testing:
-            self.ctx._content['optimize'] = load_node(6268)
+            self.ctx._content['optimize'] = load_node(9357)
             return
 
         print ('optimize workchain: {}'.format(future.pid))
@@ -559,13 +560,13 @@ class PhononPhonopy(WorkChain):
         testing = False
         if testing:
             from aiida.orm import load_node
-            nodes = [6289, 6292]  # VASP
+            nodes = [9378, 9381]  # VASP
             labels = ['structure_1', 'structure_0']
             for pk, label in zip(nodes, labels):
                 future = load_node(pk)
                 self.ctx._content[label] = future
 
-            self.ctx._content['single_point'] = load_node(6295)
+            self.ctx._content['single_point'] = load_node(9385)
             return
 
         # Forces
@@ -615,7 +616,7 @@ class PhononPhonopy(WorkChain):
 
         self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
 
-        if 'code_fc' in self.inputs.ph_settings.get_dict():
+        if 'codex' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')
             code_label = self.inputs.ph_settings.get_dict()['code']
             JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
@@ -647,12 +648,13 @@ class PhononPhonopy(WorkChain):
 
         phonopy_inputs = {'structure': self.ctx.final_structure,
                           'ph_settings': self.inputs.ph_settings,
-                          'force_constants':force_constants,
+                          'force_constants': force_constants,
                           'bands': bands}
 
         if 'single_point' in self.ctx:
             nac_data = get_nac_from_data(born_charges=self.ctx.single_point.out.born_charges,
-                                         epsilon=self.ctx.single_point.out.output_array)
+                                         epsilon=self.ctx.single_point.out.output_array,
+                                         structure=self.ctx.primitive_structure)
             phonopy_inputs.update(nac_data)
             self.out('nac_data', nac_data['nac_data'])
 

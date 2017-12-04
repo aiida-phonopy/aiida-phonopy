@@ -39,7 +39,7 @@ class BasePhonopyCalculation(object):
     #_internal_retrieve_list += ['FORCE_CONSTANTS']
 
     # Initialize list of commands to be specified for each specific plugin
-    _additional_cmdline_params = []
+    _additional_cmdline_params = ['--thm']
     _calculation_cmd = []
 
     @classproperty
@@ -150,7 +150,7 @@ class BasePhonopyCalculation(object):
             self._additional_cmdline_params += ['--readfc']
 
         if nac_data is not None:
-            born_txt = get_BORN_txt(structure, parameters_data, nac_data)
+            born_txt = get_BORN_txt(parameters_data, nac_data)
             nac_filename = tempfolder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)

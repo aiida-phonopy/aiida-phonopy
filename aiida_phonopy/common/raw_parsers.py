@@ -101,13 +101,15 @@ def parse_band_structure(filename, input_bands):
 
 # WRITE DATA TO TEXT
 
-def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
+def get_BORN_txt(parameters, nac_data, symprec=1.e-5):
     from phonopy.structure.cells import get_primitive, get_supercell
     from phonopy.structure.symmetry import Symmetry
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
 
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
+    structure = nac_data.get_structure()
+
 
     print ('inside born parameters')
     pmat = parameters.dict.primitive
@@ -143,7 +145,7 @@ def get_BORN_txt(structure, parameters, nac_data, symprec=1.e-5):
         for num in atom.flatten():
             born_txt += ('{0:4.8f} '.format(num))
         born_txt += ('\n')
-    born_txt += ('{}\n'.format(factor))
+    # born_txt += ('{}\n'.format(factor))
 
     return born_txt
 
@@ -217,8 +219,9 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
         *np.array(parameters['primitive']).reshape((1, 9))[0])
     input_file += 'MP = {} {} {}\n'.format(*parameters['mesh'])
 
-    input_file += 'BAND = '
+    print bands
     if bands is not None:
+        input_file += 'BAND = '
         for i, band in enumerate(bands.get_band_ranges()):
             input_file += ' '.join(np.array(band.flatten(), dtype=str))
             if i < bands.get_number_of_bands() - 1:
