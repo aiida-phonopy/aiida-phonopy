@@ -11,3 +11,10 @@ atomic forces and relax the crystal structure.
 Examples
 --------
 Some test calculations are found in the folder **/examples**
+
+- plugins: examples of basic functionality of phonopy remote plugin. This tests require 
+the previous calculation of forces or force constants that should be already stored in the database
+- workchains: examples of the full phonon calculation / gruneisen parameters from scratch. These workflows
+require the installation of plugins for VASP, LAMMPS or QuantumESPRESSO.
+- tools: example scripts for visualize the results of phonon/gruneisen workchains. These scripts require
+ matplotlib.

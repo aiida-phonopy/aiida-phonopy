@@ -1,3 +1,5 @@
+# Calculate DOS Band structure and thermal properties
+# Additionally if DATA_SETS (forces) are used force constants are also calculated
 from aiida import load_dbenv
 load_dbenv()
 
@@ -8,7 +10,7 @@ ParameterData = DataFactory('parameter')
 import numpy as np
 import os
 
-codename = 'phonopy_tp@boston_in'
+codename = 'phonopy_tot@boston_in'
 code = Code.get_from_string(codename)
 
 cell = [[ 3.1900000572, 0,           0],

@@ -64,6 +64,7 @@ def phonopy_gruneisen(**kwargs):
     bands = kwargs.pop('bands')
 
     if 'phonon_plus_nac' in kwargs:
+        print ('using nac in guneisen')
         phonon_plus_nac = kwargs.pop('phonon_plus_nac')
         phonon_minus_nac = kwargs.pop('phonon_minus_nac')
         phonon_origin_nac = kwargs.pop('phonon_origin_nac')
@@ -147,11 +148,11 @@ class GruneisenPhonopy(WorkChain):
         print ('start create cell expansions')
 
         # For testing
-        testing = False
+        testing = True
         if testing:
-            self.ctx._content['plus'] = load_node(8837)
-            self.ctx._content['origin'] = load_node(8833)
-            self.ctx._content['minus'] = load_node(8841)
+            self.ctx._content['plus'] = load_node(9599)
+            self.ctx._content['origin'] = load_node(9595)
+            self.ctx._content['minus'] = load_node(9603)
             return
 
         calcs = {}
@@ -188,10 +189,11 @@ class GruneisenPhonopy(WorkChain):
                            'ph_settings' : self.inputs.ph_settings,
                            'bands': self.ctx.origin.out.band_structure}
 
-        if 'nac_data' in self.ctx.origin.get_outputs():
-            input_gruneisen.update({'phonon_plus_nac' : self.ctx.plus.out.nac,
-                                    'phonon_minus_nac': self.ctx.minus.out.nac,
-                                    'phonon_origin_nac': self.ctx.origin.out.nac})
+        if 'nac_data' in self.ctx.origin.get_outputs_dict():
+            print 'loading nac (grune)'
+            input_gruneisen.update({'phonon_plus_nac': self.ctx.plus.out.nac_data,
+                                    'phonon_minus_nac': self.ctx.minus.out.nac_data,
+                                    'phonon_origin_nac': self.ctx.origin.out.nac_data})
 
         gruneisen_results = phonopy_gruneisen(**input_gruneisen)
 

@@ -27,43 +27,21 @@ class ForceConstantsData(ArrayData):
 
         self.set_array('force_constants', numpy.array(force_constants))
 
-    def get_epsilon(self):
+    def read_from_file(self, filename):
         """
-        Return dielectric tensor stored in the node as a numpy array
-        """
-
-        return self.get_array('epsilon')
-
-    def get_born_charges(self):
-        """
-        Return born charges stored in the node as a numpy array
-        """
-        return self.get_array('born_charges')
-
-    def epsilon_and_born_exist(self):
-
-        """
-        Check if born charges and epsion exists
+        Read the force constants from a phonopy FORCE_CONSTANTS file
+        :param filename: FORCE_CONSTANTS file name
         """
 
-        return 'born_charges' in self.get_arraynames() and 'epsilon' in self.get_arraynames()
+        fcfile = open(filename)
+        num = int((fcfile.readline().strip().split())[0])
+        force_constants = numpy.zeros((num, num, 3, 3), dtype=float)
+        for i in range(num):
+            for j in range(num):
+                fcfile.readline()
+                tensor = []
+                for k in range(3):
+                    tensor.append([float(x) for x in fcfile.readline().strip().split()])
+                force_constants[i, j] = numpy.array(tensor)
 
-    def set_born_charges(self, born_charges):
-        """
-        Store Born charges as a numpy array. Possibly overwrite the array
-        if it already existed.
-        Internally, it is stored as a force_constants.npy file in numpy format.
-        :param array: The numpy array to store.
-        """
-
-        self.set_array('born_charges', numpy.array(born_charges))
-
-    def set_epsilon(self, epsilon):
-        """
-        Store the dielectric tensor as a numpy array. Possibly overwrite the array
-        if it already existed.
-        Internally, it is stored as a force_constants.npy file in numpy format.
-        :param array: The numpy array to store.
-        """
-
-        self.set_array('epsilon', numpy.array(epsilon))
+        self.set_data(force_constants)

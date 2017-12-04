@@ -1,5 +1,5 @@
 # To run this script use the wc_phonon pk number:
-# $ python plot_phonon pknumber
+# $ python plot_phonon.py pknumber
 
 
 from aiida import load_dbenv
@@ -20,7 +20,7 @@ import numpy as np
 import sys
 
 if len(sys.argv) < 2:
-    print ('use: plot_phonon pk_number')
+    print ('use: python plot_phonon.py {pk_number}')
     exit()
 
 # Set WorkChain PhononPhonopy PK number

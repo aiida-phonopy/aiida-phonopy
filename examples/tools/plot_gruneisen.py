@@ -1,5 +1,5 @@
 # To run this script use the wc_gruneisen pk number:
-# $ python plot_gruneisen pknumber
+# $ python plot_gruneisen.py pknumber
 
 from aiida import load_dbenv
 load_dbenv()
@@ -19,7 +19,7 @@ import sys
 import numpy as np
 
 if len(sys.argv) < 2:
-    print ('use: plot_gruneisen pk_number')
+    print ('use: python plot_gruneisen.py {pk_number}')
     exit()
 
 # Set WorkChain GruneisenPhonopy PK number

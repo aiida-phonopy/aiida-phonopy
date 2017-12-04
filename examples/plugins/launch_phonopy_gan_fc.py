@@ -1,3 +1,5 @@
+# Calculate force constants
+#
 from aiida import load_dbenv
 load_dbenv()
 
@@ -8,7 +10,7 @@ ParameterData = DataFactory('parameter')
 import numpy as np
 import os
 
-codename = 'phonopy_dos@boston_in'
+codename = 'phonopy_fc@stern_in'
 code = Code.get_from_string(codename)
 
 cell = [[ 3.1900000572, 0,           0],
@@ -28,9 +30,9 @@ for i, scaled_position in enumerate(scaled_positions):
     s.append_atom(position=np.dot(scaled_position, cell).tolist(),
                   symbols=symbols[i])
 
-parameters = ParameterData(dict={'supercell': [[2, 0, 0],
-                                               [0, 2, 0],
-                                               [0, 0, 2]],
+parameters = ParameterData(dict={'supercell': [[3, 0, 0],
+                                               [0, 3, 0],
+                                               [0, 0, 3]],
                                  'primitive': [[1.0, 0.0, 0.0],
                                                [0.0, 1.0, 0.0],
                                                [0.0, 0.0, 1.0]],
@@ -41,7 +43,7 @@ parameters = ParameterData(dict={'supercell': [[2, 0, 0],
 
 calc = code.new_calc(max_wallclock_seconds=3600,
                      resources={"num_machines": 1,
-                                "parallel_env":"mpi*",
+                                "parallel_env":"localmpi",
                                 "tot_num_mpiprocs": 6})
 
 
@@ -51,12 +53,7 @@ calc.description = "A much longer description"
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
-
-# Chose to use forces or force constants
-if True:
-    calc.use_data_sets(load_node(2949))  # This node should contain a ForceSetsData object
-else:
-    calc.use_force_constants(load_node(2953))  # This node should contain a ForceConstantsData object
+calc.use_data_sets(load_node(23913))  # This node should contain a ForceSetsData object
 
 if False:
     subfolder, script_filename = calc.submit_test()
