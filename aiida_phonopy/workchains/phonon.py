@@ -13,6 +13,9 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.base import Str, Float, Bool
 from aiida.work.workchain import _If, _While
 
+import numpy as np
+from aiida_phonopy.common.generate_inputs import generate_inputs
+
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
 # from aiida.workflows.wc_optimize import OptimizeStructure
@@ -29,9 +32,6 @@ StructureData = DataFactory('structure')
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
-import numpy as np
-
-from aiida_phonopy.common.generate_inputs import generate_inputs
 
 def generate_phonopy_params(code, structure, ph_settings, force_sets=None, force_constants=None, nac_data=None, bands=None):
     """

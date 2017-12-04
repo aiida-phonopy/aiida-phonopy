@@ -7,6 +7,7 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool
 
+
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
 
@@ -30,7 +31,7 @@ scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
                   (0.0000000,  0.5000000,  0.0000000),
                   (0.0000000,  0.0000000,  0.5000000)]
 
-symbols=['Mg', 'Mg', 'Mg' ,'Mg', 'O', 'O', 'O', 'O']
+symbols=['Mg', 'Mg', 'Mg', 'Mg', 'O', 'O', 'O', 'O']
 
 positions = np.dot(scaled_positions, cell)
 
@@ -45,7 +46,6 @@ machine_dict = {'resources': {'num_machines': 1,
                 'max_wallclock_seconds': 3600 * 10,
                 }
 
-
 # PHONOPY settings
 ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                                 [0, 2, 0],
@@ -56,12 +56,11 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
-                                   # Uncomment the following line to use phonopy remotely
-                                   # 'code_fc': 'phonopy_fc@boston' # this uses phonopy.force_constants plugin
-                                   'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
-                                   'machine': machine_dict
+                                  # Uncomment to use phonopy remotely
+                                  #'code_fc': 'phonopy_fc@boston',  # this uses phonopy.force_constants plugin
+                                  # 'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
+                                  'machine': machine_dict
                                   })
-
 
 # VASP SPECIFIC
 incar_dict = {
@@ -70,36 +69,27 @@ incar_dict = {
     'ENCUT'  : 400,
     'ALGO'   : 38,
     'ISMEAR' : 0,
-    'SIGMA'  : 0.02,
+    'SIGMA'  : 0.01,
     'GGA'    : 'PS'
 }
 
-es_settings = ParameterData(dict=incar_dict)
-
-from pymatgen.io import vasp as vaspio
-
-potcar = vaspio.Potcar(symbols=['Mg', 'O'],
-                       functional='PBE')
-
-# custom k-points
-# supported_modes = Enum(("Gamma", "Monkhorst", "Automatic", "Line_mode", "Cartesian", "Reciprocal"))
-kpoints_dict = {'type': 'Monkhorst',
-                'points': [2, 2, 2],
-                'shift': [0.0, 0.0, 0.0]}
-
-settings_dict = {'code': {'optimize': 'vasp544mpi@boston',
-                          'forces': 'vasp544mpi@boston',
-                          'born_charges': 'vasp544mpi@boston'}, # Calculate and use Born effective charges
+settings_dict = {'code': {'optimize': 'vasp@stern_in',
+                          'forces': 'vasp@stern_in',
+                          'born_charges': 'vasp@stern_in'},
                  'parameters': incar_dict,
-                 #  'kpoints': kpoints_dict,  # optional explicit definition of kpoints mesh
-                 'kpoints_per_atom': 1000,  # k-point density
-                 'pseudos': potcar.as_dict(),
-                 'machine': machine_dict}
+                 'kpoints_density': 0.5,  # k-point density,
+                 'pseudos_family': 'pbe_test_family',
+                 'family_folder': '/Users/abel/VASP/test_paw/',
+                 'machine': machine_dict
+                 }
 
+es_settings = ParameterData(dict=settings_dict)
 
 GruneisenPhonopy = WorkflowFactory('phonopy.gruneisen')
 
-if True:
+# Chose how to run the calculation
+run_by_deamon = False
+if not run_by_deamon:
     result = run(GruneisenPhonopy,
                  structure=structure,
                  es_settings=es_settings,

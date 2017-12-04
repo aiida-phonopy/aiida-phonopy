@@ -85,7 +85,10 @@ es_settings = ParameterData(dict=settings_dict)
 
 PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
-if True:
+
+# Chose how to run the calculation
+run_by_deamon = False
+if not run_by_deamon:
     result = run(PhononPhonopy,
                  structure=structure,
                  es_settings=es_settings,

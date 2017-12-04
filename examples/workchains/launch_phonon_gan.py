@@ -15,9 +15,9 @@ ParameterData = DataFactory('parameter')
 
 import numpy as np
 
-cell = [[ 3.1900000572, 0,           0],
-        [-1.5950000286, 2.762621076, 0],
-        [ 0.0,          0,           5.1890001297]]
+cell = [[ 3.1900000, 0.0000000, 0.0000000],
+        [-1.5950000, 2.7626210, 0.0000000],
+        [ 0.0000000, 0.0000000, 5.1890000]]
 
 structure = StructureData(cell=cell)
 
@@ -56,6 +56,7 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   # 'machine': machine_dict
                                   })
 
+# Uncomment to use one of the examples
 #code_to_use = 'VASP'
 code_to_use = 'QE'
 #code_to_use = 'LAMMPS'
@@ -141,7 +142,9 @@ if code_to_use == 'LAMMPS':
 PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
 
-if True:
+# Chose how to run the calculation
+run_by_deamon = False
+if not run_by_deamon:
     result = run(PhononPhonopy,
                  structure=structure,
                  es_settings=es_settings,

@@ -15,14 +15,11 @@ ParameterData = DataFactory('parameter')
 
 
 # Define structure
-
 import numpy as np
 
-cell = [[ 3.1900000572, 0,           0],
-        [-1.5950000286, 2.762621076, 0],
-        [ 0.0,          0,           5.1890001297]]
-
-structure = StructureData(cell=cell)
+cell = [[ 3.1900000, 0.0000000, 0.0000000],
+        [-1.5950000, 2.7626210, 0.0000000],
+        [ 0.0000000, 0.0000000, 5.1890000]]
 
 scaled_positions=[(0.6666669,  0.3333334,  0.0000000),
                   (0.3333331,  0.6666663,  0.5000000),
@@ -33,6 +30,7 @@ symbols=['Ga', 'Ga', 'N', 'N']
 
 positions = np.dot(scaled_positions, cell)
 
+structure = StructureData(cell=cell)
 for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
@@ -144,7 +142,9 @@ if code_to_use == 'LAMMPS':
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
-if True:
+# Chose how to run the calculation
+run_by_deamon = False
+if not run_by_deamon:
     results = run(OptimizeStructure,
                   structure=structure,
                   es_settings=es_settings,

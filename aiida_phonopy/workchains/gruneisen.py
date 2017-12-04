@@ -21,6 +21,7 @@ ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
+BandStructureData = DataFactory('phonopy.band_structure')
 PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
 import numpy as np
@@ -60,12 +61,12 @@ def phonopy_gruneisen(**kwargs):
     phonon_origin_structure = kwargs.pop('phonon_origin_structure')
     phonon_origin_fc = kwargs.pop('phonon_origin_fc')
     ph_settings = kwargs.pop('ph_settings')
-    band_structure = kwargs.pop('band_structure')
+    bands = kwargs.pop('bands')
 
     if 'phonon_plus_nac' in kwargs:
         phonon_plus_nac = kwargs.pop('phonon_plus_nac')
-        phonon_minus_nac = kwargs.pop('phonon_plus_nac')
-        phonon_origin_nac = kwargs.pop('phonon_plus_nac')
+        phonon_minus_nac = kwargs.pop('phonon_minus_nac')
+        phonon_origin_nac = kwargs.pop('phonon_origin_nac')
     else:
         phonon_plus_nac = None
         phonon_minus_nac = None
@@ -96,8 +97,12 @@ def phonopy_gruneisen(**kwargs):
 
     # BAND STRUCTURE
     # band_structure = get_path_using_seekpath(phonon_origin.get_primitive())
-    gruneisen.set_band_structure(band_structure.get_band_ranges(),
-                                 band_structure.get_number_of_points())
+    gruneisen.set_band_structure(bands.get_band_ranges(),
+                                 bands.get_number_of_points())
+
+    band_structure = BandStructureData(bands=bands.get_bands(),
+                                       labels=bands.get_labels(),
+                                       unitcell=bands.get_unitcell())
 
     band_structure.set_band_structure_gruneisen(gruneisen.get_band_structure())
 
@@ -143,11 +148,11 @@ class GruneisenPhonopy(WorkChain):
         print ('start create cell expansions')
 
         # For testing
-        testing = False
+        testing = True
         if testing:
-            self.ctx._content['plus'] = load_node(1462)
-            self.ctx._content['origin'] = load_node(1459)
-            self.ctx._content['minus'] = load_node(1465)
+            self.ctx._content['plus'] = load_node(8837)
+            self.ctx._content['origin'] = load_node(8833)
+            self.ctx._content['minus'] = load_node(8841)
             return
 
         calcs = {}
@@ -160,7 +165,8 @@ class GruneisenPhonopy(WorkChain):
                             ph_settings=self.inputs.ph_settings,
                             es_settings=self.inputs.es_settings,
                             pressure=Float(expansions[1]),
-                            optimize=Bool(True)
+                            optimize=Bool(True),
+                            use_born=Bool(True)
                             )
 
             calcs[expansions[0]] = future
@@ -181,7 +187,7 @@ class GruneisenPhonopy(WorkChain):
                            'phonon_origin_structure' : self.ctx.origin.out.final_structure,
                            'phonon_origin_fc' : self.ctx.origin.out.force_constants,
                            'ph_settings' : self.inputs.ph_settings,
-                           'band_structure' : self.ctx.origin.out.band_structure}
+                           'bands': self.ctx.origin.out.band_structure}
 
         if 'nac_data' in self.ctx.origin.get_outputs():
             input_gruneisen.update({'phonon_plus_nac' : self.ctx.plus.out.nac,
@@ -190,14 +196,14 @@ class GruneisenPhonopy(WorkChain):
 
         gruneisen_results = phonopy_gruneisen(**input_gruneisen)
 
-        gruneisen_results = phonopy_gruneisen(phonon_plus_structure=self.ctx.plus.out.final_structure,
-                                              phonon_plus_fc=self.ctx.plus.out.force_constants,
-                                              phonon_minus_structure=self.ctx.minus.out.final_structure,
-                                              phonon_minus_fc=self.ctx.minus.out.force_constants,
-                                              phonon_origin_structure=self.ctx.origin.out.final_structure,
-                                              phonon_origin_fc=self.ctx.origin.out.force_constants,
-                                              ph_settings=self.inputs.ph_settings,
-                                              band_structure=self.ctx.origin.out.band_structure)
+        #gruneisen_results = phonopy_gruneisen(phonon_plus_structure=self.ctx.plus.out.final_structure,
+        #                                      phonon_plus_fc=self.ctx.plus.out.force_constants,
+        #                                      phonon_minus_structure=self.ctx.minus.out.final_structure,
+        #                                      phonon_minus_fc=self.ctx.minus.out.force_constants,
+        #                                      phonon_origin_structure=self.ctx.origin.out.final_structure,
+        #                                      phonon_origin_fc=self.ctx.origin.out.force_constants,
+        #                                      ph_settings=self.inputs.ph_settings,
+        #                                      band_structure=self.ctx.origin.out.band_structure)
 
         self.out('band_structure', gruneisen_results['band_structure'])
         self.out('mesh', gruneisen_results['mesh'])
