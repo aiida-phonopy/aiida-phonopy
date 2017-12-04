@@ -57,8 +57,7 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
                                   # Uncomment to use phonopy remotely
-                                  #'code_fc': 'phonopy_fc@boston',  # this uses phonopy.force_constants plugin
-                                  # 'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
+                                  'code': 'phonopy_tot@boston_in', # this uses phonopy.force_constants plugin
                                   'machine': machine_dict
                                   })
 

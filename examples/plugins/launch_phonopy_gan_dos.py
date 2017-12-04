@@ -28,9 +28,9 @@ for i, scaled_position in enumerate(scaled_positions):
     s.append_atom(position=np.dot(scaled_position, cell).tolist(),
                   symbols=symbols[i])
 
-parameters = ParameterData(dict={'supercell': [[2,0,0],
-                                               [0,2,0],
-                                               [0,0,2]],
+parameters = ParameterData(dict={'supercell': [[2, 0, 0],
+                                               [0, 2, 0],
+                                               [0, 0, 2]],
                                  'primitive': [[1.0, 0.0, 0.0],
                                                [0.0, 1.0, 0.0],
                                                [0.0, 0.0, 1.0]],

@@ -616,7 +616,7 @@ class PhononPhonopy(WorkChain):
 
         self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
 
-        if 'codex' in self.inputs.ph_settings.get_dict():
+        if 'code' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')
             code_label = self.inputs.ph_settings.get_dict()['code']
             JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
