@@ -14,7 +14,7 @@ from aiida.orm.data.base import Str, Float, Bool
 
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
-from aiida_phonopy.workchains.phonon import get_path_using_seekpath, get_born_parameters
+from aiida_phonopy.workchains.phonon import get_born_parameters
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
@@ -96,7 +96,6 @@ def phonopy_gruneisen(**kwargs):
     gruneisen.set_mesh(ph_settings.dict.mesh, is_gamma_center=False, is_mesh_symmetry=True)
 
     # BAND STRUCTURE
-    # band_structure = get_path_using_seekpath(phonon_origin.get_primitive())
     gruneisen.set_band_structure(bands.get_band_ranges(),
                                  bands.get_number_of_points())
 
@@ -148,7 +147,7 @@ class GruneisenPhonopy(WorkChain):
         print ('start create cell expansions')
 
         # For testing
-        testing = True
+        testing = False
         if testing:
             self.ctx._content['plus'] = load_node(8837)
             self.ctx._content['origin'] = load_node(8833)
@@ -195,15 +194,6 @@ class GruneisenPhonopy(WorkChain):
                                     'phonon_origin_nac': self.ctx.origin.out.nac})
 
         gruneisen_results = phonopy_gruneisen(**input_gruneisen)
-
-        #gruneisen_results = phonopy_gruneisen(phonon_plus_structure=self.ctx.plus.out.final_structure,
-        #                                      phonon_plus_fc=self.ctx.plus.out.force_constants,
-        #                                      phonon_minus_structure=self.ctx.minus.out.final_structure,
-        #                                      phonon_minus_fc=self.ctx.minus.out.force_constants,
-        #                                      phonon_origin_structure=self.ctx.origin.out.final_structure,
-        #                                      phonon_origin_fc=self.ctx.origin.out.force_constants,
-        #                                      ph_settings=self.inputs.ph_settings,
-        #                                      band_structure=self.ctx.origin.out.band_structure)
 
         self.out('band_structure', gruneisen_results['band_structure'])
         self.out('mesh', gruneisen_results['mesh'])
