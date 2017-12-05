@@ -96,7 +96,7 @@ class BandStructureData(ArrayData):
 
     def set_frequencies(self, frequencies):
         """
-        Return the frequencies in the node as a numpy array
+        Return the frequencies as a numpy array
         """
 
         import numpy
@@ -107,7 +107,7 @@ class BandStructureData(ArrayData):
 
     def get_unitcell(self):
         """
-        Return the unitcell in the node as a numpy array
+        Return the unitcell as a numpy array
         """
 
         return self.get_array('unitcell')
@@ -146,9 +146,10 @@ class BandStructureData(ArrayData):
 
     def get_frequencies(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
-        """
+        Return phonon frequencies as a numpy array
 
+        :param band: (integer) if not None, return only the frequencies of subpath with index band
+        """
         frequencies = self.get_array('frequencies')
 
         if band is not None:
@@ -158,7 +159,10 @@ class BandStructureData(ArrayData):
 
     def get_gamma(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
+        Return the mode Gruneisen parameter as a numpy array
+
+        :param band: (integer) if not None, return only the mode gruneisen parameters at the subpath with index band
+
         """
 
         gamma =  self.get_array('gamma')
@@ -170,7 +174,10 @@ class BandStructureData(ArrayData):
 
     def get_eigenvalues(self, band=None):
         """
-        Return the frequencies in the node as a numpy array
+        Return the eigenvalues as a numpy array
+
+        :param band: (integer) if not None, return only the eigenvalues at the subpath with index band
+
         """
         eigenvalues = self.get_array('eigenvalues')
 
@@ -181,7 +188,10 @@ class BandStructureData(ArrayData):
 
     def get_bands(self, band=None):
         """
-        Return the bands in the node as a numpy array
+        Return the bands as a list of q_points in numpy array format [Nsubpaths x Nq_points x 3]
+
+        :param band: (integer) if not None, return only the q_points at the subpath with index band
+
         """
         bands = self.get_array('bands')
 
@@ -192,7 +202,9 @@ class BandStructureData(ArrayData):
 
     def get_band_ranges(self, band=None):
         """
-        Return the bands in the node as a numpy array
+        Return the band ranges (limit q_points for each subpath) [Nsubpaths x 2]
+
+        :param band: (integer) if not None, return only the 2 delimiter q_points of the corresponding subpath
         """
         import numpy
 
@@ -207,7 +219,9 @@ class BandStructureData(ArrayData):
 
     def get_labels(self, band=None):
         """
-        Return the band labels in the node as a numpy array
+        Return the symbols of the high simetry point that delimiter the subpaths
+        :param band: (integer) if not None, return only the labels of the 2 delimiter q_points of the corresponding subpath
+
         """
 
         band_labels = self.get_array('band_labels')
