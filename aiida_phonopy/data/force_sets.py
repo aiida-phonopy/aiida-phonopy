@@ -89,7 +89,6 @@ class ForceSetsData(ArrayData):
             else:
                 direction.append([])
 
-
         self.set_array('direction', numpy.array(direction))
         self.set_array('number', numpy.array(number))
         self.set_array('displacement', numpy.array(displacement))

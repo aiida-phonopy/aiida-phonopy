@@ -10,3 +10,4 @@ This is a collection of data objects for AiiDA uses in the plugins and workchain
    force_constants
    force_sets
    phonon_dos
+   nac

@@ -225,10 +225,6 @@ def get_nac_from_data(**kwargs):
                        born_charges=kwargs.pop('born_charges').get_array('born_charges'),
                        epsilon=kwargs.pop('epsilon').get_array('epsilon')[-1])
 
-    # nac_data = ArrayData()
-    # nac_data.set_array('born_charges', kwargs.pop('born_charges').get_array('born_charges'))
-    # nac_data.set_array('epsilon', kwargs.pop('epsilon').get_array('epsilon')[-1])
-
     return {'nac_data': nac_data}
 
 
