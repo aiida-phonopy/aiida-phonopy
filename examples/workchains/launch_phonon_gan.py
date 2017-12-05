@@ -51,8 +51,8 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
-                                  # Uncomment the following line to use phonopy remotely
-                                  # 'code_fc': 'phonopy_fc@boston_in',  # this uses phonopy.force_constants plugin
+                                  # Uncomment the following two lines to use phonopy remotely
+                                  # 'code': 'phonopy@boston_in',  # this uses phonopy.phonopy
                                   # 'machine': machine_dict
                                   })
 
@@ -63,6 +63,7 @@ code_to_use = 'QE'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
+
     incar_dict = {
         'NELMIN' : 5,
         'NELM'   : 100,

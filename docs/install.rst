@@ -21,6 +21,7 @@ Additional optional requirements
 --------------------------------
 
 * aiida-vasp (to use VASP as a calculator)
+* aiida-quantumespresso (to use QuantumESPRESSO as a calculator)
 * aiida-lammps (to use LAMMPS as a calculator)
 
 Setup workchains

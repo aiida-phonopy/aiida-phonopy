@@ -8,11 +8,9 @@ This plugin is designed to calculate the harmonic force constants, thermal prope
 
    :param structure: AiiDA StructureData object that contains the crystal unit cell information
    :param parameters: AiiDA ParametersData data object that contains the phonopy input parameters
-   :param data_sets: AiiDA ForceSetsData object that contains the forces, directions and details
-   of all the supercells with displacements (equivalent to FORCE_SETS file in phonopy)
+   :param data_sets: AiiDA ForceSetsData object that contains the forces, directions and detail of all the supercells with displacements (equivalent to FORCE_SETS file in phonopy)
    :param force_constants: AiiDA ForceConstants object that contains the force constants
-   :param nac_data: AiiDA ForceSetsData object that contains the Born effective charges and
-   the dielectric tensor
+   :param nac_data: AiiDA ForceSetsData object that contains the Born effective charges and the dielectric tensor
 
 - input parameters should be dictionary with the following entries ::
 
@@ -30,6 +28,7 @@ This plugin is designed to calculate the harmonic force constants, thermal prope
 
 Either data_sets of force_constants should be used. If data_sets is used force constants will be calculated
 and returned as a calculation output. If force_constants is used the calculation will be faster.
+
 - data_sets can be created from a phonopy FORCE_SETS file by ::
 
     ForceSetsData = DataFactory('phonopy.force_sets')
