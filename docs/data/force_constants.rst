@@ -10,5 +10,3 @@ Setters and getters are provided to store and get the data in phonopy format:
 .. automodule:: aiida_phonopy.data.force_constants
 .. autoclass:: ForceConstantsData()
    :members: set_data, get_data, read_from_phonopy_file
-
-

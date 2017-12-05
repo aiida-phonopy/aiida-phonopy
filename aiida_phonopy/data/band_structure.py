@@ -44,6 +44,8 @@ class BandStructureData(ArrayData):
 
     def set_unitcell(self, unitcell):
         """
+        Set the unit cell
+
         :param unitcell: Numpy Array that contains the unitcell matrix (Lattice vectors in columns)
         :return:
         """

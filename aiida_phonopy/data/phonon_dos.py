@@ -75,6 +75,7 @@ class PhononDosData(ArrayData):
     def get_atom_labels(self, full=False):
         """
         Store the atomic symbols as a numpy array.
+
         :param full: if True, return the atomic symbols of all atoms. By default (false) return the atomic symbols
         of non-equivalent atoms by symmetry
         """
@@ -88,6 +89,7 @@ class PhononDosData(ArrayData):
     def set_atom_labels(self, labels):
         """
         Store the phonon dos as a numpy array
+
         :param array: The numpy array to store
         """
         self._set_attr("atom_labels", labels)
@@ -103,6 +105,7 @@ class PhononDosData(ArrayData):
     def set_frequencies(self, array):
         """
         Store the frequencies as a numpy array
+
         :param array: The numpy array to store
         """
         self.set_array('frequencies', array)
@@ -110,6 +113,7 @@ class PhononDosData(ArrayData):
     def set_partial_dos(self, array):
         """
         Store the partial dos as a numpy array
+
         :param array: The numpy array to store
         """
 

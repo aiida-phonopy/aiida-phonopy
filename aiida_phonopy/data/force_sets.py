@@ -14,6 +14,7 @@ class ForceSetsData(ArrayData):
         """
         Return the shape of an array (read from the value cached in the
         properties for efficiency reasons).
+
         :param name: The name of the array.
         """
         return self.get_attr("natom")
@@ -22,6 +23,7 @@ class ForceSetsData(ArrayData):
         """
         Return the shape of an array (read from the value cached in the
         properties for efficiency reasons).
+
         :param name: The name of the array.
         """
         return self.get_attr("ndisplacements")
@@ -101,6 +103,7 @@ class ForceSetsData(ArrayData):
     def read_from_phonopy_file(self, filename):
         """
         Read the force constants from a phonopy FORCE_SETS file
+
         :param filename: FORCE_SETS file name
         """
 

@@ -22,6 +22,7 @@ class ForceConstantsData(ArrayData):
         Store the force constants as a numpy array. Possibly overwrite the array
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
+
         :param array: The numpy array to store.
         """
 
@@ -30,6 +31,7 @@ class ForceConstantsData(ArrayData):
     def read_from_phonopy_file(self, filename):
         """
         Read the force constants from a phonopy FORCE_CONSTANTS file
+
         :param filename: FORCE_CONSTANTS file name
         """
 

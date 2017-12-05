@@ -37,6 +37,7 @@ class NacData(ArrayData):
         Store Born charges as a numpy array. Possibly overwrite the array
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
+
         :param array: The numpy array to store.
         """
 
@@ -47,6 +48,7 @@ class NacData(ArrayData):
         Store the dielectric tensor as a numpy array. Possibly overwrite the array
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
+
         :param array: The numpy array to store.
         """
 
