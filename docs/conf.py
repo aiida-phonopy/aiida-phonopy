@@ -154,4 +154,4 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-autodoc_mock_imports = ['aiida.orm', 'aiida.orm.data.array']
+autodoc_mock_imports = ['aiida.orm', 'aiida.orm.data.array', 'numpy']

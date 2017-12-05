@@ -32,7 +32,6 @@ class ForceSetsData(ArrayData):
         """
         Return the force constants stored in the node as a numpy array
         """
-        import numpy
 
         natom = self.get_attr("natom")
         ndisplacements = self.get_attr("ndisplacements")
