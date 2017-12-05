@@ -12,7 +12,7 @@ class ForceConstantsData(ArrayData):
 
     def get_data(self):
         """
-        Return the force constants stored in the node as a numpy array
+        Return the force constants stored in the node as a numpy array (Natoms x 3 x 3)
         """
 
         return self.get_array('force_constants')

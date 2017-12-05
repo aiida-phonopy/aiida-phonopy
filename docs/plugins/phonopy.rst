@@ -43,7 +43,7 @@ and returned as a calculation output. If force_constants is used the calculation
 
 - nac_data is an optional parameter and can be created from single point calculation, the required
 information is the crystal structure(StructureData) used in the calculation, born effective charges (numpy array)
-for all the atoms in the crystal structure and the dielectric tensor (numpy array [dim: natoms x 3 x 3]) ::
+for all the atoms in the crystal structure and the dielectric tensor (numpy array [dim: Natoms x 3 x 3]) ::
 
     nac_data = NacData(structure=crystal_structure,
                        born_charges=born_charges_numpy_array,
