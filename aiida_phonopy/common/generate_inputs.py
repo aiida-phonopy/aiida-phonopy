@@ -210,15 +210,13 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     except:
         code = settings.dict.code
 
-
     plugin = Code.get_from_string(code).get_attr('input_plugin')
 
     VaspCalculation = CalculationFactory(plugin)
 
-    class VaspCalculation2(VaspCalculation):
+    class VaspCalculationMod(VaspCalculation):
             _default_parser = 'vasp.pymatgen'
-
-    inputs = VaspCalculation2.process().get_inputs_template()
+    inputs = VaspCalculationMod.process().get_inputs_template()
 
     # code
     inputs.code = Code.get_from_string(code)

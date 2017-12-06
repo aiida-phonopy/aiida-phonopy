@@ -510,7 +510,7 @@ class PhononPhonopy(WorkChain):
 
             calculation_input._label = label
             future = submit(JobCalculation, **calculation_input)
-            print label, future.pid
+            # print label, future.pid
             self.report('{} pk = {}'.format(label, future.pid))
 
             calcs[label] = future
