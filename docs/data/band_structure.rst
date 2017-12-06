@@ -1,7 +1,7 @@
 Band structure
 ==============
 This object contains the phonon band structure calculated by phonopy.
-Also stores the mode Gruneisen parameters data in Gruneisen calculation.
+Also it can store the mode Gruneisen parameters data.
 
 Special setters are provided to store the data directly from phonopy objects:
 

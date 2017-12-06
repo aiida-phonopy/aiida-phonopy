@@ -1,8 +1,7 @@
 Data objects
 ============
 
-This is a collection of data objects for AiiDA uses in the plugins and workchains.
-
+This is a collection of data objects for AiiDA used in phonopy plugin and WorkChains.
 
 .. toctree::
 

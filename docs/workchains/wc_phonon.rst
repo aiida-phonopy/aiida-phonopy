@@ -1,19 +1,19 @@
 Phonon
 ======
 
-This WorkChain performs a phonon calculation using Phonopy. This phonon requeires at lest on of the following
+This WorkChain performs a phonon calculation using Phonopy. This phonon requires at least one of the following
 AiiDA plugins to work: QuantumESPRESSO (https://github.com/aiidateam/aiida-quantumespresso),
 VASP (https://github.com/DropD/aiida-vasp) or LAMMPS (https://github.com/abelcarreras/aiida-lammps).
 At the present time Born effective charges are only calculated using VASP plugin.
-Phonopy can be used locally and remotelly. To use phonopy remotely phonopy code must be setup as described
+Phonopy can be used either locally and remotely. To use phonopy remotely phonopy code must be setup as described
 in AiiDA documentation (https://aiida-core.readthedocs.io/en/latest/get_started/index.html#code-setup-and-configuration).
-using phonopy plugin provided in this package.
+using the phonopy plugin provided in this package.
 
 .. function:: PhononPhonopy(structure, machine, ph_settings, es_settings [, optimize=True, pressure=0.0])
 
-   :param structure: AiiDA StructureData object that contains the crystal unit cell information
-   :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters
-   :param es_settings: AiiDA ParameterData object that the electronic structure calculation input parameters.
+   :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
+   :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters.
+   :param es_settings: AiiDA ParameterData object that contains the calculator input parameters.
    These parameters depends on the code used (see workchains/launcher examples)
    :param optimize (optional): AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not
    before the phonon calculation. By default this option is True.
@@ -22,7 +22,7 @@ using phonopy plugin provided in this package.
    :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon
    calculation. By default this option is True.
 
-- ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for moreinformation.
+- ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for more information.
     Additional dictionary entries can be added to request a remote phonopy calculation. See example in examples/workchains/launh_phonon_gan ::
 
     code: phonopy@cluster
@@ -40,8 +40,8 @@ machine_dict dictionary should contain the following entries. resources_dict may
                      }
 
 - es_settings: This object contains the parameters for each specific software used as calculator (QE, VASP or LAMMPS).
- Each calculator uses a different dictionary structure (See example at examples/workchains folder for the details ).
- The common basic structure is
+ Each calculator uses a different dictionary structure (See examples at examples/workchains folder for the details).
+ The common basic structure in all calculators is
 ::
 
     settings_dict = {'code': {'optimize': 'vasp5@boston',
@@ -64,7 +64,7 @@ If the code used in all calculations types (optimize, forces and born) is the sa
                      }
 
 
-The results outputs of this workchain are:
+The results outputs of this WorkChain are the following :
 
 * **force_constants**: ForceConstantsData object that contains the harmonic force constants. If Born effective charges are calculated this object also contains the dielectric tensor and the born effective charges of each atom in the unit cell
 * **thermal_properties**: ArrayData object that contains the thermal properties calculated using phonopy. These include the entropy, free energy and heat capacity at constant volume.
@@ -72,5 +72,34 @@ The results outputs of this workchain are:
 * **band_structure**: BandStructureData object that contains the harmonic phonon band structure.
 * **final_structure**: StructureData object that contains the optimized unit cell. If no optimization is performed this is the same StructureData object provided as a input.
 
-Each one of this objects have its own methods for extracting the infomation. Check the individual object documentation
-for more details. workchains/tools/plot_phonon.py contains a complete example script showing how to extract the information from these outputs.
+Each one of this objects has its own methods for extracting the information. Check the individual object documentation
+for details. **workchains/tools/plot_phonon.py** contains a complete example script showing how to extract the information from these outputs.
+
+example of use
+--------------
+::
+
+    PhononPhonopy = WorkflowFactory('phonopy.phonon')
+
+Run in interactive ::
+
+    result = run(PhononPhonopy,
+                 structure=structure,
+                 es_settings=es_settings,
+                 ph_settings=ph_settings,
+                 # Optional settings
+                 pressure=Float(0.0),
+                 optimize=Bool(True),
+                 )
+
+Run by the deamon ::
+
+    future = submit(PhononPhonopy,
+                    structure=structure,
+                    es_settings=es_settings,
+                    ph_settings=ph_settings,
+                    # Optional settings
+                    pressure=Float(0),
+                    optimize=Bool(True),
+                    )
+    print('Running WorkChain with pk={}'.format(future.pid))
