@@ -17,6 +17,7 @@ Stress_displacement can be set as an optional argument, by default its value is 
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters.
    :param pressure (optional): AiiDA FloatData object. This determines the absolute stress (in kBar) at which the reference crystal structure is optimized (default 0).
    :param stress_displacement (optional): AiiDA FloatData object. This determines the stress difference between the 3 phonon calculations (default 1e-2 kB).
+   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is True.
 
 The outputs of this WorkChain are:
 
@@ -38,9 +39,9 @@ Run in interactive ::
                  structure=structure,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
-                 Optional settings
                  pressure=Float(0),
                  stress_displacement=Float(1e-2),
+                 use_nac=Bool(True)
                  )
 
 
@@ -51,7 +52,8 @@ Run by the deamon ::
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     pressure=Float(0),
-                    stress_displacement=Float(1e-2)
+                    stress_displacement=Float(1e-2),
+                    use_nac=Bool(True)
                     )
 
     print('Running WorkChain with pk={}'.format(future.pid))

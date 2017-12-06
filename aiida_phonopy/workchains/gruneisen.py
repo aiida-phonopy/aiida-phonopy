@@ -138,6 +138,7 @@ class GruneisenPhonopy(WorkChain):
         # Optional arguments
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(1e-2))
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
 
         spec.outline(cls.create_unit_cell_expansions, cls.calculate_gruneisen)
 
@@ -147,7 +148,7 @@ class GruneisenPhonopy(WorkChain):
         print ('start create cell expansions')
 
         # For testing
-        testing = True
+        testing = False
         if testing:
             self.ctx._content['plus'] = load_node(9599)
             self.ctx._content['origin'] = load_node(9595)
@@ -165,7 +166,7 @@ class GruneisenPhonopy(WorkChain):
                             es_settings=self.inputs.es_settings,
                             pressure=Float(expansions[1]),
                             optimize=Bool(True),
-                            use_born=Bool(True)
+                            use_nac=self.inputs.use_nac
                             )
 
             calcs[expansions[0]] = future

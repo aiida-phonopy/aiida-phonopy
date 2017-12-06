@@ -1,5 +1,3 @@
-# Works run by the daemon (using submit)
-
 from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
@@ -22,6 +20,7 @@ from aiida_phonopy.common.generate_inputs import generate_inputs
 from aiida_phonopy.common.parse_interface import parse_optimize_calculation
 
 import numpy as np
+
 
 @workfunction
 def standardize_cell(structure):
@@ -75,7 +74,6 @@ class OptimizeStructure(WorkChain):
         spec.input("tolerance_forces", valid_type=Float, required=False, default=Float(1e-5))
         spec.input("tolerance_stress", valid_type=Float, required=False, default=Float(1e-2))
         spec.input("max_iterations", valid_type=Int, required=False, default=Int(3))
-        # should be Bool but it doesn't work! bug?
         spec.input("standarize_cell", valid_type=Bool, required=False, default=Bool(True))
 
         spec.outline(cls.optimize_cycle, _While(cls.not_converged)(cls.optimize_cycle), cls.get_data)
@@ -83,10 +81,6 @@ class OptimizeStructure(WorkChain):
     def not_converged(self):
 
         print ('Check convergence')
-
-        #output_array = self.ctx.get('optimize').out.output_array
-        #forces = output_array.get_array('forces')
-        #stresses = output_array.get_array('stress')
 
         parsed_data = parse_optimize_calculation(self.ctx.optimize)
         forces = parsed_data['forces']
@@ -136,7 +130,6 @@ class OptimizeStructure(WorkChain):
             structure = standardize_cell(structure)['standardized_structure']
 
         JobCalculation, calculation_input = generate_inputs(structure,
-                                                            # self.inputs.machine,
                                                             self.inputs.es_settings,
                                                             pressure=self.inputs.pressure,
                                                             type='optimize',

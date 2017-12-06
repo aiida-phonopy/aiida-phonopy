@@ -153,6 +153,7 @@ if not run_by_deamon:
                  # Optional settings
                  pressure=Float(0.0),
                  optimize=Bool(True),
+                 use_nac=Bool(False),
                  )
 
     print (result)
@@ -164,6 +165,7 @@ else:
                     # Optional settings
                     pressure=Float(0),
                     optimize=Bool(True),
+                    use_nac=Bool(False),
                     )
 
     print future
