@@ -7,14 +7,13 @@ from aiida.work.run import run, submit, async
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool
 
+import numpy as np
+
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
 
 
 # Define structure
-
-import numpy as np
-
 cell = [[ 3.1900000, 0.0000000, 0.0000000],
         [-1.5950000, 2.7626210, 0.0000000],
         [ 0.0000000, 0.0000000, 5.1890000]]
@@ -37,7 +36,7 @@ for i, scaled_position in enumerate(scaled_positions):
 machine_dict = {'resources': {'num_machines': 1,
                               'parallel_env': 'mpi*',
                               'tot_num_mpiprocs': 16},
-                'max_wallclock_seconds': 3600 * 10,
+                'max_wallclock_seconds': 3600 * 10,  # max time of running job
                 }
 
 # PHONOPY settings
@@ -50,8 +49,8 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
-                                  # Uncomment the following line to use phonopy remotely
-                                  # 'code_fc': 'phonopy_fc@boston_in',  # this uses phonopy.force_constants plugin
+                                  # Uncomment the following lines to use phonopy remotely
+                                  # 'code': 'phonopy_tot@boston_in',  # this uses phonopy.phonon plugin
                                   # 'machine': machine_dict
                                   })
 

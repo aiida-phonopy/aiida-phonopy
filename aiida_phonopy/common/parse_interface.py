@@ -5,14 +5,20 @@ from aiida.orm.data.base import Str, Float, Bool, Int
 StructureData = DataFactory('structure')
 
 @workfunction
-def structure_from_qe_trajectory(output_trajectory, pos):
+def structure_from_trajectory(output_trajectory, pos):
     """
     Worfunction to extract a structure object from trajectory node and keep the provenance
+
     :param output_trajectory: trajectory node from a QE optimization
     :param pos: number of structure to extract from trajectory node
     :return:
     """
     pos = int(pos)
+
+    # Check maximum
+    num_structures = len(output_trajectory.get_array('positions'))
+    pos = max(pos, num_structures)
+
     positions = output_trajectory.get_array('positions')[pos]
     symbols = output_trajectory.get_array('symbols')
     cell = output_trajectory.get_array('cells')[pos]
@@ -30,14 +36,17 @@ def parse_optimize_calculation(calc):
     Stress in kB
     Force in eV/Angstrom
     """
-    import numpy as np
 
     plugin = calc.get_code().get_attr('input_plugin')
 
     if plugin == 'vasp.vasp':
         forces = calc.out.output_trajectory.get_array('forces')[-1]
         stresses = calc.out.output_trajectory.get_array('stress')[-1]
-        structure = calc.out.output_structure
+
+        try:
+            structure = calc.out.output_structure
+        except:
+            structure = structure_from_trajectory(calc.out.output_trajectory, Int(-1))['structure']
 
     elif plugin == 'lammps.optimize':
         forces = calc.out.output_array.get_array('forces')
@@ -48,10 +57,10 @@ def parse_optimize_calculation(calc):
         forces = calc.out.output_trajectory.get_array('forces')[-1]
         stresses = calc.out.output_trajectory.get_array('stress')[-1] * 10 # GPa to kBar
 
-        structure = structure_from_qe_trajectory(calc.out.output_trajectory, Int(-1))
-        print structure
-        structure = structure.pop('structure')
-        print structure
+        try:
+            structure = calc.out.output_structure
+        except:
+            structure = structure_from_trajectory(calc.out.output_trajectory, Int(-1))['structure']
 
     else:
         return Exception('Not supported plugin')
