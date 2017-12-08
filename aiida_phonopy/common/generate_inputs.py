@@ -110,10 +110,16 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
 
     if type == 'born_charges':
         parameters['CONTROL'].update({'tstress': True,
+                                      'tprnfor': True,
+                                      'etot_conv_thr': 1.e-8,
+                                      'forc_conv_thr': 1.e-8
+                                      })
+
+        parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True
                                       })
-        parameters['INPUTPH'] = {'epsil': True,
-                                 'zeu': True}  # Degrees of movement
+        #parameters['INPUTPH'] = {'epsil': True,
+        #                         'zeu': True}  # Degrees of movement
 
     inputs.parameters = ParameterData(dict=parameters)
 
@@ -142,7 +148,6 @@ def generate_lammps_params(structure, settings, pressure=0.0, type=None):
         code = settings.dict.code[type]
     except:
         code = settings.dict.code
-
 
     plugin = Code.get_from_string(code).get_attr('input_plugin')
     LammpsCalculation = CalculationFactory(plugin)

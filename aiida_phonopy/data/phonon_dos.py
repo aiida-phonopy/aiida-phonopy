@@ -119,3 +119,32 @@ class PhononDosData(ArrayData):
 
         self.set_array('partial_dos', array)
         self._set_attr("n_partial_dos", len(array))
+
+    def is_stable(self, tol=1e-6):
+        """
+        Returns true if no imaginary modes (shown as negative frequency DOS)
+        :param tol:
+        :return:
+        """
+        import numpy as np
+
+        dos = self.get_dos()
+        freq = self.get_frequencies()
+
+        mask_neg = np.ma.masked_less(freq, 0.0).mask
+        mask_pos = np.ma.masked_greater(freq, 0.0).mask
+
+        if mask_neg.any() == False:
+            return True
+
+        if mask_pos.any() == False:
+            return False
+
+        int_neg = -np.trapz(np.multiply(dos[mask_neg], freq[mask_neg]), x=freq[mask_neg])
+        int_pos = np.trapz(np.multiply(dos[mask_pos], freq[mask_pos]), x=freq[mask_pos])
+
+        if int_neg / int_pos > tol:
+            return False
+        else:
+            return True
+

@@ -145,7 +145,7 @@ class OptimizeStructure(WorkChain):
     def get_data(self):
 
         self.out('optimized_structure', parse_optimize_calculation(self.ctx.optimize)['output_structure'])
-        self.out('optimized_structure_data', self.ctx.optimize.out.output_parameters)
+        self.out('optimized_structure_data', self.ctx.optimize.out.output_array)
 
         return
 

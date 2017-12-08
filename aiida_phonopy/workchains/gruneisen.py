@@ -28,26 +28,128 @@ import numpy as np
 
 
 def get_phonon(structure, force_constants, ph_settings, nac_data=None):
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
     from phonopy import Phonopy
+    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
 
-    # Generate phonopy phonon object
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-
-    phonon = Phonopy(bulk,
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
 
-    phonon.set_force_constants(force_constants.get_data())
-
+    if force_constants is not None:
+        phonon.set_force_constants(force_constants.get_data())
 
     if nac_data is not None:
             phonon.set_nac_params(get_born_parameters(phonon, nac_data))
 
     return phonon
+
+
+def get_commensurate(structure, ph_settings):
+    from phonopy import Phonopy
+    from phonopy.harmonic.dynmat_to_fc import DynmatToForceConstants
+    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+
+    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+                     ph_settings.dict.supercell,
+                     primitive_matrix=ph_settings.dict.primitive,
+                     symprec=ph_settings.dict.symmetry_precision)
+
+    primitive = phonon.get_primitive()
+    supercell = phonon.get_supercell()
+
+    dynmat2fc = DynmatToForceConstants(primitive, supercell)
+    commensurate = dynmat2fc.get_commensurate_points()
+
+    return dynmat2fc, commensurate
+
+
+def get_force_constants(phonon_origin, gruneisen, commensurate, volumes):
+    from phonopy.harmonic.dynmat_to_fc import DynmatToForceConstants
+    from phonopy.units import VaspToTHz
+
+    from copy import deepcopy
+    phonon = deepcopy(phonon_origin)
+
+    phonon.set_qpoints_phonon(commensurate,
+                              is_eigenvectors=True)
+    frequencies, eigenvectors = phonon.get_qpoints_phonon()
+
+    primitive = phonon.get_primitive()
+    supercell = phonon.get_supercell()
+
+    dynmat2fc = DynmatToForceConstants(primitive, supercell)
+    volume_ref = phonon.get_unitcell().get_volume()
+
+    force_constants_list = []
+    for volume in volumes:
+        renormalized_frequencies = []
+        for freq, g in zip(frequencies, gruneisen):
+            renormalized_frequencies.append(freq + (freq * (np.exp(-g*np.log(volume/volume_ref))-1)))
+        renormalized_frequencies = np.array(renormalized_frequencies)
+
+        # Fixing Gamma point data
+        renormalized_frequencies[0][0:3] = [0.0, 0.0, 0.0]
+
+        dynmat2fc.set_dynamical_matrices(renormalized_frequencies / VaspToTHz, eigenvectors)
+        dynmat2fc.run()
+        force_constants_list.append(np.array(dynmat2fc.get_force_constants()))
+
+    return force_constants_list
+
+
+def get_thermal_properties(structure, ph_settings, force_constants_list):
+    from phonopy import Phonopy
+    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+
+    free_energy_list = []
+    entropy_list = []
+    cv_list = []
+    temperature = None
+    for fc in force_constants_list:
+        phonon = Phonopy(phonopy_bulk_from_structure(structure),
+                         ph_settings.dict.supercell,
+                         primitive_matrix=ph_settings.dict.primitive,
+                         symprec=ph_settings.dict.symmetry_precision)
+
+        phonon.set_force_constants(fc)
+        phonon.set_mesh(ph_settings.dict.mesh, is_eigenvectors=True, is_mesh_symmetry=False)
+        phonon.set_thermal_properties()
+        temperature, free_energy, entropy, cv = phonon.get_thermal_properties()
+        free_energy_list.append(free_energy)
+        entropy_list.append(entropy)
+        cv_list.append(cv)
+
+    return np.array(free_energy_list), np.array(entropy_list).T, np.array(cv_list).T, temperature
+
+
+def get_gruneisen_at_list(phonon_origin, phonon_plus, phonon_minus, list_qpoints):
+
+    from phonopy.gruneisen import Gruneisen
+    from copy import deepcopy
+
+    gruneisen = Gruneisen(phonon_origin.get_dynamical_matrix(),
+                          phonon_plus.get_dynamical_matrix(),
+                          phonon_minus.get_dynamical_matrix())
+
+    gruneisen.set_qpoints(list_qpoints)
+    gamma = gruneisen.get_gruneisen()
+
+    factor = phonon_origin.get_unit_conversion_factor(),
+    eigenvalues = gruneisen.get_eigenvalues()
+    frequencies = np.sqrt(abs(eigenvalues)) * np.sign(eigenvalues) * factor
+
+    phonon = deepcopy(phonon_origin)
+
+    phonon.set_qpoints_phonon(list_qpoints,
+                              is_eigenvectors=True)
+    frequencies_check, eigenvectors = phonon.get_qpoints_phonon()
+
+    # Make sure that both sets of frequencies are the same (should be!)
+    np.testing.assert_almost_equal(frequencies, frequencies_check)
+
+    return gamma, frequencies, eigenvectors
+
 
 @workfunction
 def phonopy_gruneisen(**kwargs):
@@ -73,8 +175,6 @@ def phonopy_gruneisen(**kwargs):
         phonon_minus_nac = None
         phonon_origin_nac = None
 
-
-
     phonon_plus = get_phonon(phonon_plus_structure,
                              phonon_plus_fc,
                              ph_settings,
@@ -96,7 +196,7 @@ def phonopy_gruneisen(**kwargs):
 
     gruneisen.set_mesh(ph_settings.dict.mesh, is_gamma_center=False, is_mesh_symmetry=True)
 
-    # BAND STRUCTURE
+    # band structure
     gruneisen.set_band_structure(bands.get_band_ranges(),
                                  bands.get_number_of_points())
 
@@ -114,7 +214,6 @@ def phonopy_gruneisen(**kwargs):
     weights_mesh = np.array(mesh.get_weights())
     eigenvalues_mesh = np.array(mesh.get_eigenvalues())
 
-    # build mesh
     mesh_array = ArrayData()
     mesh_array.set_array('frequencies', frequencies_mesh)
     mesh_array.set_array('gruneisen', gruneisen_mesh)
@@ -122,7 +221,141 @@ def phonopy_gruneisen(**kwargs):
     mesh_array.set_array('eigenvalues', eigenvalues_mesh)
     mesh_array.set_array('weights', weights_mesh)
 
-    return {'band_structure': band_structure, 'mesh': mesh_array}
+    # commensurate
+    dynmat2fc, commensurate_q_points = get_commensurate(phonon_origin_structure, ph_settings)
+    commensurate_gruneisen, commensurate_frequencies, eigenvectors = get_gruneisen_at_list(phonon_origin,
+                                                                                           phonon_plus,
+                                                                                           phonon_minus,
+                                                                                           commensurate_q_points)
+    commensurate_array = ArrayData()
+    commensurate_array.set_array('q_points', commensurate_q_points)
+    commensurate_array.set_array('gruneisen', commensurate_gruneisen)
+    commensurate_array.set_array('frequencies', commensurate_frequencies)
+    commensurate_array.set_array('eigenvectors', eigenvectors)
+
+    return {'band_structure': band_structure, 'mesh': mesh_array, 'commensurate': commensurate_array}
+
+
+@workfunction
+def get_eos(phonon_plus_structure,phonon_origin_structure, phonon_minus_structure,
+            phonon_plus_data, phonon_origin_data, phonon_minus_data):
+
+    # Wayaround to VASP possible BUG (energy without entropy not correct in vasprun.xml)
+    e_plus = phonon_plus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+    e_origin = phonon_origin_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+    e_minus = phonon_minus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+
+    # print 'plus new:', e_plus, phonon_plus_structure.get_cell_volume()
+    # print 'origin new:', e_origin, phonon_origin_structure.get_cell_volume()
+    # print 'minus new:', e_minus, phonon_minus_structure.get_cell_volume()
+
+    vol_fit = np.polyfit([phonon_plus_structure.get_cell_volume(),
+                          phonon_origin_structure.get_cell_volume(),
+                          phonon_minus_structure.get_cell_volume()],
+                         [e_plus, e_origin, e_minus],
+                         2)
+    p_energy = np.poly1d(vol_fit)
+
+    stress_fit = np.polyfit([phonon_plus_structure.get_cell_volume(),
+                             phonon_origin_structure.get_cell_volume(),
+                             phonon_minus_structure.get_cell_volume()],
+                            [np.average(np.diag(phonon_plus_data.get_array('stress')[-1])),
+                             np.average(np.diag(phonon_origin_data.get_array('stress')[-1])),
+                             np.average(np.diag(phonon_minus_data.get_array('stress')[-1]))],
+                            2)
+    p_stress = np.poly1d(stress_fit)
+
+    volumes = np.linspace(phonon_origin_structure.get_cell_volume() * 0.95,
+                          phonon_origin_structure.get_cell_volume() * 1.05,
+                          num=10)
+
+    eos = ArrayData()
+    eos.set_array('volumes', volumes)
+    eos.set_array('energies', p_energy(volumes))
+    eos.set_array('stresses', p_stress(volumes))
+
+    return {'eos': eos}
+
+
+@workfunction
+def phonopy_qha_prediction(phonon_structure,
+                           force_constants,
+                           eos,
+                           ph_settings,
+                           commensurate):
+
+    phonon = get_phonon(phonon_structure,
+                        force_constants,
+                        ph_settings)
+
+    force_constants_list = get_force_constants(phonon,
+                                               commensurate.get_array('gruneisen'),
+                                               commensurate.get_array('q_points'),
+                                               eos.get_array('volumes'))
+
+    free_energy_list, entropy_list, cv_list, temperature = get_thermal_properties(phonon_structure,
+                                                                                  ph_settings,
+                                                                                  force_constants_list)
+    # testing
+    import matplotlib.pyplot as plt
+    plt.figure(1)
+    plt.plot(free_energy_list)
+
+    plt.figure(2)
+    plt.plot(eos.get_array('volumes'), eos.get_array('energies'))
+
+    plt.figure(3)
+    plt.plot(eos.get_array('stresses'), eos.get_array('energies'))
+
+    plt.figure(4)
+    plt.plot(temperature, cv_list)
+
+    plt.figure(5)
+    plt.plot(temperature, entropy_list)
+    plt.show()
+
+    # end testing
+
+    qha_output = get_qha(eos,
+                         temperature,
+                         free_energy_list,
+                         cv_list,
+                         entropy_list)
+
+    prediction = {'temperature': qha_output['qha_temperatures'][-1],
+                  'volume_limits': [qha_output['volume_temperature'][0], qha_output['volume_temperature'][-1]]}
+
+    return {'qha_prediction': ParameterData(dict=prediction)
+}
+
+
+def get_qha(eos, temperatures, fe_phonon, cv, entropy, t_max=1000):
+
+    from phonopy import PhonopyQHA
+    import numpy as np
+
+    phonopy_qha = PhonopyQHA(eos.get_array('volumes'),
+                             eos.get_array('energies'),
+                             eos="vinet",
+                             temperatures=np.array(temperatures),
+                             free_energy=np.array(fe_phonon).T,
+                             cv=np.array(cv),
+                             entropy=np.array(entropy),
+                             t_max=t_max,
+                             verbose=False)
+
+    plt = phonopy_qha.plot_qha()
+    plt.show()
+
+    qha_results = {'qha_temperatures': phonopy_qha._qha._temperatures[:phonopy_qha._qha._max_t_index],
+                   'helmholtz_volume': phonopy_qha.get_helmholtz_volume(),
+                   'thermal_expansion': phonopy_qha.get_thermal_expansion(),
+                   'volume_temperature':  phonopy_qha.get_volume_temperature(),
+                   'heat_capacity_P_numerical': phonopy_qha.get_heat_capacity_P_numerical(),
+                   'volume_expansion': phonopy_qha.get_volume_expansion(),
+                   'gibbs_temperature': phonopy_qha.get_gibbs_temperature()}
+
+    return qha_results
 
 
 class GruneisenPhonopy(WorkChain):
@@ -136,8 +369,8 @@ class GruneisenPhonopy(WorkChain):
         spec.input("ph_settings", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
-        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("stress_displacement", valid_type=Float, required=False, default=Float(1e-2))
+        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))  # in kB
+        spec.input("stress_displacement", valid_type=Float, required=False, default=Float(2.0))  # in kB
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
 
         spec.outline(cls.create_unit_cell_expansions, cls.calculate_gruneisen)
@@ -145,14 +378,14 @@ class GruneisenPhonopy(WorkChain):
     def create_unit_cell_expansions(self):
 
         print('start Gruneisen (pk={})'.format(self.pid))
-        print ('start create cell expansions')
+        print('start create cell expansions')
 
         # For testing
-        testing = False
+        testing = True
         if testing:
-            self.ctx._content['plus'] = load_node(9599)
-            self.ctx._content['origin'] = load_node(9595)
-            self.ctx._content['minus'] = load_node(9603)
+            self.ctx._content['plus'] = load_node(12185)
+            self.ctx._content['origin'] = load_node(12182)
+            self.ctx._content['minus'] = load_node(12188)
             return
 
         calcs = {}
@@ -186,11 +419,11 @@ class GruneisenPhonopy(WorkChain):
                            'phonon_minus_fc': self.ctx.minus.out.force_constants,
                            'phonon_origin_structure' : self.ctx.origin.out.final_structure,
                            'phonon_origin_fc' : self.ctx.origin.out.force_constants,
-                           'ph_settings' : self.inputs.ph_settings,
+                           'ph_settings': self.inputs.ph_settings,
                            'bands': self.ctx.origin.out.band_structure}
 
         if 'nac_data' in self.ctx.origin.get_outputs_dict():
-            print 'loading nac (grune)'
+            print ('loading nac (grune)')
             input_gruneisen.update({'phonon_plus_nac': self.ctx.plus.out.nac_data,
                                     'phonon_minus_nac': self.ctx.minus.out.nac_data,
                                     'phonon_origin_nac': self.ctx.origin.out.nac_data})
@@ -199,3 +432,18 @@ class GruneisenPhonopy(WorkChain):
 
         self.out('band_structure', gruneisen_results['band_structure'])
         self.out('mesh', gruneisen_results['mesh'])
+        self.out('commensurate', gruneisen_results['commensurate'])
+
+        eos = get_eos(phonon_plus_structure=self.ctx.plus.out.final_structure,
+                      phonon_origin_structure=self.ctx.origin.out.final_structure,
+                      phonon_minus_structure=self.ctx.minus.out.final_structure,
+                      phonon_plus_data=self.ctx.plus.out.optimized_data,
+                      phonon_origin_data=self.ctx.origin.out.optimized_data,
+                      phonon_minus_data=self.ctx.minus.out.optimized_data)
+
+        prediction_results = phonopy_qha_prediction(phonon_structure=self.ctx.origin.out.final_structure,
+                                                    force_constants=self.ctx.origin.out.force_constants,
+                                                    eos=eos['eos'],
+                                                    ph_settings=self.inputs.ph_settings,
+                                                    commensurate=gruneisen_results['commensurate'])
+

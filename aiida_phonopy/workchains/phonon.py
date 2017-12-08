@@ -473,6 +473,7 @@ class PhononPhonopy(WorkChain):
 
         if 'optimized' in self.ctx:
             self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
+            self.out('optimized_data', self.ctx.optimized.out.optimized_structure_data)
         else:
             self.ctx.final_structure = self.inputs.structure
 
