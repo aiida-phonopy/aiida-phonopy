@@ -30,7 +30,8 @@
     "aiida.workflows": [
       "phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure",
       "phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy",
-      "phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy"
+      "phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy",
+      "phonopy.qha = aiida_phonopy.workchains.qha: QHAPhonopy"
     ]
   }
 }
