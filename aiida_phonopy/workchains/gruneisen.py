@@ -1,5 +1,3 @@
-# Works run by the daemon (using submit)
-
 from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
@@ -237,17 +235,22 @@ def phonopy_gruneisen(**kwargs):
 
 
 @workfunction
-def get_eos(phonon_plus_structure,phonon_origin_structure, phonon_minus_structure,
+def get_eos(phonon_plus_structure, phonon_origin_structure, phonon_minus_structure,
             phonon_plus_data, phonon_origin_data, phonon_minus_data):
 
-    # Wayaround to VASP possible BUG (energy without entropy not correct in vasprun.xml)
-    e_plus = phonon_plus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
-    e_origin = phonon_origin_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
-    e_minus = phonon_minus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+    # Wayaround to VASP  (energy without entropy not correct in vasprun.xml)
+
+    # e_plus = phonon_plus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+    # e_origin = phonon_origin_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
+    # e_minus = phonon_minus_data.get_array('electronic_steps')[None][-1][-1][-1]['e_wo_entrp']
 
     # print 'plus new:', e_plus, phonon_plus_structure.get_cell_volume()
     # print 'origin new:', e_origin, phonon_origin_structure.get_cell_volume()
     # print 'minus new:', e_minus, phonon_minus_structure.get_cell_volume()
+
+    e_plus = phonon_plus_data.dict.energy
+    e_origin = phonon_origin_data.dict.energy
+    e_minus = phonon_minus_data.dict.energy
 
     vol_fit = np.polyfit([phonon_plus_structure.get_cell_volume(),
                           phonon_origin_structure.get_cell_volume(),
@@ -259,9 +262,9 @@ def get_eos(phonon_plus_structure,phonon_origin_structure, phonon_minus_structur
     stress_fit = np.polyfit([phonon_plus_structure.get_cell_volume(),
                              phonon_origin_structure.get_cell_volume(),
                              phonon_minus_structure.get_cell_volume()],
-                            [np.average(np.diag(phonon_plus_data.get_array('stress')[-1])),
-                             np.average(np.diag(phonon_origin_data.get_array('stress')[-1])),
-                             np.average(np.diag(phonon_minus_data.get_array('stress')[-1]))],
+                            [np.average(np.diag(phonon_plus_data.dict.stress)),
+                             np.average(np.diag(phonon_origin_data.dict.stress)),
+                             np.average(np.diag(phonon_minus_data.dict.stress))],
                             2)
     p_stress = np.poly1d(stress_fit)
 
@@ -322,12 +325,40 @@ def phonopy_qha_prediction(phonon_structure,
                          cv_list,
                          entropy_list)
 
-    prediction = {'temperature': qha_output['qha_temperatures'][-1],
-                  'volume_limits': [qha_output['volume_temperature'][0], qha_output['volume_temperature'][-1]]}
+    stress_fit = np.polyfit(eos.get_array('volumes'),
+                            eos.get_array('stresses'), 2)
+    p_stress = np.poly1d(stress_fit)
+
+    volumes_test = np.linspace(eos.get_array('volumes')[0]-20, eos.get_array('volumes')[-1]+20, 50)
+    plt.plot(eos.get_array('volumes'), eos.get_array('stresses'), 'ro')
+    plt.plot(volumes_test, p_stress(volumes_test), label='poly')
+    plt.plot(volumes_test,
+             fit_pressure_volume(eos.get_array('volumes'), eos.get_array('stresses'), volumes_test),
+             label='inverse')
+
+    plt.legend()
+    plt.show()
+
+    # stresses = p_stress(qha_output['volume_temperature'])
+    stresses = fit_pressure_volume(eos.get_array('volumes'), eos.get_array('stresses'), qha_output['volume_temperature'])
+
+    prediction = {'temperature': [0.0, qha_output['qha_temperatures'][-1]],
+                  'volume_range': [min(qha_output['volume_temperature']), max(qha_output['volume_temperature'])],
+                  'stress_range': [max(stresses), min(stresses)]}
 
     return {'qha_prediction': ParameterData(dict=prediction)
 }
 
+
+def fit_pressure_volume(volume_data, stress_data, volumes_prediction):
+    from scipy.optimize import curve_fit
+
+    def func(x, a, b):
+        return a / x + b
+
+    popt, pcov = curve_fit(func, volume_data, stress_data)
+
+    return func(volumes_prediction, *popt)
 
 def get_qha(eos, temperatures, fe_phonon, cv, entropy, t_max=1000):
 
@@ -383,9 +414,9 @@ class GruneisenPhonopy(WorkChain):
         # For testing
         testing = True
         if testing:
-            self.ctx._content['plus'] = load_node(12185)
-            self.ctx._content['origin'] = load_node(12182)
-            self.ctx._content['minus'] = load_node(12188)
+            self.ctx._content['plus'] = load_node(13603)
+            self.ctx._content['origin'] = load_node(13600)
+            self.ctx._content['minus'] = load_node(13606)
             return
 
         calcs = {}
@@ -447,3 +478,6 @@ class GruneisenPhonopy(WorkChain):
                                                     ph_settings=self.inputs.ph_settings,
                                                     commensurate=gruneisen_results['commensurate'])
 
+        self.out('prediction', prediction_results['qha_prediction'])
+
+        print(prediction_results)

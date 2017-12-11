@@ -3,6 +3,7 @@ from aiida.work.workfunction import workfunction
 from aiida.orm.data.base import Str, Float, Bool, Int
 
 StructureData = DataFactory('structure')
+ParameterData = DataFactory('parameter')
 
 @workfunction
 def structure_from_trajectory(output_trajectory, pos):
@@ -37,25 +38,34 @@ def parse_optimize_calculation(calc):
     Force in eV/Angstrom
     """
 
+    import numpy as np
+
     plugin = calc.get_code().get_attr('input_plugin')
 
     if plugin == 'vasp.vasp':
         forces = calc.out.output_trajectory.get_array('forces')[-1]
-        stresses = calc.out.output_trajectory.get_array('stress')[-1]
+        stress = calc.out.output_trajectory.get_array('stress')[-1]
 
         try:
             structure = calc.out.output_structure
         except:
             structure = structure_from_trajectory(calc.out.output_trajectory, Int(-1))['structure']
 
+        energy_wo_entrop = calc.out.output_trajectory.get_array('e_wo_entrp')[-1]
+        pressure = np.average(np.diag(stress))
+        factor = 0.0006241509125883258  # kBar * A^3 -> eV
+        energy = energy_wo_entrop - structure.get_cell_volume() * pressure * factor
+
     elif plugin == 'lammps.optimize':
         forces = calc.out.output_array.get_array('forces')
-        stresses = calc.out.output_array.get_array('stress')
+        stress = calc.out.output_array.get_array('stress')
         structure = calc.out.output_structure
+        energy = calc.out.output_parameters.dict.energy
 
     elif plugin == 'quantumespresso.pw':
         forces = calc.out.output_trajectory.get_array('forces')[-1]
-        stresses = calc.out.output_trajectory.get_array('stress')[-1] * 10 # GPa to kBar
+        stress = calc.out.output_trajectory.get_array('stress')[-1] * 10 # GPa to kBar
+        energy = calc.out.output_parameters.dict.energy
 
         try:
             structure = calc.out.output_structure
@@ -65,4 +75,8 @@ def parse_optimize_calculation(calc):
     else:
         return Exception('Not supported plugin')
 
-    return {'forces': forces, 'stresses': stresses, 'output_structure': structure}
+    output_data = ParameterData(dict={'energy': energy,
+                                      'forces': forces.tolist(),
+                                      'stress': stress.tolist()})
+
+    return {'output_structure': structure, 'output_data': output_data}

@@ -82,17 +82,13 @@ class OptimizeStructure(WorkChain):
 
         print ('Check convergence')
 
-        parsed_data = parse_optimize_calculation(self.ctx.optimize)
-        forces = parsed_data['forces']
-        stresses = parsed_data['stresses']
-
-        # Temporal way around. This has to be uniform for all codes
-        if len(stresses.shape) > 2:  # For quantum espresso
-            stresses = stresses[-1] * 10
+        parsed_data = parse_optimize_calculation(self.ctx.optimize)['output_data']
+        forces = np.array(parsed_data.dict.forces)
+        stress = np.array(parsed_data.dict.stress)
 
         not_converged_forces = len(np.where(abs(forces) > float(self.inputs.tolerance_forces))[0])
 
-        stress_compare_matrix = stresses - np.diag([float(self.inputs.pressure)]*3)
+        stress_compare_matrix = stress - np.diag([float(self.inputs.pressure)]*3)
         not_converged_stress = len(np.where(abs(stress_compare_matrix) > float(self.inputs.tolerance_stress))[0])
 
         not_converged = not_converged_forces + not_converged_stress
@@ -145,7 +141,9 @@ class OptimizeStructure(WorkChain):
     def get_data(self):
 
         self.out('optimized_structure', parse_optimize_calculation(self.ctx.optimize)['output_structure'])
-        self.out('optimized_structure_data', self.ctx.optimize.out.output_array)
+        self.out('optimized_structure_data', parse_optimize_calculation(self.ctx.optimize)['output_data'])
+
+
 
         return
 
