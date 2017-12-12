@@ -70,7 +70,6 @@ def phonopy_qha(**kwargs):
     return {'qha_results', qha_results}
 
 
-
 class QHAPhonopy(WorkChain):
     """
     Workchain to calculate the mode Gruneisen parameters
@@ -139,4 +138,5 @@ class QHAPhonopy(WorkChain):
 
         qha_results = phonopy_qha(**input_qha)
 
-        self.out('qha_results', qha_results['qha_results'])
+        for key, value in qha_results:
+            self.out(key, value)
