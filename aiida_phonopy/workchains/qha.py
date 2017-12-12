@@ -67,7 +67,7 @@ def phonopy_qha(**kwargs):
     for key, value in qha_output.items():
         qha_results.set_array(key, np.array(value))
 
-    return {'qha_results', qha_results}
+    return {'qha_results': qha_results}
 
 
 class QHAPhonopy(WorkChain):
@@ -138,5 +138,5 @@ class QHAPhonopy(WorkChain):
 
         qha_results = phonopy_qha(**input_qha)
 
-        for key, value in qha_results:
+        for key, value in qha_results.items():
             self.out(key, value)
