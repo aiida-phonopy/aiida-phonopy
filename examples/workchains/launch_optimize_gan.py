@@ -58,8 +58,8 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   # 'machine': machine_dict
                                   })
 
-#code_to_use = 'VASP'
-code_to_use = 'QE'
+code_to_use = 'VASP'
+#code_to_use = 'QE'
 #code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
@@ -74,8 +74,8 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                              'forces': 'vasp@stern_in'},
+    settings_dict = {'code': {'optimize': 'vasp@stern',
+                              'forces': 'vasp@stern'},
                      'parameters': incar_dict,
                      'kpoints_density': 0.5,  # k-point density,
                      'pseudos_family': 'pbe_test_family',
@@ -131,8 +131,8 @@ if code_to_use == 'LAMMPS':
                   'max_evaluations': 1000000,
                   'max_iterations': 500000}
 
-    settings_dict = {'code': {'optimize': 'lammps_optimize@boston',
-                              'forces': 'lammps_force@boston'},
+    settings_dict = {'code': {'optimize': 'lammps_optimize@boston_in',
+                              'forces': 'lammps_force@boston_in'},
                      'parameters': parameters,
                      'potential': potential,
                      'machine': machine_dict

@@ -72,9 +72,9 @@ incar_dict = {
     'GGA'    : 'PS'
 }
 
-settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                          'forces': 'vasp@stern_in',
-                          'born_charges': 'vasp@stern_in'},
+settings_dict = {'code': {'optimize': 'vasp@boston',
+                          'forces': 'vasp@boston',
+                          'born_charges': 'vasp@boston'},
                  'parameters': incar_dict,
                  'kpoints_density': 0.5,  # k-point density,
                  'pseudos_family': 'pbe_test_family',

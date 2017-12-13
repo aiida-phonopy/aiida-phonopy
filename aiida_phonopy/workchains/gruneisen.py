@@ -123,12 +123,12 @@ def get_thermal_properties(structure, ph_settings, force_constants_list):
 
 def get_gruneisen_at_list(phonon_origin, phonon_plus, phonon_minus, list_qpoints):
 
-    from phonopy.gruneisen import Gruneisen
+    from phonopy.gruneisen.core import GruneisenBase
     from copy import deepcopy
 
-    gruneisen = Gruneisen(phonon_origin.get_dynamical_matrix(),
-                          phonon_plus.get_dynamical_matrix(),
-                          phonon_minus.get_dynamical_matrix())
+    gruneisen = GruneisenBase(phonon_origin.get_dynamical_matrix(),
+                              phonon_plus.get_dynamical_matrix(),
+                              phonon_minus.get_dynamical_matrix())
 
     gruneisen.set_qpoints(list_qpoints)
     gamma = gruneisen.get_gruneisen()
@@ -195,8 +195,7 @@ def phonopy_gruneisen(**kwargs):
     gruneisen.set_mesh(ph_settings.dict.mesh, is_gamma_center=False, is_mesh_symmetry=True)
 
     # band structure
-    gruneisen.set_band_structure(bands.get_band_ranges(),
-                                 bands.get_number_of_points())
+    gruneisen.set_band_structure(bands.get_bands())
 
     band_structure = BandStructureData(bands=bands.get_bands(),
                                        labels=bands.get_labels(),
@@ -205,19 +204,14 @@ def phonopy_gruneisen(**kwargs):
     band_structure.set_band_structure_gruneisen(gruneisen.get_band_structure())
 
     # mesh
-    mesh = gruneisen.get_mesh()
-    frequencies_mesh = np.array(mesh.get_frequencies())
-    gruneisen_mesh = np.array(mesh.get_gruneisen())
-    q_points_mesh = np.array(mesh.get_qpoints())
-    weights_mesh = np.array(mesh.get_weights())
-    eigenvalues_mesh = np.array(mesh.get_eigenvalues())
+    mesh_data = gruneisen.get_mesh()
 
     mesh_array = ArrayData()
-    mesh_array.set_array('frequencies', frequencies_mesh)
-    mesh_array.set_array('gruneisen', gruneisen_mesh)
-    mesh_array.set_array('q_points', q_points_mesh)
-    mesh_array.set_array('eigenvalues', eigenvalues_mesh)
-    mesh_array.set_array('weights', weights_mesh)
+    mesh_array.set_array('frequencies', np.array(mesh_data[2]))
+    mesh_array.set_array('gruneisen', np.array(mesh_data[4]))
+    mesh_array.set_array('q_points', np.array(mesh_data[0]))
+    mesh_array.set_array('eigenvectors', np.array(mesh_data[3]))
+    mesh_array.set_array('weights', np.array(mesh_data[1]))
 
     # commensurate
     dynmat2fc, commensurate_q_points = get_commensurate(phonon_origin_structure, ph_settings)
@@ -412,7 +406,7 @@ class GruneisenPhonopy(WorkChain):
         print('start create cell expansions')
 
         # For testing
-        testing = True
+        testing = False
         if testing:
             self.ctx._content['plus'] = load_node(13603)
             self.ctx._content['origin'] = load_node(13600)

@@ -89,6 +89,12 @@ class QHAPhonopy(WorkChain):
     def get_gruneisen_prediction(self):
         print('start qha (pk={})'.format(self.pid))
 
+
+        testing = True
+        if testing:
+            self.ctx._content['gruneisen'] = load_node(18494)
+            return
+
         future = submit(GruneisenPhonopy,
                         structure=self.inputs.structure,
                         ph_settings=self.inputs.ph_settings,

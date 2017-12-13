@@ -60,7 +60,6 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
 
     # Transform cells to StructureData and set them ready to return
     data_sets = phono3py.get_displacement_dataset()
-    print data_sets
     data_sets_object = ForceSetsData(data_sets3=data_sets)
 
     disp_cells = {'data_sets': data_sets_object}
@@ -85,7 +84,7 @@ def create_forces_set(**kwargs):
 
     """
     data_sets = kwargs.pop('data_sets')
-    force_sets = ForceSetsData(data_sets=data_sets.get_data_sets())
+    force_sets = ForceSetsData(data_sets3=data_sets.get_data_sets3())
 
     forces = []
     for i in range(data_sets.get_number_of_displacements()):

@@ -79,8 +79,8 @@ class BandStructureData(ArrayData):
 
         import numpy
 
-        q_points = numpy.array([band[0] for band in band_structure_gruneisen._paths])
-        distances = numpy.array([band[5] for band in band_structure_gruneisen._paths])
+        q_points = numpy.array(band_structure_gruneisen[0])
+        distances = numpy.array(band_structure_gruneisen[1])
 
         # Check consistency
         if self.get_bands() is None:
@@ -90,9 +90,9 @@ class BandStructureData(ArrayData):
 
         numpy.testing.assert_array_almost_equal(distances, self.get_distances(), decimal=4)
 
-        self.set_array('gamma', numpy.array([band[2] for band in band_structure_gruneisen._paths]))
-        self.set_array('eigenvalues', numpy.array([band[3] for band in band_structure_gruneisen._paths]))
-        self.set_array('frequencies', numpy.array([band[4] for band in band_structure_gruneisen._paths]))
+        self.set_array('gamma', numpy.array(band_structure_gruneisen[4]))
+        self.set_array('eigenvectors', numpy.array(band_structure_gruneisen[3]))
+        self.set_array('frequencies', numpy.array(band_structure_gruneisen[2]))
 
     def set_frequencies(self, frequencies):
         """
@@ -172,19 +172,19 @@ class BandStructureData(ArrayData):
 
         return gamma
 
-    def get_eigenvalues(self, band=None):
+    def get_eigenvectors(self, band=None):
         """
-        Return the eigenvalues as a numpy array
+        Return the eigenvectors as a numpy array
 
-        :param band: (integer) if not None, return only the eigenvalues at the subpath with index band
+        :param band: (integer) if not None, return only the eigenvectors at the subpath with index band
 
         """
-        eigenvalues = self.get_array('eigenvalues')
+        eigenvectors = self.get_array('eigenvectors')
 
         if band is not None:
-            eigenvalues = eigenvalues[band]
+            eigenvectors = eigenvectors[band]
 
-        return eigenvalues
+        return eigenvectors
 
     def get_bands(self, band=None):
         """

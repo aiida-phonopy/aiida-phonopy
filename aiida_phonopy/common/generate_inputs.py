@@ -135,7 +135,7 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
     return PwCalculation.process(), inputs
 
 
-def generate_lammps_params(structure, settings, pressure=0.0, type=None):
+def generate_lammps_params(structure, settings, type=None, pressure=0.0):
     """
     Generate the input paramemeters needed to run a calculation for LAMMPS
 
@@ -154,6 +154,7 @@ def generate_lammps_params(structure, settings, pressure=0.0, type=None):
     inputs = LammpsCalculation.process().get_inputs_template()
     inputs.code = Code.get_from_string(code)
 
+    # machine
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
@@ -162,6 +163,8 @@ def generate_lammps_params(structure, settings, pressure=0.0, type=None):
 
     # if code.get_input_plugin_name() == 'lammps.optimize':
     if type == 'optimize':
+        print ('optimize inside')
+
         lammps_parameters = dict(settings.dict.parameters)
         lammps_parameters.update({'pressure': pressure})  # pressure kb
         inputs.parameters = ParameterData(dict=lammps_parameters)

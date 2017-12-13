@@ -58,8 +58,8 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
 
 # Uncomment to use one of the examples
 #code_to_use = 'VASP'
-code_to_use = 'QE'
-#code_to_use = 'LAMMPS'
+#code_to_use = 'QE'
+code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
@@ -130,8 +130,8 @@ if code_to_use == 'LAMMPS':
                   'max_evaluations': 1000000,
                   'max_iterations': 500000}
 
-    settings_dict = {'code': {'optimize': 'lammps_optimize@boston',
-                              'forces': 'lammps_force@boston'},
+    settings_dict = {'code': {'optimize': 'lammps_optimize@boston_in',
+                              'forces': 'lammps_force@boston_in'},
                      'parameters': parameters,
                      'potential': potential,
                      'machine': machine_dict
@@ -164,7 +164,7 @@ else:
                     ph_settings=ph_settings,
                     # Optional settings
                     pressure=Float(0),
-                    optimize=Bool(True),
+                    optimize=Bool(False),
                     use_nac=Bool(False),
                     )
 
