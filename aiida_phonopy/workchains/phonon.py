@@ -453,7 +453,6 @@ class PhononPhonopy(WorkChain):
         print ('start optimize')
         future = submit(OptimizeStructure,
                         structure=self.inputs.structure,
-                        # machine=self.inputs.machine,
                         es_settings=self.inputs.es_settings,
                         pressure=self.inputs.pressure,
                         )
@@ -468,7 +467,6 @@ class PhononPhonopy(WorkChain):
         return ToContext(optimized=future)
 
     def create_displacement_calculations(self):
-        print ('create displacements')
         self.report('create displacements')
 
         if 'optimized' in self.ctx:

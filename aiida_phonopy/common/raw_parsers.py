@@ -98,26 +98,36 @@ def parse_band_structure(filename, input_bands):
     return band_structure
 
 
-
 # WRITE DATA TO TEXT
 
-def get_BORN_txt(parameters, nac_data, symprec=1.e-5):
+
+def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
     from phonopy.structure.cells import get_primitive, get_supercell
     from phonopy.structure.symmetry import Symmetry
     from phonopy.structure.atoms import Atoms as PhonopyAtoms
 
+    print ('inside born parameters')
+
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
-    structure = nac_data.get_structure()
+    structure_born = nac_data.get_structure()
 
+    ucell = PhonopyAtoms(symbols=[site.kind_name for site in structure_born.sites],
+                         positions=[site.position for site in structure_born.sites],
+                         cell=structure_born.cell)
 
-    print ('inside born parameters')
-    pmat = parameters.dict.primitive
-    smat = parameters.dict.supercell
+    if structure is not None:
+        pmat = parameters.dict.primitive
+        inv_pmat = np.linalg.inv(pmat)
+        inv_smat = np.linalg.inv(structure.cell)
+        rmat = np.dot(inv_smat, structure_born.cell)
+        pmat = np.dot(inv_pmat, rmat)
+        smat = parameters.dict.supercell
 
-    ucell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                         positions=[site.position for site in structure.sites],
-                         cell=structure.cell)
+    else:
+        # NAC parameters are assumed to be calculated using the primitive cell defined in phonopy parameters
+        pmat = np.identity(3)
+        smat = np.identity(3)
 
     num_atom = len(born_charges)
     assert num_atom == ucell.get_number_of_atoms(), \
@@ -127,6 +137,7 @@ def get_BORN_txt(parameters, nac_data, symprec=1.e-5):
     inv_smat = np.linalg.inv(smat)
     scell = get_supercell(ucell, smat, symprec=symprec)
     pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
+
     p2s = np.array(pcell.get_primitive_to_supercell_map(), dtype='intc')
     p_sym = Symmetry(pcell, is_symmetry=True, symprec=symprec)
     s_indep_atoms = p2s[p_sym.get_independent_atoms()]

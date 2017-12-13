@@ -63,7 +63,7 @@ class ForceSetsData(ArrayData):
 
         first_atoms = []
         for i in range(ndisplacements):
-            first_atoms.append({'directions': direction[i],
+            first_atoms.append({'direction': direction[i],
                                 'number': number[i],
                                 'forces': forces[i],
                                 'displacement': displacement[i]})
@@ -112,3 +112,20 @@ class ForceSetsData(ArrayData):
 
         self.set_data_sets(data_sets)
         self.set_forces([displacement['forces'] for displacement in data_sets['first_atoms']])
+
+    # phono3py
+
+    def set_forces3(self, forces):
+        import numpy
+        self.set_array('forces3', numpy.array(forces))
+
+    def get_forces3(self):
+        forces_list = self.get_array('forces3')
+        return [forces for forces in forces_list]
+
+    def set_data_sets3(self, data_sets):
+        self._set_attr('data_sets_3', data_sets)
+
+    def get_data_sets3(self):
+        return self.get_attr('data_sets_3')
+

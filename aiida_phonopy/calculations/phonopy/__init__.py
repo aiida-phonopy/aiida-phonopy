@@ -150,7 +150,7 @@ class BasePhonopyCalculation(object):
             self._additional_cmdline_params += ['--readfc']
 
         if nac_data is not None:
-            born_txt = get_BORN_txt(parameters_data, nac_data)
+            born_txt = get_BORN_txt(nac_data, structure=structure, parameters=parameters_data)
             nac_filename = tempfolder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)

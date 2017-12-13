@@ -104,12 +104,27 @@ class QHAPhonopy(WorkChain):
 
         print('start Gruneisen (pk={})'.format(self.pid))
         prediction = self.ctx.gruneisen.out.prediction
-        stress_range = prediction.get_array('stress_range')
+        stress_range = prediction.dict.stress_range
         stress_delta = stress_range[-1] - stress_range[0]
 
         stress_samples = np.linspace(stress_range[0] - stress_delta * 0.5,
                                      stress_range[-1] + stress_delta * 0.5,
                                      self.inputs.num_expansions)
+
+        # For testing
+        testing = False
+        if testing:
+            self.ctx._content['phonon_0'] = load_node(13865)
+            self.ctx._content['phonon_1'] = load_node(13868)
+            self.ctx._content['phonon_2'] = load_node(13871)
+            self.ctx._content['phonon_3'] = load_node(13874)
+            self.ctx._content['phonon_4'] = load_node(13877)
+            self.ctx._content['phonon_5'] = load_node(13883)
+            self.ctx._content['phonon_6'] = load_node(13888)
+            self.ctx._content['phonon_7'] = load_node(13892)
+            self.ctx._content['phonon_8'] = load_node(13896)
+            self.ctx._content['phonon_9'] = load_node(13899)
+            return
 
         calcs = {}
         for i, stress in enumerate(stress_samples):
@@ -132,7 +147,7 @@ class QHAPhonopy(WorkChain):
         print('start Gruneisen (pk={})'.format(self.pid))
         input_qha = {}
         for i in range(int(self.inputs.num_expansions)):
-            input_qha['structure_{}'.format(i)] = self.ctx.get('phonon_{}'.format(i)).out.structure
+            input_qha['structure_{}'.format(i)] = self.ctx.get('phonon_{}'.format(i)).out.final_structure
             input_qha['output_data_{}'.format(i)] = self.ctx.get('phonon_{}'.format(i)).out.optimized_data
             input_qha['thermal_properties_{}'.format(i)] = self.ctx.get('phonon_{}'.format(i)).out.thermal_properties
 
