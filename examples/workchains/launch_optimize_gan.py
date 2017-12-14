@@ -58,9 +58,9 @@ ph_settings = ParameterData(dict={'supercell': [[2,0,0],
                                   # 'machine': machine_dict
                                   })
 
-code_to_use = 'VASP'
+# code_to_use = 'VASP'
 #code_to_use = 'QE'
-#code_to_use = 'LAMMPS'
+code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
@@ -74,8 +74,8 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    settings_dict = {'code': {'optimize': 'vasp@stern',
-                              'forces': 'vasp@stern'},
+    settings_dict = {'code': {'optimize': 'vasp@stern_in',
+                              'forces': 'vasp@stern_in'},
                      'parameters': incar_dict,
                      'kpoints_density': 0.5,  # k-point density,
                      'pseudos_family': 'pbe_test_family',
@@ -150,7 +150,7 @@ if not run_by_deamon:
                   es_settings=es_settings,
                   # Optional settings
                   # pressure=Float(10.0),
-                  max_iterations=Int(1)
+                  max_iterations=Int(3)
                   )
 
     print(results)

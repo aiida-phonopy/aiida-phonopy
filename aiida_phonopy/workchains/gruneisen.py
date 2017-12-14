@@ -110,13 +110,16 @@ def get_thermal_properties(structure, ph_settings, force_constants_list):
                          primitive_matrix=ph_settings.dict.primitive,
                          symprec=ph_settings.dict.symmetry_precision)
 
+        # Normalization factor primitive to unit cell
+        normalization_factor = phonon.unitcell.get_number_of_atoms()/phonon.primitive.get_number_of_atoms()
+
         phonon.set_force_constants(fc)
         phonon.set_mesh(ph_settings.dict.mesh, is_eigenvectors=True, is_mesh_symmetry=False)
         phonon.set_thermal_properties()
         temperature, free_energy, entropy, cv = phonon.get_thermal_properties()
-        free_energy_list.append(free_energy)
-        entropy_list.append(entropy)
-        cv_list.append(cv)
+        free_energy_list.append(np.array(free_energy) * normalization_factor)
+        entropy_list.append(np.array(entropy) * normalization_factor)
+        cv_list.append(np.array(cv) * normalization_factor)
 
     return np.array(free_energy_list), np.array(entropy_list).T, np.array(cv_list).T, temperature
 
@@ -293,6 +296,7 @@ def phonopy_qha_prediction(phonon_structure,
     free_energy_list, entropy_list, cv_list, temperature = get_thermal_properties(phonon_structure,
                                                                                   ph_settings,
                                                                                   force_constants_list)
+
     # testing
     import matplotlib.pyplot as plt
     plt.figure(1)

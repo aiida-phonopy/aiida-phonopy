@@ -74,9 +74,9 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                              'forces': 'vasp@stern_in',
-                              'born_charges': 'vasp@stern_in'},
+    settings_dict = {'code': {'optimize': 'vasp@stern',
+                              'forces': 'vasp@stern',
+                              'born_charges': 'vasp@stern'},
                      'parameters': incar_dict,
                      'kpoints_density': 0.5,  # k-point density,
                      'pseudos_family': 'pbe_test_family',
@@ -152,7 +152,7 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  pressure=Float(0.0),
-                 optimize=Bool(True),
+                 optimize=Bool(False),
                  use_nac=Bool(False),
                  )
 

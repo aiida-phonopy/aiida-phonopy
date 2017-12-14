@@ -148,7 +148,6 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  # pressure=Float(0),
-                 # optimize=Bool(False),
                  use_nac=Bool(False),
                  )
 
@@ -160,7 +159,6 @@ else:
                     ph_settings=ph_settings,
                     # Optional settings
                     # pressure=Float(0),
-                    # optimize=Bool(False),
                     use_nac=Bool(False),
                     )
 

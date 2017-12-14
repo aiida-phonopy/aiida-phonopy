@@ -41,16 +41,17 @@ def phonopy_qha(**kwargs):
         stresses.append(np.average(np.diag(output_data.dict.stress)))
 
         thermal_properties = kwargs.pop('thermal_properties_{}'.format(i))
-        entropy.append(thermal_properties['entropy'])
-        free_energy.append(thermal_properties['free_energy'])
-        cv.append(thermal_properties['heat_capacity'])
-        temperature = thermal_properties['temperture']
+        entropy.append(thermal_properties.get_array('entropy'))
+        free_energy.append(thermal_properties.get_array('free_energy'))
+        cv.append(thermal_properties.get_array('heat_capacity'))
+        temperature = thermal_properties.get_array('temperature')
 
     free_energy = np.array(free_energy)
     entropy = np.array(entropy).T
     cv = np.array(cv).T
     volumes = np.array(volumes)
     energies = np.array(energies)
+    stresses = np.array(stresses)
 
     eos = ArrayData()
     eos.set_array('volumes', volumes)
@@ -90,9 +91,9 @@ class QHAPhonopy(WorkChain):
         print('start qha (pk={})'.format(self.pid))
 
 
-        testing = True
+        testing = False
         if testing:
-            self.ctx._content['gruneisen'] = load_node(18494)
+            self.ctx._content['gruneisen'] = load_node(19945)
             return
 
         future = submit(GruneisenPhonopy,
@@ -117,19 +118,22 @@ class QHAPhonopy(WorkChain):
                                      stress_range[-1] + stress_delta * 0.5,
                                      self.inputs.num_expansions)
 
+        print prediction.dict.stress_range
+        print prediction.dict.volume_range
+
         # For testing
         testing = False
         if testing:
-            self.ctx._content['phonon_0'] = load_node(13865)
-            self.ctx._content['phonon_1'] = load_node(13868)
-            self.ctx._content['phonon_2'] = load_node(13871)
-            self.ctx._content['phonon_3'] = load_node(13874)
-            self.ctx._content['phonon_4'] = load_node(13877)
-            self.ctx._content['phonon_5'] = load_node(13883)
-            self.ctx._content['phonon_6'] = load_node(13888)
-            self.ctx._content['phonon_7'] = load_node(13892)
-            self.ctx._content['phonon_8'] = load_node(13896)
-            self.ctx._content['phonon_9'] = load_node(13899)
+            self.ctx._content['phonon_0'] = load_node(19218)
+            self.ctx._content['phonon_1'] = load_node(19221)
+            self.ctx._content['phonon_2'] = load_node(19224)
+            self.ctx._content['phonon_3'] = load_node(19227)
+            self.ctx._content['phonon_4'] = load_node(19230)
+            self.ctx._content['phonon_5'] = load_node(19233)
+            self.ctx._content['phonon_6'] = load_node(19236)
+            self.ctx._content['phonon_7'] = load_node(19239)
+            self.ctx._content['phonon_8'] = load_node(19242)
+            self.ctx._content['phonon_9'] = load_node(19245)
             return
 
         calcs = {}
