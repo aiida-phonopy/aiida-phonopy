@@ -161,9 +161,9 @@ class PhononPhono3py(WorkChain):
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
 
-        #spec.outline(_If(cls.use_optimize)(cls.optimize),
-        #             cls.create_displacement_calculations, cls.collect_data)
-        spec.outline(cls.calculate_force_constants)
+        spec.outline(_If(cls.use_optimize)(cls.optimize),
+                     cls.create_displacement_calculations, cls.collect_data)
+        # spec.outline(cls.calculate_force_constants)
 
     def use_optimize(self):
         print('start phonon3 (pk={})'.format(self.pid))
@@ -282,8 +282,6 @@ class PhononPhono3py(WorkChain):
         self.out('final_structure', self.ctx.final_structure)
 
         self.report('phonon3py calculation finished ')
-
-        # test
 
     def calculate_force_constants(self):
 
