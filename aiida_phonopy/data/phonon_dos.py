@@ -10,19 +10,25 @@ class PhononDosData(ArrayData):
         super(PhononDosData, self).__init__(*args, **kwargs)
         self._cached_arrays = {}
 
-    def _get_equivalent_atom_list(self):
+    def _get_equivalent_atom_list(self, with_weights=False):
         import numpy
         partial_dos = self.get_array('partial_dos')
         partial_symbols = self.get_attr("atom_labels")
 
         # Check atom equivalences
         delete_list = []
+        weight_list = [1] * len(partial_dos)
+
         for i, dos_i in enumerate(partial_dos):
             for j, dos_j in enumerate(partial_dos):
                 if i < j:
                     if numpy.allclose(dos_i, dos_j, rtol=1, atol=1e-8) and partial_symbols[i] == partial_symbols[j]:
-                        dos_i += dos_j
                         delete_list.append(j)
+                        weight_list[i] += 1
+
+        if with_weights:
+            return (numpy.delete(range(len(partial_dos)), delete_list),
+                    numpy.delete(weight_list, delete_list))
 
         return numpy.delete(range(len(partial_dos)), delete_list)
 
@@ -58,12 +64,14 @@ class PhononDosData(ArrayData):
         non-equivalent atoms by symmetry are returned
         :return: 2D numpy array with the partial density of states
         """
-
+        import numpy
         partial_dos = self.get_array('partial_dos')
 
         if full:
             return partial_dos
-        return partial_dos[self._get_equivalent_atom_list()]
+        indices, weights = self._get_equivalent_atom_list(with_weights=True)
+
+        return numpy.multiply(partial_dos[indices], weights)
 
     def get_frequencies(self):
         """

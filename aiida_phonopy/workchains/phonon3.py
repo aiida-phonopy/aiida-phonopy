@@ -111,7 +111,6 @@ def get_force_constants3(data_sets, structure, ph_settings):
 
     phono3py.generate_displacements(distance=ph_settings.dict.distance)
 
-
     phono3py.produce_fc3(data_sets.get_forces3(),
                          displacement_dataset=data_sets.get_data_sets3(),
                          is_translational_symmetry=True,
@@ -120,7 +119,12 @@ def get_force_constants3(data_sets, structure, ph_settings):
     fc3 = phono3py.get_fc3()
     fc2 = phono3py.get_fc2()
 
-    return fc3, fc2
+    force_constants = ForceConstantsData(data=fc2)
+    force_constants.store()
+
+    print (force_constants)
+
+    return force_constants
 
 
 
@@ -157,8 +161,9 @@ class PhononPhono3py(WorkChain):
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
 
-        spec.outline(_If(cls.use_optimize)(cls.optimize),
-                     cls.create_displacement_calculations, cls.collect_data)
+        #spec.outline(_If(cls.use_optimize)(cls.optimize),
+        #             cls.create_displacement_calculations, cls.collect_data)
+        spec.outline(cls.calculate_force_constants)
 
     def use_optimize(self):
         print('start phonon3 (pk={})'.format(self.pid))
@@ -274,10 +279,16 @@ class PhononPhono3py(WorkChain):
             self.out('nac_data', nac_data['nac_data'])
 
         self.out('force_sets', self.ctx.force_sets)
+        self.out('final_structure', self.ctx.final_structure)
 
         self.report('phonon3py calculation finished ')
 
         # test
+
+    def calculate_force_constants(self):
+
+        self.ctx.force_sets = load_node(25783)
+        self.ctx.final_structure = self.inputs.structure
 
         force_constants = get_force_constants3(self.ctx.force_sets,
                                                self.ctx.final_structure,
