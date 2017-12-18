@@ -75,7 +75,7 @@ plt.ylabel('Density')
 plt.xlabel('Frequency [THz]')
 plt.ylim([0, np.max(total_dos) * 1.1])
 
-plt.plot(frequency, total_dos, label='Total DOS')
+plt.plot(frequency, total_dos, '--', zorder=len(partial_dos)+2, label='Total DOS')
 
 for dos, symbol in zip(partial_dos, partial_symbols):
     plt.plot(frequency, dos, label='{}'.format(symbol))

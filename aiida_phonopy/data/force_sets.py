@@ -1,4 +1,5 @@
 from aiida.orm.data.array import ArrayData
+import numpy
 
 
 class ForceSetsData(ArrayData):
@@ -26,7 +27,11 @@ class ForceSetsData(ArrayData):
 
         :param name: The name of the array.
         """
-        return self.get_attr("ndisplacements")
+
+        ndisplacements = self.get_attr("ndisplacements")
+        if 'ndisplacements_s' in self.get_attrs():
+            ndisplacements += numpy.sum(self.get_attr("ndisplacements_s"))
+        return ndisplacements
 
     def get_data_sets(self):
         """
@@ -75,8 +80,6 @@ class ForceSetsData(ArrayData):
 
     def set_data_sets(self, data_sets):
 
-        import numpy
-
         self._set_attr('natom', data_sets['natom'])
         ndisplacements = len(data_sets['first_atoms'])
 
@@ -100,8 +103,8 @@ class ForceSetsData(ArrayData):
 
     def set_forces(self, forces):
 
-        import numpy
         self.set_array('forces', numpy.array(forces))
+        print ('forces num {}'.format(len(forces)))
 
     def read_from_phonopy_file(self, filename):
         """
@@ -123,7 +126,6 @@ class ForceSetsData(ArrayData):
         return [forces for forces in forces_list]
 
     def set_data_sets3(self, data_sets):
-        import numpy
 
         # print data_sets['first_atoms'][0].keys()
 
@@ -146,6 +148,8 @@ class ForceSetsData(ArrayData):
             direction_f.append(first_atoms['direction'])
             displacement_f.append(first_atoms['displacement'])
             number_f.append(first_atoms['number'])
+            forces_2_order.append(n)
+            n += 1
 
             direction_s = []
             number_s = []
@@ -164,8 +168,6 @@ class ForceSetsData(ArrayData):
             displacement.append(displacement_s)
             direction.append(direction_s)
             pair_distance.append(pair_distance_s)
-            forces_2_order.append(n)
-            n += 1
 
         self.set_array('direction_s', numpy.array(direction))
         self.set_array('number_s', numpy.array(number))

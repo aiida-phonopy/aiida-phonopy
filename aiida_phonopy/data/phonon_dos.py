@@ -39,7 +39,6 @@ class PhononDosData(ArrayData):
 
         return self.get_array('dos')
 
-
     def get_number_of_partial_dos(self, full=False):
         """
         Return the number of atoms (equivalent to the dimension of partial density of states)
@@ -64,15 +63,14 @@ class PhononDosData(ArrayData):
         non-equivalent atoms by symmetry are returned
         :return: 2D numpy array with the partial density of states
         """
-        import numpy
+
         partial_dos = self.get_array('partial_dos')
 
         if full:
             return partial_dos
-        indices, weights = self._get_equivalent_atom_list(with_weights=True)
-        print indices, weights
 
-        partial_dos = [partial*weight for weight, partial in zip(weights, partial_dos[indices])]
+        indices, weights = self._get_equivalent_atom_list(with_weights=True)
+        partial_dos = [partial * weight for weight, partial in zip(weights, partial_dos[indices])]
 
         return partial_dos
 

@@ -242,8 +242,7 @@ class PhononPhono3py(WorkChain):
     def collect_data(self):
 
         from aiida_phonopy.workchains.phonon import get_nac_from_data
-        print ('calculate force constants')
-        self.report('calculate force constants')
+        self.report('collect data and create force_sets')
 
         wf_inputs = {}
         for i in range(self.ctx.number_of_displacements):
