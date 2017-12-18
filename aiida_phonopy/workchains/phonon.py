@@ -32,6 +32,7 @@ StructureData = DataFactory('structure')
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
+__testing__ = False
 
 def generate_phonopy_params(code, structure, ph_settings, force_sets=None, force_constants=None, nac_data=None, bands=None):
     """
@@ -456,9 +457,7 @@ class PhononPhonopy(WorkChain):
                         es_settings=self.inputs.es_settings,
                         pressure=self.inputs.pressure,
                         )
-        # For testing
-        testing = False
-        if testing:
+        if __testing__:
             self.ctx._content['optimize'] = load_node(9357)
             return
 
@@ -486,8 +485,7 @@ class PhononPhonopy(WorkChain):
         calcs = {}
 
         # Load data from nodes
-        testing = False
-        if testing:
+        if __testing__:
             from aiida.orm import load_node
             nodes = [9378, 9381]  # VASP
             labels = ['structure_1', 'structure_0']

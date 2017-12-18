@@ -24,6 +24,8 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
 import numpy as np
 
+__testing__ = False
+
 
 def get_phonon(structure, force_constants, ph_settings, nac_data=None):
     from phonopy import Phonopy
@@ -298,24 +300,25 @@ def phonopy_qha_prediction(phonon_structure,
                                                                                   force_constants_list)
 
     # testing
-    import matplotlib.pyplot as plt
-    plt.figure(1)
-    plt.plot(free_energy_list)
+    if __testing__:
 
-    plt.figure(2)
-    plt.plot(eos.get_array('volumes'), eos.get_array('energies'))
+        import matplotlib.pyplot as plt
+        plt.figure(1)
+        plt.plot(free_energy_list)
 
-    plt.figure(3)
-    plt.plot(eos.get_array('stresses'), eos.get_array('energies'))
+        plt.figure(2)
+        plt.plot(eos.get_array('volumes'), eos.get_array('energies'))
 
-    plt.figure(4)
-    plt.plot(temperature, cv_list)
+        plt.figure(3)
+        plt.plot(eos.get_array('stresses'), eos.get_array('energies'))
 
-    plt.figure(5)
-    plt.plot(temperature, entropy_list)
-    plt.show()
+        plt.figure(4)
+        plt.plot(temperature, cv_list)
 
-    # end testing
+        plt.figure(5)
+        plt.plot(temperature, entropy_list)
+        plt.show()
+        # end testing
 
     qha_output = get_qha(eos,
                          temperature,
@@ -328,14 +331,18 @@ def phonopy_qha_prediction(phonon_structure,
     p_stress = np.poly1d(stress_fit)
 
     volumes_test = np.linspace(eos.get_array('volumes')[0]-20, eos.get_array('volumes')[-1]+20, 50)
-    plt.plot(eos.get_array('volumes'), eos.get_array('stresses'), 'ro')
-    plt.plot(volumes_test, p_stress(volumes_test), label='poly')
-    plt.plot(volumes_test,
-             fit_pressure_volume(eos.get_array('volumes'), eos.get_array('stresses'), volumes_test),
-             label='inverse')
 
-    plt.legend()
-    plt.show()
+    # testing
+    if __testing__:
+        import matplotlib.pyplot as plt
+        plt.plot(eos.get_array('volumes'), eos.get_array('stresses'), 'ro')
+        plt.plot(volumes_test, p_stress(volumes_test), label='poly')
+        plt.plot(volumes_test,
+                 fit_pressure_volume(eos.get_array('volumes'), eos.get_array('stresses'), volumes_test),
+                 label='inverse')
+
+        plt.legend()
+        plt.show()
 
     # stresses = p_stress(qha_output['volume_temperature'])
     stresses = fit_pressure_volume(eos.get_array('volumes'), eos.get_array('stresses'), qha_output['volume_temperature'])
@@ -373,8 +380,11 @@ def get_qha(eos, temperatures, fe_phonon, cv, entropy, t_max=1000):
                              t_max=t_max,
                              verbose=False)
 
-    plt = phonopy_qha.plot_qha()
-    plt.show()
+    # testing
+    if __testing__:
+        import matplotlib.pyplot as plt
+        plt = phonopy_qha.plot_qha()
+        plt.show()
 
     qha_results = {'qha_temperatures': phonopy_qha._qha._temperatures[:phonopy_qha._qha._max_t_index],
                    'helmholtz_volume': phonopy_qha.get_helmholtz_volume(),

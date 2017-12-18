@@ -28,8 +28,6 @@ scaled_positions=[(0.6666669,  0.3333334,  0.0000000),
 
 symbols=['Ga', 'Ga', 'N', 'N']
 
-positions = np.dot(scaled_positions, cell)
-
 for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])

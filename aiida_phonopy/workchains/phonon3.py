@@ -32,6 +32,7 @@ StructureData = DataFactory('structure')
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
+__testing__ = False
 
 @workfunction
 def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
@@ -119,12 +120,14 @@ def get_force_constants3(data_sets, structure, ph_settings):
     fc3 = phono3py.get_fc3()
     fc2 = phono3py.get_fc2()
 
-    force_constants = ForceConstantsData(data=fc2)
-    force_constants.store()
+    force_constants_2 = ForceConstantsData(data=fc2)
+    force_constants_2.store()
 
-    print (force_constants)
+    force_constants_3 = ForceConstantsData(data=fc3)
+    force_constants_3.store()
 
-    return force_constants
+
+    return force_constants_2, force_constants_3
 
 
 
@@ -159,11 +162,11 @@ class PhononPhono3py(WorkChain):
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      cls.create_displacement_calculations, cls.collect_data)
-        # spec.outline(cls.calculate_force_constants)
+        # spec.outline(cls.calculate_force_constants)  # testing
 
     def use_optimize(self):
         print('start phonon3 (pk={})'.format(self.pid))
@@ -176,9 +179,7 @@ class PhononPhono3py(WorkChain):
                         es_settings=self.inputs.es_settings,
                         pressure=self.inputs.pressure,
                         )
-        # For testing
-        testing = False
-        if testing:
+        if __testing__:
             self.ctx._content['optimize'] = load_node(9357)
             return
 
@@ -209,21 +210,6 @@ class PhononPhono3py(WorkChain):
         self.ctx.number_of_displacements = len(supercells)
 
         calcs = {}
-
-        # Load data from nodes
-        testing = False
-        if testing:
-            from aiida.orm import load_node
-            nodes = [9378, 9381]  # VASP
-            labels = ['structure_1', 'structure_0']
-            for pk, label in zip(nodes, labels):
-                future = load_node(pk)
-                self.ctx._content[label] = future
-
-            self.ctx._content['single_point'] = load_node(9385)
-            return
-
-        # Forces
         for label, supercell in supercells.iteritems():
 
             JobCalculation, calculation_input = generate_inputs(supercell,
@@ -234,12 +220,12 @@ class PhononPhono3py(WorkChain):
 
             calculation_input._label = label
             future = submit(JobCalculation, **calculation_input)
-            # print label, future.pid
-            self.report('{} pk = {}'.format(label, future.pid))
+            print ('{} pk = {}'.format(label, future.pid))
+            # self.report('{} pk = {}'.format(label, future.pid))
 
             calcs[label] = future
 
-        # Born charges
+        # Born charges (for primitive cell)
         if bool(self.inputs.use_nac):
             self.report('calculate born charges')
             JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
@@ -281,6 +267,7 @@ class PhononPhono3py(WorkChain):
         self.out('force_sets', self.ctx.force_sets)
         self.out('final_structure', self.ctx.final_structure)
 
+
         self.report('phonon3py calculation finished ')
 
     def calculate_force_constants(self):
@@ -288,10 +275,11 @@ class PhononPhono3py(WorkChain):
         self.ctx.force_sets = load_node(25783)
         self.ctx.final_structure = self.inputs.structure
 
-        force_constants = get_force_constants3(self.ctx.force_sets,
-                                               self.ctx.final_structure,
-                                               self.inputs.ph_settings)
+        fc2, fc3 = get_force_constants3(self.ctx.force_sets,
+                                        self.ctx.final_structure,
+                                        self.inputs.ph_settings)
 
-        print (force_constants)
+        print (fc2)
+        print (fc3)
 
         return
