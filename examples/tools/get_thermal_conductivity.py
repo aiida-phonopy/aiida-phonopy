@@ -7,7 +7,7 @@
 from aiida import load_dbenv
 load_dbenv()
 
-from aiida.orm import load_node, load_workflow
+from aiida.orm import load_node, load_workflow, DataFactory
 
 from phonopy.harmonic.force_constants import show_drift_force_constants
 from phono3py.phonon3.fc3 import show_drift_fc3
@@ -15,6 +15,8 @@ from phono3py.phonon3 import Phono3py
 
 from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
 from aiida_phonopy.workchains.phonon3 import get_force_constants3
+
+ParameterData = DataFactory('parameter')
 
 import sys
 
@@ -31,6 +33,11 @@ wc = load_node(int(sys.argv[1]))
 force_sets = wc.out.force_sets
 structure = wc.out.final_structure
 ph_settings = wc.inp.ph_settings
+
+# If modifications in phonon parameters are necessary
+ph_settings_dict = ph_settings.get_dict()
+ph_settings_dict['mesh'] = [40, 40, 40]
+ph_settings = ParameterData(dict=ph_settings_dict)
 
 fc2, fc3 = get_force_constants3(force_sets,
                                 structure,

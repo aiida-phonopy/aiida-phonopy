@@ -70,8 +70,11 @@ class PhononDosData(ArrayData):
         if full:
             return partial_dos
         indices, weights = self._get_equivalent_atom_list(with_weights=True)
+        print indices, weights
 
-        return numpy.multiply(partial_dos[indices], weights)
+        partial_dos = [partial*weight for weight, partial in zip(weights, partial_dos[indices])]
+
+        return partial_dos
 
     def get_frequencies(self):
         """

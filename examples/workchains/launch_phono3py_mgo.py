@@ -20,7 +20,6 @@ cell = [[ 4.2119998932, 0,            0],
         [ 0.0,          4.2119998932, 0],
         [ 0.0,          0,           4.2119998932]]
 
-structure = StructureData(cell=cell)
 
 scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
                   (0.0000000,  0.5000000,  0.5000000),
@@ -33,8 +32,7 @@ scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
 
 symbols=['Mg', 'Mg', 'Mg', 'Mg', 'O', 'O', 'O', 'O']
 
-positions = np.dot(scaled_positions, cell)
-
+structure = StructureData(cell=cell)
 for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])

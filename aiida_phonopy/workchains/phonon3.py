@@ -267,7 +267,6 @@ class PhononPhono3py(WorkChain):
         self.out('force_sets', self.ctx.force_sets)
         self.out('final_structure', self.ctx.final_structure)
 
-
         self.report('phonon3py calculation finished ')
 
     def calculate_force_constants(self):

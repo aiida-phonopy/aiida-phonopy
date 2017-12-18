@@ -31,8 +31,6 @@ scaled_positions = [(0.875,  0.875,  0.875),
                     (0.625,  0.625,  0.125)]
 
 structure = StructureData(cell=cell)
-positions = np.dot(scaled_positions, cell)
-
 for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
@@ -131,9 +129,7 @@ if code_to_use == 'LAMMPS':
 
     es_settings = ParameterData(dict=settings_dict)
 
-
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
-
 
 # Chose how to run the calculation
 run_by_deamon = False

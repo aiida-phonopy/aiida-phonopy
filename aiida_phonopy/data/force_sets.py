@@ -53,8 +53,9 @@ class ForceSetsData(ArrayData):
         Return the force constants stored in the node as a numpy array
         """
 
-        natom = self.get_attr("natom")
-        ndisplacements = self.get_attr("ndisplacements")
+        natom = self.get_attr('natom')
+        ndisplacements = self.get_attr('ndisplacements')
+        order = self.get_attr('forces2_order')
 
         direction = self.get_array('direction')
         number = self.get_array('number')
@@ -65,7 +66,7 @@ class ForceSetsData(ArrayData):
         for i in range(ndisplacements):
             first_atoms.append({'direction': direction[i],
                                 'number': number[i],
-                                'forces': forces[i],
+                                'forces': forces[order[i]],
                                 'displacement': displacement[i]})
 
         return {'natom': natom, 'first_atoms': first_atoms}
@@ -77,7 +78,7 @@ class ForceSetsData(ArrayData):
         import numpy
 
         self._set_attr('natom', data_sets['natom'])
-        self._set_attr('ndisplacements', len(data_sets['first_atoms']))
+        ndisplacements = len(data_sets['first_atoms'])
 
         direction = []
         number = []
@@ -93,6 +94,9 @@ class ForceSetsData(ArrayData):
         self.set_array('direction', numpy.array(direction))
         self.set_array('number', numpy.array(number))
         self.set_array('displacement', numpy.array(displacement))
+
+        self._set_attr('ndisplacements', ndisplacements)
+        self._set_attr('forces2_order', range(ndisplacements))
 
     def set_forces(self, forces):
 
@@ -135,6 +139,8 @@ class ForceSetsData(ArrayData):
         number_f = []
         displacement_f = []
 
+        forces_2_order = []
+        n = 0
         for first_atoms in data_sets['first_atoms']:
 
             direction_f.append(first_atoms['direction'])
@@ -152,11 +158,14 @@ class ForceSetsData(ArrayData):
                 displacement_s.append(second_atoms['displacement'])
                 direction_s.append(second_atoms['direction'])
                 pair_distance_s.append(second_atoms['pair_distance'])
-            number.append(number_s)
+                n += 1
 
+            number.append(number_s)
             displacement.append(displacement_s)
             direction.append(direction_s)
             pair_distance.append(pair_distance_s)
+            forces_2_order.append(n)
+            n += 1
 
         self.set_array('direction_s', numpy.array(direction))
         self.set_array('number_s', numpy.array(number))
@@ -167,8 +176,9 @@ class ForceSetsData(ArrayData):
         self.set_array('number', numpy.array(number_f))
         self.set_array('displacement', numpy.array(displacement_f))
 
-        self._set_attr('ndisplacements', len(data_sets['first_atoms']) + numpy.sum(ndisplacements_s))
+        self._set_attr('ndisplacements', len(data_sets['first_atoms']))
         self._set_attr('ndisplacements_s', ndisplacements_s)
+        self._set_attr('forces2_order', forces_2_order)
 
     def get_data_sets3(self):
         natom = self.get_attr("natom")
