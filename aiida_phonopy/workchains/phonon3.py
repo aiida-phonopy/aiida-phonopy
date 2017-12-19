@@ -95,12 +95,10 @@ def create_forces_set(**kwargs):
 
     return {'force_sets': force_sets}
 
-
+@workfunction
 def get_force_constants3(data_sets, structure, ph_settings):
 
-    print ('create 3rd order force constants')
     from phono3py.phonon3 import Phono3py
-
     from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
 
     # Generate phonopy phonon object
@@ -109,8 +107,6 @@ def get_force_constants3(data_sets, structure, ph_settings):
                         primitive_matrix=ph_settings.dict.primitive,
                         symprec=ph_settings.dict.symmetry_precision,
                         log_level=1)
-
-    phono3py.generate_displacements(distance=ph_settings.dict.distance)
 
     phono3py.produce_fc3(data_sets.get_forces3(),
                          displacement_dataset=data_sets.get_data_sets3(),
@@ -121,15 +117,10 @@ def get_force_constants3(data_sets, structure, ph_settings):
     fc2 = phono3py.get_fc2()
 
     force_constants_2 = ForceConstantsData(data=fc2)
-    force_constants_2.store()
-
     force_constants_3 = ForceConstantsData(data=fc3)
-    force_constants_3.store()
 
-
-    return force_constants_2, force_constants_3
-
-
+    return {'force_constants_2order': force_constants_2,
+            'force_constants_3order': force_constants_3}
 
 
 class PhononPhono3py(WorkChain):
@@ -163,14 +154,21 @@ class PhononPhono3py(WorkChain):
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
+        spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
-                     cls.create_displacement_calculations, cls.collect_data)
+                     cls.create_displacement_calculations,
+                     cls.collect_data,
+                     _If(cls.calculate_fc)(cls.calculate_force_constants))
         # spec.outline(cls.calculate_force_constants)  # testing
 
     def use_optimize(self):
         print('start phonon3 (pk={})'.format(self.pid))
         return self.inputs.optimize
+
+    def calculate_fc(self):
+        return self.inputs.calculate_fc
+
 
     def optimize(self):
         print ('start optimize')
@@ -270,14 +268,11 @@ class PhononPhono3py(WorkChain):
 
     def calculate_force_constants(self):
 
-        self.ctx.force_sets = load_node(25783)
-        self.ctx.final_structure = self.inputs.structure
+        force_constants = get_force_constants3(self.ctx.force_sets,
+                                               self.ctx.final_structure,
+                                               self.inputs.ph_settings)
 
-        fc2, fc3 = get_force_constants3(self.ctx.force_sets,
-                                        self.ctx.final_structure,
-                                        self.inputs.ph_settings)
-
-        print (fc2)
-        print (fc3)
+        self.out('force_constants_2order', force_constants['force_constants_2order'])
+        self.out('force_constants_3order', force_constants['force_constants_3order'])
 
         return

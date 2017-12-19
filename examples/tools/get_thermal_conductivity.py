@@ -14,7 +14,6 @@ from phono3py.phonon3.fc3 import show_drift_fc3
 from phono3py.phonon3 import Phono3py
 
 from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
-from aiida_phonopy.workchains.phonon3 import get_force_constants3
 
 ParameterData = DataFactory('parameter')
 
@@ -39,18 +38,24 @@ ph_settings_dict = ph_settings.get_dict()
 ph_settings_dict['mesh'] = [40, 40, 40]
 ph_settings = ParameterData(dict=ph_settings_dict)
 
-fc2, fc3 = get_force_constants3(force_sets,
-                                structure,
-                                ph_settings)
-
-show_drift_fc3(fc3.get_data())
-show_drift_force_constants(fc2.get_data(), name='fc2')
-
+# Create phono3py and calculate as usual
 phono3py = Phono3py(phonopy_bulk_from_structure(structure),
                     supercell_matrix=ph_settings.dict.supercell,
                     primitive_matrix=ph_settings.dict.primitive,
                     symprec=ph_settings.dict.symmetry_precision,
                     log_level=1)
+
+phono3py.produce_fc3(force_sets.get_forces3(),
+                     displacement_dataset=force_sets.get_data_sets3(),
+                     is_translational_symmetry=True,
+                     is_permutation_symmetry=True,
+                     is_permutation_symmetry_fc2=True)
+
+fc3 = phono3py.get_fc3()
+fc2 = phono3py.get_fc2()
+
+show_drift_fc3(fc3.get_data())
+show_drift_force_constants(fc2.get_data(), name='fc2')
 
 phono3py.run_thermal_conductivity(temperatures=range(0, 1001, 10),
                                   boundary_mfp=1e6,  # This is to avoid divergence of phonon life time.
