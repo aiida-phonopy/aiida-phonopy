@@ -168,24 +168,6 @@ def create_forces_set(**kwargs):
     return {'force_sets': force_sets}
 
 
-@workfunction
-def add_nac_to_force_constants(force_constants, born_charges, array_data):
-    """
-    Create a new ForceConstants object with Born charges info from VASP array output included
-
-    :param force_constants: original force constants
-    :param born_charges: ArrayData object that contains the born effective charges
-    :param array_data: ArrayData object that contains the dielectric tensor
-    :return: force_constants: ForceConstants object
-    """
-
-    force_constants_nac = ForceConstantsData(data=force_constants.get_data(),
-                                             born_charges=born_charges.get_array('born_charges'),
-                                             epsilon=array_data.get_array('epsilon')[-1])
-
-    return {'force_constants': force_constants_nac}
-
-
 @wf_like_calculation
 @workfunction
 def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
@@ -281,21 +263,6 @@ def get_primitive(structure, ph_settings):
     return {'primitive_structure': primitive_structure}
 
 
-def get_born_parameters(phonon, nac_data):
-    from phonopy.interface import get_default_physical_units
-
-    epsilon = nac_data.get_epsilon()
-    born_primitive = nac_data.get_born_charges()
-
-    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
-
-    non_anal = {'born': born_primitive,
-                'factor': factor,
-                'dielectric': epsilon}
-
-    return non_anal
-
-
 def get_born_parameters_from_data(phonon, nac, symprec=1e-5):
     from phonopy.interface import get_default_physical_units
     from phonopy.interface.vasp import symmetrize_borns_and_epsilon
@@ -366,9 +333,9 @@ def get_properties_from_phonopy(**kwargs):
     if 'nac_data' in kwargs:
         print ('use born charges')
         nac_data = kwargs.pop('nac_data')
-        born_parameters = get_born_parameters(phonon, nac_data)
-
-        phonon.set_nac_params(born_parameters)
+        primitive = phonon.get_primitive()
+        nac_parameters = nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
+        phonon.set_nac_params(nac_parameters)
 
     # Normalization factor primitive to unit cell
     normalization_factor = phonon.unitcell.get_number_of_atoms()/phonon.primitive.get_number_of_atoms()
@@ -487,13 +454,13 @@ class PhononPhonopy(WorkChain):
         # Load data from nodes
         if __testing__:
             from aiida.orm import load_node
-            nodes = [9378, 9381]  # VASP
+            nodes = [30078, 30081]  # VASP
             labels = ['structure_1', 'structure_0']
             for pk, label in zip(nodes, labels):
                 future = load_node(pk)
                 self.ctx._content[label] = future
 
-            self.ctx._content['single_point'] = load_node(9385)
+            self.ctx._content['single_point'] = load_node(30084)
             return
 
         # Forces
@@ -516,7 +483,6 @@ class PhononPhonopy(WorkChain):
         if bool(self.inputs.use_nac):
             self.report('calculate born charges')
             JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
-                                                                # self.inputs.machine,
                                                                 self.inputs.es_settings,
                                                                 # pressure=self.input.pressure,
                                                                 type='born_charges')
@@ -581,7 +547,7 @@ class PhononPhonopy(WorkChain):
         if 'single_point' in self.ctx:
             nac_data = get_nac_from_data(born_charges=self.ctx.single_point.out.born_charges,
                                          epsilon=self.ctx.single_point.out.output_array,
-                                         structure=self.ctx.primitive_structure)
+                                         structure=self.ctx.single_point.inp.structure)
             phonopy_inputs.update(nac_data)
             self.out('nac_data', nac_data['nac_data'])
 

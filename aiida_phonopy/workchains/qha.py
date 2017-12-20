@@ -11,6 +11,8 @@ from aiida.orm.data.base import Str, Float, Bool, Int
 
 import numpy as np
 
+__testing__ = False
+
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
@@ -91,8 +93,7 @@ class QHAPhonopy(WorkChain):
         print('start qha (pk={})'.format(self.pid))
 
 
-        testing = False
-        if testing:
+        if __testing__:
             self.ctx._content['gruneisen'] = load_node(19945)
             return
 
@@ -122,8 +123,7 @@ class QHAPhonopy(WorkChain):
         print prediction.dict.volume_range
 
         # For testing
-        testing = False
-        if testing:
+        if __testing__:
             self.ctx._content['phonon_0'] = load_node(19218)
             self.ctx._content['phonon_1'] = load_node(19221)
             self.ctx._content['phonon_2'] = load_node(19224)

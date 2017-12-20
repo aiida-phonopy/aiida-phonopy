@@ -12,7 +12,7 @@ ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
 
-# Function obtained from aiida's quantumespresso plugin. Copied here for convinence
+# Function obtained from aiida's quantumespresso plugin. Copied here for convenience
 def get_pseudos_qe(structure, family_name):
     """
     Set the pseudo to use for all atomic kinds, picking pseudos from the
@@ -51,7 +51,7 @@ def get_pseudos_qe(structure, family_name):
 def generate_qe_params(structure, settings, pressure=0.0, type=None):
 
     """
-    Generate the input paramemeters needed to run a calculation for PW (Quantum Espresso)
+    Generate the input parameters needed to run a calculation for PW (Quantum Espresso)
 
     :param structure:  StructureData object containing the crystal structure
     :param machine:  ParametersData object containing a dictionary with the computational resources information
@@ -63,7 +63,6 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
         code = settings.dict.code[type]
     except:
         code = settings.dict.code
-
 
     plugin = Code.get_from_string(code).get_attr('input_plugin')
     PwCalculation = CalculationFactory(plugin)
@@ -221,10 +220,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     plugin = Code.get_from_string(code).get_attr('input_plugin')
 
     VaspCalculation = CalculationFactory(plugin)
-
-    class VaspCalculationMod(VaspCalculation):
-            _default_parser = 'vasp.pymatgen'
-    inputs = VaspCalculationMod.process().get_inputs_template()
+    inputs = VaspCalculation.process().get_inputs_template()
 
     # code
     inputs.code = Code.get_from_string(code)
@@ -235,6 +231,9 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     # machine
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
+
+    # setup pymatgen parser
+    inputs._options._default_parser = 'vasp.pymatgen'
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)
@@ -300,7 +299,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs.paw = get_pseudos_vasp(structure, settings.dict.pseudos_family,
                                   folder_path=settings.dict.family_folder)
 
-
     # Kpoints
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
@@ -308,6 +306,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs.kpoints = kpoints
 
     return VaspCalculation.process(), inputs
+
 
 def generate_inputs(structure, es_settings, type=None, pressure=0.0, machine=None):
 

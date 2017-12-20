@@ -66,38 +66,60 @@ class NacData(ArrayData):
 
         return structure
 
-    def get_born_parameters_phonopy(self, symprec=1e-5):
-
-        from phonopy.units import Hartree, Bohr
-        from phonopy.structure.atoms import Atoms as PhonopyAtoms
-        from phonopy.interface.vasp import symmetrize_borns_and_epsilon
-        from phonopy.structure.cells import get_supercell, get_primitive
+    def get_born_parameters_phonopy(self, primitive_cell=None, symprec=1e-5):
 
         import numpy as np
+        from phonopy.structure.cells import get_primitive, get_supercell
+        from phonopy.structure.atoms import Atoms as PhonopyAtoms
+        from phonopy.units import Hartree, Bohr
 
-        pmat = self.get_array('primtive_matrix')
-        smat = self.get_array('supercell_matrix')
+        print ('inside born parameters')
 
-        cell = PhonopyAtoms(symbols=self.get_attr('symbols'),
-                            positions=self.get_attr('positions'),
-                            cell=self.get_attr('cell'))
+        born_charges = self.get_array('born_charges')
+        epsilon = self.get_array('epsilon')
+        structure_born = self.get_structure()
 
-        borns_, epsilon_ = symmetrize_borns_and_epsilon(self.get_born_charges(),
-                                                        self.get_epsilon(),
-                                                        cell,
-                                                        symprec=symprec)
+        ucell = PhonopyAtoms(symbols=[site.kind_name for site in structure_born.sites],
+                             positions=[site.position for site in structure_born.sites],
+                             cell=structure_born.cell)
 
-        scell = get_supercell(cell, smat, symprec=symprec)
-        u2u_map = scell.get_unitcell_to_unitcell_map()
+        if primitive_cell is None:
+            target_mat = np.identity(3)
+        else:
+            inv_target = np.linalg.inv(primitive_cell)
+            target_mat = np.dot(inv_target, structure_born.cell)
 
-        pcell = get_primitive(scell, np.dot(np.linalg.inv(smat), pmat), symprec=symprec)
+        if np.linalg.det(structure_born.cell) < np.linalg.det(primitive_cell):
 
-        p2s_map = pcell.get_primitive_to_supercell_map()
-        born_primitive = borns_[[u2u_map[i] for i in p2s_map]]
+            inv_pmat = np.identity(3)
+            inv_smat = np.linalg.inv(target_mat)
+
+            scell = get_supercell(ucell, inv_smat, symprec=symprec)
+            pcell = get_primitive(ucell, inv_pmat, symprec=symprec)
+
+            s2u = scell.get_supercell_to_unitcell_map()
+            map_unitcell = scell.get_unitcell_to_unitcell_map()
+
+            reduced_born = [born_charges[map_unitcell[i]] for i in s2u]
+
+        else:
+
+            inv_smat = np.identity(3)
+            inv_pmat = np.linalg.inv(target_mat)
+
+            scell = get_supercell(ucell, inv_smat, symprec=symprec)
+
+            pcell = get_primitive(ucell, inv_pmat, symprec=symprec)
+
+            s2u = pcell.get_primitive_to_supercell_map()
+
+            map_unitcell = scell.get_unitcell_to_unitcell_map()
+
+            reduced_born = [born_charges[map_unitcell[i]] for i in s2u]
 
         factor = Hartree * Bohr
-
-        non_anal = {'born': born_primitive,
+        non_anal = {'born': reduced_born,
                     'factor': factor,
-                    'dielectric': epsilon_}
+                    'dielectric': epsilon}
+
         return non_anal

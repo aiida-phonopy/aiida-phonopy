@@ -12,7 +12,6 @@ from aiida.orm.data.base import Str, Float, Bool
 
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
-from aiida_phonopy.workchains.phonon import get_born_parameters
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
@@ -40,7 +39,9 @@ def get_phonon(structure, force_constants, ph_settings, nac_data=None):
         phonon.set_force_constants(force_constants.get_data())
 
     if nac_data is not None:
-            phonon.set_nac_params(get_born_parameters(phonon, nac_data))
+            primitive = phonon.get_primitive()
+            nac_parameters = nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
+            phonon.set_nac_params(nac_parameters)
 
     return phonon
 

@@ -57,6 +57,14 @@ fc2 = phono3py.get_fc2()
 show_drift_fc3(fc3.get_data())
 show_drift_force_constants(fc2.get_data(), name='fc2')
 
+# # For special cases like NAC
+use_nac = False
+if use_nac:
+    primitive = phono3py.get_phonon_primitive()
+    nac_params = wc.out.nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
+    phono3py.set_phph_interaction(nac_params=nac_params)
+
+
 phono3py.run_thermal_conductivity(temperatures=range(0, 1001, 10),
                                   boundary_mfp=1e6,  # This is to avoid divergence of phonon life time.
                                   write_kappa=True)
