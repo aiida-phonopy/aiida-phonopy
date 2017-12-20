@@ -19,6 +19,4 @@ using the phonopy plugin provided in this package.
 
 The results outputs of this WorkChain are the following :
 
-* **qha_results**: ArrayData object that contains the thermal properties at constant pressure calculated using phonopy.
-This ArrayData includes the following arrays: qha_temperatures, helmholtz_volume, thermal_expansion, volume_temperature, heat_capacity_P_numerical,
-volume_expansion and gibbs_temperature.
+* **qha_results**: ArrayData object that contains the thermal properties at constant pressure calculated using phonopy. This ArrayData includes the following arrays: qha_temperatures, helmholtz_volume, thermal_expansion, volume_temperature, heat_capacity_P_numerical, volume_expansion and gibbs_temperature.
