@@ -263,46 +263,6 @@ def get_primitive(structure, ph_settings):
     return {'primitive_structure': primitive_structure}
 
 
-def get_born_parameters_from_data(phonon, nac, symprec=1e-5):
-    from phonopy.interface import get_default_physical_units
-    from phonopy.interface.vasp import symmetrize_borns_and_epsilon
-    from phonopy.structure.cells import get_supercell, get_primitive
-
-    pmat = phonon.get_primitive_matrix()
-    smat = phonon.get_supercell_matrix()
-    cell = phonon.get_unitcell()
-    born_nac = nac.get_born()
-    epsilon = nac.get_epsilon()
-
-    nac_cell = phonopy_bulk_from_structure(nac.get_structure())
-
-
-    borns_, epsilon_ = symmetrize_borns_and_epsilon(born_nac,
-                                                    epsilon,
-                                                    nac_cell,
-                                                    symprec=symprec)
-
-    np.dot(nac_cell, cell)
-
-    #inv_smat = np.linalg.inv(smat)
-    scell = get_supercell(cell, smat, symprec=symprec)
-    u2u_map = scell.get_unitcell_to_unitcell_map()
-    # pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
-
-    pcell = phonon.get_primitive()
-    p2s_map = pcell.get_primitive_to_supercell_map()
-    born_primitive = borns_[[u2u_map[i] for i in p2s_map]]
-
-    factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
-
-    non_anal = {'born': born_primitive,
-                'factor': factor,
-                'dielectric': epsilon}
-
-    return non_anal
-
-
-
 @wf_like_calculation
 @workfunction
 def get_properties_from_phonopy(**kwargs):

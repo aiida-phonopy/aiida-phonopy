@@ -13,6 +13,13 @@ class NacData(ArrayData):
         self._cached_arrays = {}
 
     def set_structure(self, structure):
+        """
+        Sets the structure used to calculate the Born effective charges and the dielectric tensor (NAC parameters).
+        Setting this structure is necessary for get_born_parameters_phonopy function to work.
+
+        :param structure: StructureData object that constains the unitcell used to calculate the NAC parameters
+        :return:
+        """
 
         self._set_attr('cell', structure.cell)
         self._set_attr('positions', [site.position for site in structure.sites])
@@ -20,14 +27,14 @@ class NacData(ArrayData):
 
     def get_epsilon(self):
         """
-        Return dielectric tensor stored in the node as a numpy array
+        Return dielectric tensor as a numpy array
         """
 
         return self.get_array('epsilon')
 
     def get_born_charges(self):
         """
-        Return born charges stored in the node as a numpy array
+        Return born charges  as a numpy array
         """
 
         return self.get_array('born_charges')
@@ -38,7 +45,7 @@ class NacData(ArrayData):
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
 
-        :param array: The numpy array to store.
+        :param born_charges: The numpy array to store.
         """
 
         self.set_array('born_charges', numpy.array(born_charges))
@@ -49,12 +56,18 @@ class NacData(ArrayData):
         if it already existed.
         Internally, it is stored as a force_constants.npy file in numpy format.
 
-        :param array: The numpy array to store.
+        :param epsilon: The numpy array to store.
         """
 
         self.set_array('epsilon', numpy.array(epsilon))
 
     def get_structure(self):
+
+        """
+        Returns the structure used to calculate the NAC parameters
+
+        :return: StructureData
+        """
 
         structure = StructureData(cell=self.get_attr('cell'))
 
@@ -67,6 +80,14 @@ class NacData(ArrayData):
         return structure
 
     def get_born_parameters_phonopy(self, primitive_cell=None, symprec=1e-5):
+        """
+        Returns a dictionary in phonopy format that contains the non-analytical corrections.
+        By default the born charges for all the atoms in the unit cell used to calculate them.
+        Using primitive_cell allow to choose to use a custom unit cell.
+
+        :param primitive_cell (optional): (NumpyArray) lattice vectors matrix that define the unit cell in which the born_charges are returned. (this should be the primitive cell used in phonopy)
+        :return:
+        """
 
         import numpy as np
         from phonopy.structure.cells import get_primitive, get_supercell

@@ -1,7 +1,7 @@
 ########################################################
 # This is an example of how to use the data from phonon3
 # WorkChain to calculate the thermal conductivity with phono3py
-# To run this script use the phono3py workchain pk number:
+# To run this script use a phono3py workchain pk number:
 # $ python get_thermal_conductivity.py pknumber
 #########################################################
 from aiida import load_dbenv
@@ -15,9 +15,10 @@ from phono3py.phonon3 import Phono3py
 
 from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
 
-ParameterData = DataFactory('parameter')
-
 import sys
+
+
+ParameterData = DataFactory('parameter')
 
 if len(sys.argv) < 2:
     print ('use: python get_thermal_conductivity.py {pk_number}')
@@ -71,6 +72,4 @@ phono3py.run_thermal_conductivity(temperatures=range(0, 1001, 10),
 
 # Conductivity_RTA object (https://git.io/vVRUW)
 cond_rta = phono3py.get_thermal_conductivity()
-
-
 
