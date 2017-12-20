@@ -165,3 +165,5 @@ class QHAPhonopy(WorkChain):
 
         for key, value in qha_results.items():
             self.out(key, value)
+
+        print('QHA WorkChain finished')

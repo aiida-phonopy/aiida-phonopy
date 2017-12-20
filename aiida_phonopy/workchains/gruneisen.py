@@ -411,7 +411,7 @@ class GruneisenPhonopy(WorkChain):
         # Optional arguments
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))  # in kB
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(2.0))  # in kB
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))
 
         spec.outline(cls.create_unit_cell_expansions, cls.calculate_gruneisen)
 

@@ -95,6 +95,7 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  # pressure=Float(0),
+                  use_nac=Bool(True)
                  )
 
     print (result)
@@ -105,6 +106,7 @@ else:
                     ph_settings=ph_settings,
                     # Optional settings
                     # pressure=Float(0),
+                    use_nac=Bool(True)
                     )
 
     print future

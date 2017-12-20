@@ -8,3 +8,5 @@ This is a collection of workchains for AiiDA to do phonon calculations using pho
 
    wc_phonon
    wc_gruneisen
+   wc_qha
+   wc_phonon3

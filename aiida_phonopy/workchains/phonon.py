@@ -365,7 +365,7 @@ class PhononPhonopy(WorkChain):
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      cls.create_displacement_calculations,

@@ -11,19 +11,23 @@ Setters and getters are provided to store the data from aiida objects and get th
 .. autoclass:: NacData()
    :members: set_structure, set_born_charges, set_epsilon, get_born_parameters_phonopy
 
+
+
 example of use
 --------------
-::
+Setup the nac_data object from calculation output data ::
 
-    structure = StructureData(**structure_data)
-    born_charges = NumpyArray(**born_data)
-    dielectric_tensor = NumpyArray(**epsilon_data)
+    structure = StructureData()
+    born_charges = NumpyArray()
+    dielectric_tensor = NumpyArray()
+
     nac_data = NacData(structure=structure,
                        born_charges=born_charges,
                        epsilon=dielectric_tensor)
 
-    ...
+Use this object to setup a phonopy calculation ::
 
-    phonon = Phonopy(**ph_input_data)
+    phonon = Phonopy()
+    primitive = phonon.get_primitive()
     nac_parameters = nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
     phonon.set_nac_params(nac_parameters)

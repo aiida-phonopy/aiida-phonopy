@@ -10,14 +10,14 @@ with the unit cell optimized with a slightly higher and lower stress (defined by
 obtaining a slightly smaller and larger unit cell respectively.
 Stress_displacement can be set as an optional argument, by default its value is 1e-2 kB.
 
-.. function:: GruneisenPhonopy(structure, machine, ph_settings, es_settings [, stress_displacement=1e-2])
+.. function:: GruneisenPhonopy(structure, ph_settings, es_settings [, stress_displacement=1e-2, use_nac=False])
 
    :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
    :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters.
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters.
    :param pressure (optional): AiiDA FloatData object. This determines the absolute stress (in kBar) at which the reference crystal structure is optimized (default 0).
    :param stress_displacement (optional): AiiDA FloatData object. This determines the stress difference between the 3 phonon calculations (default 1e-2 kB).
-   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is True.
+   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
 
 The outputs of this WorkChain are:
 

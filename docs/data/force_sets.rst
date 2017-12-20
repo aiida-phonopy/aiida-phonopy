@@ -8,10 +8,10 @@ Setters and getters are provided to store and get the data in phonopy format:
 
 .. automodule:: aiida_phonopy.data.force_sets
 .. autoclass:: ForceSetsData()
-   :members: set_data_sets, get_data_sets, get_force_sets, read_from_phonopy_file, get_number_of_displacements
+   :members: set_data_sets, get_data_sets, get_force_sets, read_from_phonopy_file, get_number_of_displacements, get_forces3, get_data_sets3
 
-example of use
---------------
+example of use in phonopy
+-------------------------
 ::
 
     data_sets = phonon.get_displacement_dataset()

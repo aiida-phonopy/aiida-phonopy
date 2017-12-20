@@ -1,7 +1,7 @@
 Phonon
 ======
 
-This WorkChain performs a phonon calculation using Phonopy. This phonon requires at least one of the following
+This WorkChain performs a phonon calculation using Phonopy. This WorkChain requires at least one of the following
 AiiDA plugins to work: QuantumESPRESSO (https://github.com/aiidateam/aiida-quantumespresso),
 VASP (https://github.com/DropD/aiida-vasp) or LAMMPS (https://github.com/abelcarreras/aiida-lammps).
 At the present time Born effective charges are only calculated using VASP plugin.
@@ -9,14 +9,14 @@ Phonopy can be used either locally and remotely. To use phonopy remotely phonopy
 in AiiDA documentation (https://aiida-core.readthedocs.io/en/latest/get_started/index.html#code-setup-and-configuration).
 using the phonopy plugin provided in this package.
 
-.. function:: PhononPhonopy(structure, machine, ph_settings, es_settings [, optimize=True, pressure=0.0])
+.. function:: PhononPhonopy(structure, ph_settings, es_settings [, optimize=True, pressure=0.0, use_nac=False])
 
    :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
    :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters.
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
    :param optimize (optional): AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
    :param pressure (optional): AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
-   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is True.
+   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is False.
 
 - ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for more information.
     Additional dictionary entries can be added to request a remote phonopy calculation. See example in examples/workchains/launh_phonon_gan ::
