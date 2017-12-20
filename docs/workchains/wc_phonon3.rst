@@ -11,10 +11,10 @@ are only implemented for VASP plugin.
    :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
    :param ph_settings: AiiDA ParametersData data object that contains the phonopy input parameters.
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
-   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
-   :param optimize (optional): AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
-   :param pressure (optional): AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
-   :param calculate_fc (optional): AiiDA BooleanData object. Determines if the 2on and 3rd order force constants are calculated. By default this option is False.
+   :param use_nac: (optional) AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
+   :param optimize: (optional) AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
+   :param pressure: (optional) AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
+   :param calculate_fc: (optional) AiiDA BooleanData object. Determines if the 2on and 3rd order force constants are calculated. By default this option is False.
 
 
 The results outputs of this WorkChain are the following :

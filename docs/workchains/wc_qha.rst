@@ -14,8 +14,8 @@ using the phonopy plugin provided in this package.
    :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
    :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters.
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
-   :param num_expansions (optional): AiiDA IntData object. The number of volume expansions around the optimized structure at zero pressure to perform. By default the value is 10.
-   :param use_nac (optional): AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
+   :param num_expansions: (optional) AiiDA IntData object. The number of volume expansions around the optimized structure at zero pressure to perform. By default the value is 10.
+   :param use_nac: (optional) AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
 
 The results outputs of this WorkChain are the following :
 
