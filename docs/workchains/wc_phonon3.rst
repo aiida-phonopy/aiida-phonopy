@@ -20,8 +20,8 @@ are only implemented for VASP plugin.
 The results outputs of this WorkChain are the following :
 
 * **data_sets**: ForceSetsData object that contains the information of supercells with displacements and forces. Check
-* **force_constants_2order**: ForceConstantsData object that contains the 2ond order force constants
-* **force_constants_3order**: ForceConstantsData object that contains the 3rd order force constants
-* **final_structure**: StructureData containing the optimized structure
+* **force_constants_2order**: ForceConstantsData object that contains the 2ond order force constants.
+* **force_constants_3order**: ForceConstantsData object that contains the 3rd order force constants.
+* **final_structure**: StructureData containing the optimized structure.
 
 The ForceSetsData object obtained as a output of phonon3 WorkChain can be also in harmonic phonon calculation without modification.
