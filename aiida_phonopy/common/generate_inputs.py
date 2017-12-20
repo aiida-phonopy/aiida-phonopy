@@ -211,7 +211,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     :param settings:  ParametersData object containing a dictionary with the INCAR parameters
     :return: Calculation process object, input dictionary
     """
-
     try:
         code = settings.dict.code[type]
     except:
@@ -220,6 +219,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     plugin = Code.get_from_string(code).get_attr('input_plugin')
 
     VaspCalculation = CalculationFactory(plugin)
+
     inputs = VaspCalculation.process().get_inputs_template()
 
     # code
@@ -232,8 +232,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
-    # setup pymatgen parser
-    inputs._options._default_parser = 'vasp.pymatgen'
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)
