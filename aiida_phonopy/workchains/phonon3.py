@@ -320,7 +320,6 @@ class PhononPhono3py(WorkChain):
             calculation_input._label = label
             future = submit(JobCalculation, **calculation_input)
             print ('{} pk = {}'.format(label, future.pid))
-            future.label = label
 
             calcs[label] = future
 

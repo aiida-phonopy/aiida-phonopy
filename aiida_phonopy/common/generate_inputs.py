@@ -104,9 +104,6 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
                                       'forc_conv_thr': 1.e-8
                                       })
 
-        parameters['CONTROL'].update({'tstress': True,
-                                      'tprnfor': True})
-
     if type == 'born_charges':
         parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True,
@@ -114,9 +111,6 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
                                       'forc_conv_thr': 1.e-8
                                       })
 
-        parameters['CONTROL'].update({'tstress': True,
-                                      'tprnfor': True
-                                      })
         #parameters['INPUTPH'] = {'epsil': True,
         #                         'zeu': True}  # Degrees of movement
 
