@@ -24,11 +24,11 @@ scaled_positions=[(0.6666669,  0.3333334,  0.0000000),
 
 symbols=['Ga', 'Ga', 'N', 'N']
 
-s = StructureData(cell=cell)
+structure = StructureData(cell=cell)
 
 for i, scaled_position in enumerate(scaled_positions):
-    s.append_atom(position=np.dot(scaled_position, cell).tolist(),
-                  symbols=symbols[i])
+    structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
+                          symbols=symbols[i])
 
 parameters = ParameterData(dict={'supercell': [[2, 0, 0],
                                                [0, 2, 0],
@@ -46,19 +46,25 @@ calc = code.new_calc(max_wallclock_seconds=3600,
                                 "parallel_env":"mpi*",
                                 "tot_num_mpiprocs": 6})
 
-
 calc.label = "test phonopy calculation"
 calc.description = "A much longer description"
 
-calc.use_structure(s)
+calc.use_structure(structure)
 calc.use_code(code)
 calc.use_parameters(parameters)
 
 # Chose to use forces or force constants
 if True:
-    calc.use_data_sets(load_node(2949))  # This node should contain a ForceSetsData object
+    calc.use_data_sets(load_node(46680))  # This node should contain a ForceSetsData object
 else:
-    calc.use_force_constants(load_node(2953))  # This node should contain a ForceConstantsData object
+    calc.use_force_constants(load_node(46683))  # This node should contain a ForceConstantsData object
+
+
+# Set bands (optional)
+from aiida_phonopy.workchains.phonon import get_primitive, get_path_using_seekpath
+primitive = get_primitive(structure, parameters)['primitive_structure']
+bands = get_path_using_seekpath(primitive, band_resolution=30)
+calc.use_bands(bands)
 
 if False:
     subfolder, script_filename = calc.submit_test()

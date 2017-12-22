@@ -44,6 +44,7 @@ phono3py = Phono3py(phonopy_bulk_from_structure(structure),
                     supercell_matrix=ph_settings.dict.supercell,
                     primitive_matrix=ph_settings.dict.primitive,
                     symprec=ph_settings.dict.symmetry_precision,
+                    mesh=ph_settings.dict.mesh,
                     log_level=1)
 
 phono3py.produce_fc3(force_sets.get_forces3(),
@@ -55,12 +56,12 @@ phono3py.produce_fc3(force_sets.get_forces3(),
 fc3 = phono3py.get_fc3()
 fc2 = phono3py.get_fc2()
 
-show_drift_fc3(fc3.get_data())
-show_drift_force_constants(fc2.get_data(), name='fc2')
+show_drift_fc3(fc3)
+show_drift_force_constants(fc2, name='fc2')
 
-# # For special cases like NAC
+# Use NAC if available
 use_nac = False
-if use_nac:
+if 'nac_data' in wc.get_outputs():
     primitive = phono3py.get_phonon_primitive()
     nac_params = wc.out.nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
     phono3py.set_phph_interaction(nac_params=nac_params)

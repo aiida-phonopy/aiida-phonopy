@@ -60,7 +60,6 @@ class ForceSetsData(ArrayData):
 
         natom = self.get_attr('natom')
         ndisplacements = self.get_attr('ndisplacements')
-        order = self.get_attr('forces2_order')
 
         direction = self.get_array('direction')
         number = self.get_array('number')
@@ -71,12 +70,10 @@ class ForceSetsData(ArrayData):
         for i in range(ndisplacements):
             first_atoms.append({'direction': direction[i],
                                 'number': number[i],
-                                'forces': forces[order[i]],
+                                'forces': forces[i],
                                 'displacement': displacement[i]})
 
         return {'natom': natom, 'first_atoms': first_atoms}
-
-    # {'natom': 64, 'first_atoms': [{'direction': [1, 0, 0], 'number': 0, 'displacement': array([0.01, 0., 0.])}]}
 
     def set_data_sets(self, data_sets):
 
@@ -99,12 +96,11 @@ class ForceSetsData(ArrayData):
         self.set_array('displacement', numpy.array(displacement))
 
         self._set_attr('ndisplacements', ndisplacements)
-        self._set_attr('forces2_order', range(ndisplacements))
 
     def set_forces(self, forces):
 
         self.set_array('forces', numpy.array(forces))
-        print ('forces num {}'.format(len(forces)))
+        # print ('forces num {}'.format(len(forces)))
 
     def read_from_phonopy_file(self, filename):
         """
@@ -141,15 +137,11 @@ class ForceSetsData(ArrayData):
         number_f = []
         displacement_f = []
 
-        forces_2_order = []
-        n = 0
         for first_atoms in data_sets['first_atoms']:
 
             direction_f.append(first_atoms['direction'])
             displacement_f.append(first_atoms['displacement'])
             number_f.append(first_atoms['number'])
-            forces_2_order.append(n)
-            n += 1
 
             direction_s = []
             number_s = []
@@ -162,7 +154,6 @@ class ForceSetsData(ArrayData):
                 displacement_s.append(second_atoms['displacement'])
                 direction_s.append(second_atoms['direction'])
                 pair_distance_s.append(second_atoms['pair_distance'])
-                n += 1
 
             number.append(number_s)
             displacement.append(displacement_s)
@@ -180,7 +171,6 @@ class ForceSetsData(ArrayData):
 
         self._set_attr('ndisplacements', len(data_sets['first_atoms']))
         self._set_attr('ndisplacements_s', ndisplacements_s)
-        self._set_attr('forces2_order', forces_2_order)
 
     def get_data_sets3(self):
         natom = self.get_attr("natom")
@@ -200,10 +190,10 @@ class ForceSetsData(ArrayData):
         for i, ndisplacements_s in enumerate(ndisplacements_s):
             second_atoms = []
             for j in range(ndisplacements_s):
-                second_atoms.append({'direction': direction[i, j],
-                                     'number': number[i, j],
-                                     'displacement': displacement[i, j],
-                                     'pair_distance': pair_distance[i, j]})
+                second_atoms.append({'direction': direction[i][j],
+                                     'number': number[i][j],
+                                     'displacement': displacement[i][j],
+                                     'pair_distance': pair_distance[i][j]})
 
             first_atoms.append({'direction': direction_f[i],
                                 'displacement': displacement_f[i],

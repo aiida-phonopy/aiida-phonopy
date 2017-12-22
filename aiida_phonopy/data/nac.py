@@ -94,8 +94,6 @@ class NacData(ArrayData):
         from phonopy.structure.atoms import Atoms as PhonopyAtoms
         from phonopy.units import Hartree, Bohr
 
-        print ('inside born parameters')
-
         born_charges = self.get_array('born_charges')
         epsilon = self.get_array('epsilon')
         structure_born = self.get_structure()

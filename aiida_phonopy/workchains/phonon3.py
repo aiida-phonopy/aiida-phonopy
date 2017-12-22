@@ -10,7 +10,7 @@ from aiida.work.workfunction import workfunction
 from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
 from aiida.work.run import run, submit, async
 
-from aiida.orm.data.base import Str, Float, Bool
+from aiida.orm.data.base import Str, Float, Bool, Int
 from aiida.work.workchain import _If, _While
 
 import numpy as np
@@ -32,7 +32,8 @@ StructureData = DataFactory('structure')
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
-__testing__ = False
+__testing__ = True
+
 
 @workfunction
 def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
@@ -155,9 +156,11 @@ class PhononPhono3py(WorkChain):
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
+        spec.input("chunks", valid_type=Int, required=False, default=Int(100))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
-                     cls.create_displacement_calculations,
+                     # cls.create_displacement_calculations,
+                     _While(cls.continue_submitting)(cls.create_displacement_calculations_chunk),
                      cls.collect_data,
                      _If(cls.calculate_fc)(cls.calculate_force_constants))
         # spec.outline(cls.calculate_force_constants)  # testing
@@ -169,6 +172,13 @@ class PhononPhono3py(WorkChain):
     def calculate_fc(self):
         return self.inputs.calculate_fc
 
+    def continue_submitting(self):
+
+        if 'i_disp' in self.ctx:
+            if self.ctx.i_disp < 1:
+                return False
+            self.ctx.i_disp -= 1
+        return True
 
     def optimize(self):
         print ('start optimize')
@@ -207,6 +217,23 @@ class PhononPhono3py(WorkChain):
         self.ctx.data_sets = supercells.pop('data_sets')
         self.ctx.number_of_displacements = len(supercells)
 
+        if __testing__:
+            f = open('labels', 'r')
+            lines = f.readlines()
+            f.close()
+
+            from aiida.orm import load_node
+            nodes = [int(line.split()[3]) for line in lines]
+            print (nodes)
+            labels = [line.split()[0] for line in lines]
+            print (labels)
+            for pk, label in zip(nodes, labels):
+                future = load_node(pk)
+                self.ctx._content[label] = future
+                print ('{} pk = {}'.format(label, pk))
+
+            return
+
         calcs = {}
         for label, supercell in supercells.iteritems():
 
@@ -234,6 +261,68 @@ class PhononPhono3py(WorkChain):
             future = submit(JobCalculation, **calculation_input)
             print ('single_point: {}'.format(future.pid))
             calcs['single_point'] = future
+
+        return ToContext(**calcs)
+
+    def create_displacement_calculations_chunk(self):
+
+        from aiida_phonopy.workchains.phonon import get_primitive
+
+        if 'optimized' in self.ctx:
+            self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
+            self.out('optimized_data', self.ctx.optimized.out.optimized_structure_data)
+        else:
+            self.ctx.final_structure = self.inputs.structure
+
+        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure,
+                                                     self.inputs.ph_settings)['primitive_structure']
+
+        supercells = create_supercells_with_displacements_using_phono3py(self.ctx.final_structure,
+                                                                         self.inputs.ph_settings)
+
+        self.ctx.data_sets = supercells.pop('data_sets')
+        self.ctx.number_of_displacements = len(supercells)
+
+        calcs = {}
+
+        n_disp = len(supercells)
+        if 'i_disp' in self.ctx:
+            list = range(self.ctx.i_disp * int(self.inputs.chunks),
+                         (self.ctx.i_disp + 1) * int(self.inputs.chunks))
+        else:
+            self.ctx.i_disp = n_disp / int(self.inputs.chunks)
+            list = range(self.ctx.i_disp * int(self.inputs.chunks), n_disp)
+            print ('create displacements')
+            self.report('create displacements')
+            print ('total displacements: {}'.format(n_disp))
+
+            # Born charges (for primitive cell)
+            if bool(self.inputs.use_nac):
+                self.report('calculate born charges')
+                JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
+                                                                    # self.inputs.machine,
+                                                                    self.inputs.es_settings,
+                                                                    # pressure=self.input.pressure,
+                                                                    type='born_charges')
+                future = submit(JobCalculation, **calculation_input)
+                print ('single_point: {}'.format(future.pid))
+                calcs['single_point'] = future
+
+        supercell_list = np.array(supercells.items())[list]
+
+        for label, supercell in supercell_list:
+            JobCalculation, calculation_input = generate_inputs(supercell,
+                                                                # self.inputs.machine,
+                                                                self.inputs.es_settings,
+                                                                # pressure=self.input.pressure,
+                                                                type='forces')
+
+            calculation_input._label = label
+            future = submit(JobCalculation, **calculation_input)
+            print ('{} pk = {}'.format(label, future.pid))
+            future.label = label
+
+            calcs[label] = future
 
         return ToContext(**calcs)
 

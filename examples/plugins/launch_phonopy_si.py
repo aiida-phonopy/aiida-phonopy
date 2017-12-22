@@ -69,13 +69,13 @@ calc = code.new_calc(max_wallclock_seconds=3600,
 calc.label = "test phonopy calculation"
 calc.description = "A much longer description"
 
-calc.use_structure(structure)
+calc.use_structure(load_node(35123))
 calc.use_code(code)
 calc.use_parameters(parameters)
 
 # Chose to use forces or force constants
 if True:
-    calc.use_data_sets(load_node(29838))  # This node should contain a ForceSetsData object
+    calc.use_data_sets(load_node(36552))  # This node should contain a ForceSetsData object
 else:
     calc.use_force_constants(load_node(25806))  # This node should contain a ForceConstantsData object
 
