@@ -140,8 +140,10 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  # pressure=Float(0),
-                 optimize=Bool(False),
-                 use_nac=Bool(False)
+                 optimize=Bool(True),
+                 use_nac=Bool(False),
+                 chunks=Int(120),  # set the number of maximum simultaneous calculations
+                 calculate_fc=Bool(False)  # set true to calculate 2nd & 3rd order force constants
                  )
 
     print (result)
@@ -152,8 +154,10 @@ else:
                     ph_settings=ph_settings,
                     # Optional settings
                     # pressure=Float(0),
-                    optimize=Bool(False),
-                    use_nac=Bool(False)
+                    optimize=Bool(True),
+                    use_nac=Bool(False),
+                    chunks=Int(120),  # set the number of maximum simultaneous calculations
+                    calculate_fc=Bool(False)  # set true to calculate 2nd & 3rd order force constants
                     )
 
     print future

@@ -32,7 +32,7 @@ StructureData = DataFactory('structure')
 
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
-__testing__ = True
+__testing__ = False
 
 
 @workfunction
