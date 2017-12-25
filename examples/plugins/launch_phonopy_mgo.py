@@ -40,11 +40,11 @@ for i, scaled_position in enumerate(scaled_positions):
 parameters = ParameterData(dict={'supercell': [[2, 0, 0],
                                                [0, 2, 0],
                                                [0, 0, 2]],
-                                 'primitive': [[1.0, 0.0, 0.0],
-                                               [0.0, 1.0, 0.0],
-                                               [0.0, 0.0, 1.0]],
+                                 'primitive': [[0.0, 0.5, 0.5],
+                                               [0.5, 0.0, 0.5],
+                                               [0.5, 0.5, 0.0]],
                                  'distance': 0.01,
-                                 'mesh': [40, 40, 40],
+                                 'mesh': [10, 10, 10],
                                  'symmetry_precision': 1e-5}
                           )
 
@@ -65,12 +65,12 @@ calc.use_parameters(parameters)
 if True:
     # Use forces
     force_sets = ForceSetsData()
-    force_sets.read_from_phonopy_file('FORCE_SETS')
+    force_sets.read_from_phonopy_file('MgO/FORCE_SETS')  # be careful to refer MgO directory properly
     calc.use_data_sets(force_sets)
 else:
     # Use force constants
     force_constants = ForceConstantsData()
-    force_constants.read_from_phonopy_file('FORCE_CONSTANTS')
+    force_constants.read_from_phonopy_file('MgO/FORCE_CONSTANTS') # be careful to refer MgO directory properly
     calc.use_force_constants(force_constants)
 
 # Set bands (optional)
