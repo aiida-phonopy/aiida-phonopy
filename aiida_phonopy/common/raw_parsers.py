@@ -202,7 +202,7 @@ def get_FORCE_CONSTANTS_txt(force_constants_object):
     return force_constants_txt
 
 
-def get_poscar_txt(structure):
+def get_poscar_txt(structure, use_direct=True):
     types = [site.kind_name for site in structure.sites]
     atom_type_unique = np.unique(types, return_index=True)
     sort_index = np.argsort(atom_type_unique[1])
@@ -216,9 +216,16 @@ def get_poscar_txt(structure):
         poscar_txt += '{0: 22.16f} {1: 22.16f} {2: 22.16f}\n'.format(*row)
     poscar_txt += ' '.join([str(e) for e in elements]) + '\n'
     poscar_txt += ' '.join([str(e) for e in elements_count]) + '\n'
-    poscar_txt += 'Cartesian\n'
+    if use_direct:
+        poscar_txt += 'Direct\n'
+    else:
+        poscar_txt += 'Cartesian\n'
     for site in structure.sites:
-        poscar_txt += '{0: 22.16f} {1: 22.16f} {2: 22.16f}\n'.format(*site.position)
+        if use_direct:
+            coordinates = np.dot(site.position, np.linalg.inv(cell))
+        else:
+            coordinates = site.position
+        poscar_txt += '{0: 22.16f} {1: 22.16f} {2: 22.16f}\n'.format(*coordinates)
 
     return poscar_txt
 
