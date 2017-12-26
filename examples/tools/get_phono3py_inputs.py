@@ -43,7 +43,7 @@ write_disp_fc3_yaml(force_sets.get_data_sets3(),
                     filename='disp_fc3.yaml')
 
 
-write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), filename="FORCES_FC3")
+write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), filename='FORCES_FC3')
 
 with open('POSCAR-unitcell', mode='w') as f:
     f.writelines(get_poscar_txt(structure))
