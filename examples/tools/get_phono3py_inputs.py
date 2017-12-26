@@ -21,7 +21,7 @@ import sys
 ParameterData = DataFactory('parameter')
 
 if len(sys.argv) < 2:
-    print ('use: python get_thermal_conductivity.py {pk_number}')
+    print ('use: python get_phonon3py_inputs.py {pk_number}')
     exit()
 
 # Set WorkChain phonon3 PK number
