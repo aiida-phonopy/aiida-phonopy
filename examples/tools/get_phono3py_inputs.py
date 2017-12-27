@@ -10,7 +10,7 @@ load_dbenv()
 
 from aiida.orm import load_node, DataFactory
 from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
-from aiida_phonopy.common.raw_parsers import get_poscar_txt
+from aiida_phonopy.common.raw_parsers import get_poscar_txt, get_BORN_txt
 
 from phono3py.file_IO import write_disp_fc3_yaml, write_FORCES_FC3
 from phonopy.structure.cells import get_supercell
@@ -47,3 +47,10 @@ write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), filename
 
 with open('POSCAR-unitcell', mode='w') as f:
     f.writelines(get_poscar_txt(structure))
+
+if 'nac_data' in wc.get_inputs():
+    nac_data = wc.out.nac_data
+    with open('BORN', mode='w') as f:
+        f.writelines(get_BORN_txt(nac_data,
+                                  structure=structure,
+                                  parameters=ph_settings))
