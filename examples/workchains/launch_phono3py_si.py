@@ -75,7 +75,9 @@ if code_to_use == 'VASP':
     settings_dict = {'code': {'optimize': 'vasp@stern_in',
                               'forces': 'vasp@stern_in'},
                      'parameters': incar_dict,
-                     'kpoints_density': 0.5,  # k-point density,
+                     # 'kpoints_density': 0.5,  # k-point density (higher priority)
+                     'kpoints_mesh': [2, 2, 2],  # k-point mesh
+                     'kpoints_offset': [0.5, 0.5, 0.5],  # k-point offset
                      'pseudos_family': 'pbe_test_family',
                      'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
