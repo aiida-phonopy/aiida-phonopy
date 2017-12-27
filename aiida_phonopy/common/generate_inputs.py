@@ -291,10 +291,25 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs.paw = get_pseudos_vasp(structure, settings.dict.pseudos_family,
                                   folder_path=settings.dict.family_folder)
 
-    # Kpoints
+    # KPOINTS
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
-    kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
+
+    if 'kpoints_density' in settings.get_dict():
+        kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
+
+    elif 'kpoints_mesh' in settings.get_dict():
+        if 'kpoints_offset' in settings.get_dict():
+            kpoints_offset = settings.dict.kpoints_offset
+        else:
+            kpoints_offset = [0.0, 0.0, 0.0]
+
+        kpoints.set_kpoints_mesh(settings.dict.kpoints_mesh,
+                                 offset=kpoints_offset)
+    else:
+        print ('no kpoint definition in input')
+        exit()
+
     inputs.kpoints = kpoints
 
     return VaspCalculation.process(), inputs

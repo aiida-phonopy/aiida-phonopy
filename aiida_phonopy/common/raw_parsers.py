@@ -81,13 +81,10 @@ def parse_band_structure(filename, input_bands):
         bands = dict(yaml.load(stream))
 
     for k in bands['phonon']:
-
         frequencies.append([b['frequency'] for b in k['band']])
+    frequencies = np.array(frequencies)
 
     nb = input_bands.get_number_of_bands()
-
-    frequencies = np.array(frequencies)
-    print (frequencies.shape)
     frequencies = frequencies.reshape((nb, -1, frequencies.shape[1]))
 
     band_structure = BandStructureData(frequencies=frequencies,
@@ -108,6 +105,9 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
 
     print ('inside born parameters')
 
+    from phonopy.interface.vasp import get_born_OUTCAR, _get_indep_borns
+
+
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
     structure_born = nac_data.get_structure()
@@ -116,38 +116,15 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
                          positions=[site.position for site in structure_born.sites],
                          cell=structure_born.cell)
 
-    if structure is not None:
-        pmat = parameters.dict.primitive
-        inv_pmat = np.linalg.inv(pmat)
-        inv_smat = np.linalg.inv(structure.cell)
-        rmat = np.dot(inv_smat, structure_born.cell)
-        pmat = np.dot(inv_pmat, rmat)
-        smat = parameters.dict.supercell
+    reduced_borns, epsilon, atom_indices = _get_indep_borns(ucell, born_charges, epsilon,
+                                                            primitive_matrix=None,
+                                                            supercell_matrix=None,
+                                                            symmetrize_tensors=True,
+                                                            symprec=1e-5)
 
-    else:
-        # NAC parameters are assumed to be calculated using the primitive cell defined in phonopy parameters
-        pmat = np.identity(3)
-        smat = np.identity(3)
 
-    num_atom = len(born_charges)
-    assert num_atom == ucell.get_number_of_atoms(), \
-        "num_atom %d != len(borns) %d" % (ucell.get_number_of_atoms(),
-                                          len(born_charges))
-
-    inv_smat = np.linalg.inv(smat)
-    scell = get_supercell(ucell, smat, symprec=symprec)
-    pcell = get_primitive(scell, np.dot(inv_smat, pmat), symprec=symprec)
-
-    p2s = np.array(pcell.get_primitive_to_supercell_map(), dtype='intc')
-    p_sym = Symmetry(pcell, is_symmetry=True, symprec=symprec)
-    s_indep_atoms = p2s[p_sym.get_independent_atoms()]
-    u2u = scell.get_unitcell_to_unitcell_map()
-    u_indep_atoms = [u2u[x] for x in s_indep_atoms]
-    reduced_borns = born_charges[u_indep_atoms].copy()
-
-    # factor = get_default_physical_units('vasp')['nac_factor']  # born charges in VASP units
-    factor = 14.0
-    born_txt = ('{}\n'.format(factor))
+    born_txt = "# epsilon and Z* of atoms "
+    born_txt += ' '.join(["%d" % n for n in atom_indices + 1]) + '\n'
     for num in epsilon.flatten():
         born_txt += ('{0:4.8f} '.format(num))
     born_txt += ('\n')
@@ -156,7 +133,6 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
         for num in atom.flatten():
             born_txt += ('{0:4.8f} '.format(num))
         born_txt += ('\n')
-    # born_txt += ('{}\n'.format(factor))
 
     return born_txt
 
@@ -237,7 +213,6 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
         *np.array(parameters['primitive']).reshape((1, 9))[0])
     input_file += 'MESH = {} {} {}\n'.format(*parameters['mesh'])
 
-    print bands
     if bands is not None:
         input_file += 'BAND = '
         for i, band in enumerate(bands.get_band_ranges()):

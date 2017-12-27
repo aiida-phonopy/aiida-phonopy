@@ -74,7 +74,9 @@ incar_dict = {
 
 settings_dict = {'code': 'vasp@stern_in',
                  'parameters': incar_dict,
-                 'kpoints_density': 0.5,  # k-point density,
+                 # 'kpoints_density': 0.5,  # k-point density,
+                 'kpoints_mesh': [1, 1, 1],  # k-point mesh,
+                 'kpoints_offset': [0.5, 0.5, 0.5],  # k-point offset,
                  'pseudos_family': 'pbe_test_family',
                  'family_folder': '/Users/abel/VASP/test_paw/',
                  'machine': machine_dict
