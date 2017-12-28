@@ -26,7 +26,8 @@
       "phonopy.phono3py = aiida_phonopy.calculations.phonopy.phono3py: Phono3pyCalculation"
     ],
     "aiida.parsers": [
-      "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
+      "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser",
+      "phono3py = aiida_phonopy.parsers.phono3py: Phono3pyParser"
     ],
     "aiida.workflows": [
       "phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure",

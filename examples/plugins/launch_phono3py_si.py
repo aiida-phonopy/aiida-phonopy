@@ -1,4 +1,3 @@
-# Calculate DOS Band structure and thermal properties
 from aiida import load_dbenv
 load_dbenv()
 
@@ -9,7 +8,7 @@ ParameterData = DataFactory('parameter')
 import numpy as np
 import os
 
-codename = 'phonopy_tot@boston_in'
+codename = 'phono3py@stern_in'
 code = Code.get_from_string(codename)
 
 
@@ -55,7 +54,6 @@ parameters = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'distance': 0.01,
                                   'mesh': [20, 20, 20],
                                   'symmetry_precision': 1e-5,
-
                                   })
 
 calc = code.new_calc(max_wallclock_seconds=3600,
@@ -64,24 +62,15 @@ calc = code.new_calc(max_wallclock_seconds=3600,
                                 "tot_num_mpiprocs": 6})
 
 
-calc.label = "test phonopy calculation"
+calc.label = "test phono3py calculation"
 calc.description = "A much longer description"
 
-calc.use_structure(load_node(35123))
+calc.use_structure(structure)
 calc.use_code(code)
 calc.use_parameters(parameters)
 
-# Chose to use forces or force constants
-if True:
-    calc.use_data_sets(load_node(36552))  # This node should contain a ForceSetsData object
-else:
-    calc.use_force_constants(load_node(25806))  # This node should contain a ForceConstantsData object
+calc.use_data_sets(load_node(60477))  # This node should contain a ForceSetsData object
 
-# Set bands (optional)
-from aiida_phonopy.workchains.phonon import get_primitive, get_path_using_seekpath
-primitive = get_primitive(structure, parameters)['primitive_structure']
-bands = get_path_using_seekpath(primitive, band_resolution=30)
-calc.use_bands(bands)
 
 if False:
     subfolder, script_filename = calc.submit_test()

@@ -165,7 +165,7 @@ class BasePhonopyCalculation(object):
         calcinfo.codes_info = []
         for property_cmd in self._calculation_cmd:
             codeinfo = CodeInfo()
-            codeinfo.cmdline_params = [self._INPUT_FILE_NAME] + self._additional_cmdline_params + [property_cmd]
+            codeinfo.cmdline_params = [self._INPUT_FILE_NAME] + self._additional_cmdline_params + property_cmd
             codeinfo.code_uuid = code.uuid
             codeinfo.withmpi = False
             calcinfo.codes_info += [codeinfo]
