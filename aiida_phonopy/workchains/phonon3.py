@@ -36,13 +36,14 @@ __testing__ = False
 
 
 @workfunction
-def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
+def create_supercells_with_displacements_using_phono3py(structure, ph_settings, cutoff):
     """
     Use phono3py to create the supercells with displacements to calculate the force constants by using
     finite displacements methodology
 
     :param structure: StructureData object
     :param phonopy_input: ParametersData object containing a dictionary with the data needed for phonopy
+    :param cutoff: FloatData object containing the value of the cutoff for 3rd order FC in Angstroms (if 0 no cutoff is applied)
     :return: A set of StructureData Objects containing the supercells with displacements
     """
     from phono3py.phonon3 import Phono3py
@@ -56,7 +57,13 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
                         symprec=ph_settings.dict.symmetry_precision,
                         log_level=1)
 
-    phono3py.generate_displacements(distance=ph_settings.dict.distance)
+    if float(cutoff) == 0:
+        cutoff = None
+    else:
+        cutoff = float(cutoff)
+
+    phono3py.generate_displacements(distance=ph_settings.dict.distance,
+                                    cutoff_pair_distance=cutoff)
 
     cells_with_disp = phono3py.get_supercells_with_displacements()
 
@@ -66,11 +73,14 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings):
 
     disp_cells = {'data_sets': data_sets_object}
     for i, phonopy_supercell in enumerate(cells_with_disp):
+        if phonopy_supercell is None:
+            print ('structure_{} cutoff skip'.format(i))
+            continue
         supercell = StructureData(cell=phonopy_supercell.get_cell())
         for symbol, position in zip(phonopy_supercell.get_chemical_symbols(),
                                     phonopy_supercell.get_positions()):
             supercell.append_atom(position=position, symbols=symbol)
-        disp_cells["structure_{}".format(i)] = supercell
+        disp_cells['structure_{}'.format(i)] = supercell
 
     return disp_cells
 
@@ -90,7 +100,8 @@ def create_forces_set(**kwargs):
 
     forces = []
     for i in range(data_sets.get_number_of_displacements()):
-        forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[-1])
+        if 'forces_{}'.format(i) in kwargs:
+            forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[-1])
 
     force_sets.set_forces(forces)
 
@@ -157,6 +168,7 @@ class PhononPhono3py(WorkChain):
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
+        spec.input("cutoff", valid_type=Float, required=False, default=Float(0))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      # cls.create_displacement_calculations,
@@ -212,7 +224,8 @@ class PhononPhono3py(WorkChain):
                                                      self.inputs.ph_settings)['primitive_structure']
 
         supercells = create_supercells_with_displacements_using_phono3py(self.ctx.final_structure,
-                                                                         self.inputs.ph_settings)
+                                                                         self.inputs.ph_settings,
+                                                                         self.inputs.cutoff)
 
         self.ctx.data_sets = supercells.pop('data_sets')
         self.ctx.number_of_displacements = len(supercells)
@@ -278,7 +291,8 @@ class PhononPhono3py(WorkChain):
                                                      self.inputs.ph_settings)['primitive_structure']
 
         supercells = create_supercells_with_displacements_using_phono3py(self.ctx.final_structure,
-                                                                         self.inputs.ph_settings)
+                                                                         self.inputs.ph_settings,
+                                                                         self.inputs.cutoff)
 
         self.ctx.data_sets = supercells.pop('data_sets')
         self.ctx.number_of_displacements = len(supercells)

@@ -48,9 +48,19 @@ write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), filename
 with open('POSCAR-unitcell', mode='w') as f:
     f.writelines(get_poscar_txt(structure))
 
-if 'nac_data' in wc.get_inputs():
+if 'nac_data' in wc.get_outputs_dict():
     nac_data = wc.out.nac_data
+    print ('Writing BORN file')
     with open('BORN', mode='w') as f:
         f.writelines(get_BORN_txt(nac_data,
                                   structure=structure,
                                   parameters=ph_settings))
+
+if 'force_constants_2order' and 'force_constants_3order' in wc.get_outputs_dict():
+    from phono3py.file_IO import write_fc2_to_hdf5, write_fc3_to_hdf5
+
+    print ('Writing FC2 and FC3 into HDF5 files')
+    fc2 = wc.out.force_constants_2order.get_data()
+    write_fc2_to_hdf5(fc2, filename='fc2.hdf5')
+    fc3 = wc.out.force_constants_3order.get_data()
+    write_fc3_to_hdf5(fc3, filename='fc3.hdf5')

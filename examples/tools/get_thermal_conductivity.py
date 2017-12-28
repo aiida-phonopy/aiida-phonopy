@@ -56,6 +56,12 @@ phono3py.produce_fc3(force_sets.get_forces3(),
 fc3 = phono3py.get_fc3()
 fc2 = phono3py.get_fc2()
 
+if True:
+    from phono3py.file_IO import write_fc2_to_hdf5, write_fc3_to_hdf5
+    print ('Writing FC2 and FC3 into HDF5 files')
+    write_fc2_to_hdf5(fc3, filename='fc2.hdf5')
+    write_fc3_to_hdf5(fc3, filename='fc3.hdf5')
+
 show_drift_fc3(fc3)
 show_drift_force_constants(fc2, name='fc2')
 
