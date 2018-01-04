@@ -236,7 +236,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ISTART': 0,
             'IBRION': 2,
             'ISIF': 3,
-            'NSW': 100,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
             'EDIFF': 0,
@@ -244,6 +243,9 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.',
             'PSTRESS': pressure})  # unit: kb -> kB
+
+        if not 'NSW' in incar:
+            incar.update({'NSW': 100})
 
     elif type == 'optimize_constant_volume':
         incar.update({
