@@ -55,21 +55,20 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
         force_constants = inputdict.pop(self.get_linkname('force_constants'), None)
         bands = inputdict.pop(self.get_linkname('bands'), None)
 
-        if data_sets is None and force_constants is None:
-            raise InputValidationError("no force_sets nor force_constants are specified for this calculation")
-
-        if data_sets is not None:
-            force_sets_txt = get_FORCE_SETS_txt(data_sets)
-            force_sets_filename = tempfolder.get_abs_path(self._INPUT_FORCE_SETS)
-            with open(force_sets_filename, 'w') as infile:
-                infile.write(force_sets_txt)
-            self._additional_cmdline_params += ['--writefc']
-            self._internal_retrieve_list += ['FORCE_CONSTANTS']
-
         if force_constants is not None:
             force_constants_txt = get_FORCE_CONSTANTS_txt(force_constants)
             force_constants_filename = tempfolder.get_abs_path(self._INOUT_FORCE_CONSTANTS)
             with open(force_constants_filename, 'w') as infile:
                 infile.write(force_constants_txt)
             self._additional_cmdline_params += ['--readfc']
+
+        elif data_sets is not None:
+            force_sets_txt = get_FORCE_SETS_txt(data_sets)
+            force_sets_filename = tempfolder.get_abs_path(self._INPUT_FORCE_SETS)
+            with open(force_sets_filename, 'w') as infile:
+                infile.write(force_sets_txt)
+            self._additional_cmdline_params += ['--writefc']
+            self._internal_retrieve_list += ['FORCE_CONSTANTS']
+        else:
+             raise InputValidationError("no force_sets nor force_constants are specified for this calculation")
 

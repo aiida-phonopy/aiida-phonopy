@@ -29,10 +29,8 @@ class BasePhonopyCalculation(object):
     _INPUT_NAC = 'BORN'
 
 
-
     # initialize with default files that should always be retrieved, additional files are added in the specific plugin
     _internal_retrieve_list = []
-    #_internal_retrieve_list += ['FORCE_CONSTANTS']
 
     # Initialize list of commands to be specified for each specific plugin
     _additional_cmdline_params = ['--thm']

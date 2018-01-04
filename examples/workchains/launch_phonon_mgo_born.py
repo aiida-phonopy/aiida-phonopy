@@ -94,7 +94,7 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  # pressure=Float(0),
-                 optimize=Bool(False),
+                 optimize=Bool(True),
                  use_nac=Bool(True)
                  )
 
