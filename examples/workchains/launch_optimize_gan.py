@@ -145,11 +145,12 @@ if not run_by_deamon:
                   structure=structure,
                   es_settings=es_settings,
                   # Optional settings
-                  # pressure=Float(10.0),
-                  max_iterations=Int(3)
+                  pressure=Float(0.0),
+                  max_iterations=Int(3),
+                  tolerance_forces=Float(1e-5),
+                  tolerance_stress=Float(1e-2),
+                  standarize_cell=Bool(True)
                   )
-
-    print(results)
 else:
     future = submit(OptimizeStructure,
                     structure=structure,
