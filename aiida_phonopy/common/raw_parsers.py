@@ -340,3 +340,12 @@ def get_forces_txt(force_sets):
     w.close()
     return lines
 
+
+def write_fc2_to_hdf5_file(force_constants, filename):
+    from phono3py.file_IO import write_fc2_to_hdf5
+    write_fc2_to_hdf5(force_constants.get_data(), filename)
+
+
+def write_fc3_to_hdf5_file(force_constants, filename):
+    from phono3py.file_IO import write_fc3_to_hdf5
+    write_fc3_to_hdf5(force_constants.get_data(), filename)

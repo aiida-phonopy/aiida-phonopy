@@ -69,8 +69,12 @@ calc.use_structure(structure)
 calc.use_code(code)
 calc.use_parameters(parameters)
 
-calc.use_data_sets(load_node(60477))  # This node should contain a ForceSetsData object
-
+# Chose to use forces or force constants
+if False:
+    calc.use_data_sets(load_node(60477))  # This node should contain a ForceSetsData object
+else:
+    calc.use_force_constants(load_node(62098))
+    calc.use_force_constants_3(load_node(62097))
 
 if False:
     subfolder, script_filename = calc.submit_test()

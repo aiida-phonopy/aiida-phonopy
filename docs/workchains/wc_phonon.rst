@@ -18,8 +18,7 @@ using the phonopy plugin provided in this package.
    :param pressure: (optional) AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
    :param use_nac: (optional) AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is False.
 
-- ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for more information.
-    Additional dictionary entries can be added to request a remote phonopy calculation. See example in examples/workchains/launh_phonon_gan ::
+- ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for more information. Additional dictionary entries can be added to request a remote phonopy calculation. See example in examples/workchains/launh_phonon_gan ::
 
     code: phonopy@cluster
     machine: machine_dict
@@ -35,10 +34,7 @@ machine_dict dictionary should contain the following entries. resources_dict may
                      'tot_num_mpiprocs': 16
                      }
 
-- es_settings: This object contains the parameters for each specific software used as calculator (QE, VASP or LAMMPS).
- Each calculator uses a different dictionary structure (See examples at examples/workchains folder for the details).
- The common basic structure in all calculators is
-::
+- es_settings: This object contains the parameters for each specific software used as calculator (QE, VASP or LAMMPS). Each calculator uses a different dictionary structure (See examples at examples/workchains folder for the details). The common basic structure in all calculators is ::
 
     settings_dict = {'code': {'optimize': 'vasp5@boston',
                               'forces': 'vasp4@boston',
