@@ -56,9 +56,9 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'symmetry_precision': 1e-5
                                   })
 
-# code_to_use = 'VASP'
+code_to_use = 'VASP'
 #code_to_use = 'QE'
-code_to_use = 'LAMMPS'
+#code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
@@ -132,7 +132,7 @@ if code_to_use == 'LAMMPS':
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
 
 # Chose how to run the calculation
-run_by_deamon = False
+run_by_deamon = True
 if not run_by_deamon:
     result = run(PhononPhono3py,
                  structure=structure,
@@ -141,6 +141,7 @@ if not run_by_deamon:
                  # Optional settings
                  # pressure=Float(0),
                  optimize=Bool(False),
+                 chunks=Int(200),
                  use_nac=Bool(False)
                  )
 
@@ -153,6 +154,7 @@ else:
                     # Optional settings
                     # pressure=Float(0),
                     optimize=Bool(False),
+                    chunks=Int(200),
                     use_nac=Bool(False)
                     )
 
