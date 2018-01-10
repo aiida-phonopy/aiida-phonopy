@@ -154,4 +154,10 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-autodoc_mock_imports = ['aiida.orm', 'aiida.orm.data.array', 'numpy']
+try:
+    from aiida import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+except ImportError:
+    autodoc_mock_imports = ['aiida.orm', 'numpy']

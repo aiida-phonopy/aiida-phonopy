@@ -10,7 +10,7 @@ PhononDosData = DataFactory('phonopy.phonon_dos')
 BandStructureData = DataFactory('phonopy.band_structure')
 
 
-# PARSE FILES TO DATA
+# Parse files to generate AIIDA OBJECTS
 
 def parse_FORCE_CONSTANTS(filename):
     fcfile = open(filename)
@@ -95,8 +95,22 @@ def parse_band_structure(filename, input_bands):
     return band_structure
 
 
-# WRITE DATA TO TEXT
+def parse_kappa(filename):
+    import numpy as np
+    import h5py
+    from aiida.orm.data.array import ArrayData
 
+    kappa = ArrayData()
+
+    f = h5py.File(filename, 'r')
+    for item in f:
+        array = np.array(f[item])
+        kappa.set_array(item, array)
+    f.close()
+
+    return kappa
+
+# Generate text strings for files from AIIDA OBJECTS
 
 def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
     from phonopy.structure.cells import get_primitive, get_supercell
@@ -139,14 +153,6 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
 
 def get_FORCE_SETS_txt(data_sets_object):
     data_sets = data_sets_object.get_force_sets()
-
-    #    data_list = []
-    #    for name in names:
-    #        data_list.append({'direction': data_sets_object.get_array(name)[0],
-    #                          'number': data_sets_object.get_array(name)[1],
-    #                          'displacement': data_sets_object.get_array(name)[2],
-    #                          'forces': data_sets_object.get_array(name)[3]})
-    #    data_sets = {'natom': num_atom, 'first_atoms': data_list}
 
     displacements = data_sets['first_atoms']
     forces = [x['forces'] for x in data_sets['first_atoms']]
@@ -221,7 +227,107 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
                 input_file += ','
 
         input_file += '\n'
-        input_file += 'BAND_POINTS = {}'.format(bands.get_number_of_points())
+        input_file += 'BAND_POINTS = {}\n'.format(bands.get_number_of_points())
 
     return input_file
 
+
+def get_disp_fc3_txt(structure, parameters_data, force_sets):
+    from phono3py.file_IO import write_cell_yaml
+    from phonopy.structure.cells import get_supercell
+    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+
+    import StringIO
+
+    dataset = force_sets.get_data_sets3()
+    supercell = get_supercell(phonopy_bulk_from_structure(structure),
+                              parameters_data.dict.supercell,
+                              symprec=parameters_data.dict.symmetry_precision)
+
+    w = StringIO.StringIO()
+    w.write("natom: %d\n" %  dataset['natom'])
+
+    num_first = len(dataset['first_atoms'])
+    w.write("num_first_displacements: %d\n" %  num_first)
+    if 'cutoff_distance' in dataset:
+        w.write("cutoff_distance: %f\n" %  dataset['cutoff_distance'])
+
+    num_second = 0
+    num_disp_files = 0
+    for d1 in dataset['first_atoms']:
+        num_disp_files += 1
+        num_second += len(d1['second_atoms'])
+        for d2 in d1['second_atoms']:
+            if 'included' in d2:
+                if d2['included']:
+                    num_disp_files += 1
+            else:
+                num_disp_files += 1
+
+    w.write("num_second_displacements: %d\n" %  num_second)
+    w.write("num_displacements_created: %d\n" %  num_disp_files)
+
+    w.write("first_atoms:\n")
+    count1 = 1
+    count2 = num_first + 1
+    for disp1 in dataset['first_atoms']:
+        disp_cart1 = disp1['displacement']
+        w.write("- number: %5d\n" % (disp1['number'] + 1))
+        w.write("  displacement:\n")
+        w.write("    [%20.16f,%20.16f,%20.16f ] # %05d\n" %
+                (disp_cart1[0], disp_cart1[1], disp_cart1[2], count1))
+        w.write("  second_atoms:\n")
+        count1 += 1
+
+        included = None
+        distance = 0.0
+        atom2 = -1
+        for disp2 in disp1['second_atoms']:
+            if atom2 != disp2['number']:
+                atom2 = disp2['number']
+                if 'included' in disp2:
+                    included = disp2['included']
+                pair_distance = disp2['pair_distance']
+                w.write("  - number: %5d\n" % (atom2 + 1))
+                w.write("    distance: %f\n" % pair_distance)
+                if included is not None:
+                    if included:
+                        w.write("    included: %s\n" % "true")
+                    else:
+                        w.write("    included: %s\n" % "false")
+                w.write("    displacements:\n")
+
+            disp_cart2 = disp2['displacement']
+            w.write("    - [%20.16f,%20.16f,%20.16f ] # %05d\n" %
+                    (disp_cart2[0], disp_cart2[1], disp_cart2[2], count2))
+            count2 += 1
+
+    write_cell_yaml(w, supercell)
+    w.seek(0)
+    lines = w.read()
+    w.close()
+    return lines
+
+
+def get_forces_txt(force_sets):
+    import StringIO
+
+    w = StringIO.StringIO()
+
+    from phono3py.file_IO import write_FORCES_FC3
+
+    write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), fp=w)
+    w.seek(0)
+    lines = w.read()
+    w.close()
+    return lines
+
+
+def write_fc2_to_hdf5_file(force_constants, filename):
+    from phono3py.file_IO import write_fc2_to_hdf5
+    write_fc2_to_hdf5(force_constants.get_data(), filename)
+
+
+def write_fc3_to_hdf5_file(force_constants, filename):
+    from phono3py.file_IO import write_fc3_to_hdf5
+    write_fc3_to_hdf5(force_constants.get_data(), filename)

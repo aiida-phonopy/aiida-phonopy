@@ -13,5 +13,5 @@ Special setters are provided to store the data directly from phonopy objects:
 Also special getters are provided to return data in phonopy format:
 
 .. autoclass:: BandStructureData()
-   :members: get_bands, get_band_ranges, get_distances, get_labels, get_unitcell, get_frequencies, get_gamma, get_eigenvalues
+   :members: get_bands, get_band_ranges, get_distances, get_labels, get_unitcell, get_frequencies, get_gamma
 

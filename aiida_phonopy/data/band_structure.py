@@ -1,4 +1,6 @@
 from aiida.orm.data.array import ArrayData
+# from aiida.orm import DataFactory
+# ArrayData = DataFactory('array')
 
 
 class BandStructureData(ArrayData):

@@ -56,9 +56,9 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'symmetry_precision': 1e-5
                                   })
 
-# code_to_use = 'VASP'
+code_to_use = 'VASP'
 #code_to_use = 'QE'
-code_to_use = 'LAMMPS'
+#code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
