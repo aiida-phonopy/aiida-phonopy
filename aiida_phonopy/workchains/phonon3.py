@@ -135,6 +135,26 @@ def get_force_constants3(data_sets, structure, ph_settings):
             'force_constants_3order': force_constants_3}
 
 
+def get_recover_calc(wc, label):
+
+    if type(wc) is Bool:
+        return None
+
+    try:
+        pk_list = wc.out.calcs_pk
+    except:
+        pk_list = []
+
+    out_list = [load_node(pk) for pk in pk_list]
+
+    for calc in wc.get_outputs() + out_list:
+        if calc.label == label:
+            if calc.get_state() == 'FINISHED':
+                return calc
+
+    return None
+
+
 class PhononPhono3py(WorkChain):
     """
     Workchain to do a phonon calculation using phonopy
@@ -169,6 +189,7 @@ class PhononPhono3py(WorkChain):
         spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
         spec.input("cutoff", valid_type=Float, required=False, default=Float(0))
+        spec.input("recover", required=False, default=Bool(0))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      # cls.create_displacement_calculations,
@@ -325,13 +346,21 @@ class PhononPhono3py(WorkChain):
         supercell_list = np.array(supercells.items())[list]
 
         for label, supercell in supercell_list:
+
+            recover_calc = get_recover_calc(self.inputs.recover, label)
+
+            if recover_calc is not None:
+                self.ctx._content[label] = recover_calc
+                print ('recovered: {}'.format(label))
+                continue
+
             JobCalculation, calculation_input = generate_inputs(supercell,
                                                                 # self.inputs.machine,
                                                                 self.inputs.es_settings,
                                                                 # pressure=self.input.pressure,
                                                                 type='forces')
 
-            calculation_input._label = label
+            calculation_input['_label'] = label
             future = submit(JobCalculation, **calculation_input)
             print ('{} pk = {}'.format(label, future.pid))
 

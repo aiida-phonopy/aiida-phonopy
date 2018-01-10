@@ -4,6 +4,7 @@
 
 from aiida.work.run import run, submit, async
 from aiida.orm import Code, CalculationFactory, DataFactory
+from aiida.orm.data.base import Str
 # from aiida.orm.data.upf import UpfData
 
 

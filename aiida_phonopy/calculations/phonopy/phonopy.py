@@ -30,7 +30,7 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
                                          self._OUTPUT_THERMAL_PROPERTIES,
                                          self._OUTPUT_BAND_STRUCTURE]
 
-        self._calculation_cmd = [['--pdos=0'], ['-t']]
+        self._calculation_cmd = [['--pdos=0'], ['--readfc', '-t']]
 
     @classproperty
     def _use_methods(cls):
