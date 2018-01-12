@@ -146,7 +146,8 @@ if not run_by_deamon:
                  use_nac=Bool(False),
                  chunks=Int(120),  # set the number of maximum simultaneous calculations
                  calculate_fc=Bool(False),  # set true to calculate 2nd & 3rd order force constants
-                 # recover=load_node(70122) # set workchain to recover
+                 # recover=load_node(73762), # set workchain to recover
+                 data_sets=load_node(76509)  # load previous data
                  )
 
     print (result)

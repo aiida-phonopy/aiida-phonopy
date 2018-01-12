@@ -183,8 +183,11 @@ class ForceSetsData(ArrayData):
         self._set_attr('ndisplacements_s', ndisplacements_s)
 
     def get_data_sets3(self):
+
+        if not 'ndisplacements_s' in self.get_attrs():
+            return None
+
         natom = self.get_attr("natom")
-        # ndisplacements = self.get_attr("ndisplacements")
         ndisplacements_s = self.get_attr("ndisplacements_s")
 
         direction = self.get_array('direction_s')

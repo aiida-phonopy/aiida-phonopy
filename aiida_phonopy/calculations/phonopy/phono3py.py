@@ -81,4 +81,3 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
         # Set name for output file
         kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
         self._internal_retrieve_list += [kappa_filename]
-        print self._internal_retrieve_list

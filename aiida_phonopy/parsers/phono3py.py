@@ -46,7 +46,6 @@ class Phono3pyParser(Parser):
 
         #if self._calc._OUTPUT_KAPPA in list_of_files:
         for filename in filter(lambda x: x.startswith(self._calc._OUTPUT_KAPPA), list_of_files):
-            print filename
             outfile = out_folder.get_abs_path(filename)
             kappa_data = parse_kappa(outfile)
             new_nodes_list.append(('kappa', kappa_data))
