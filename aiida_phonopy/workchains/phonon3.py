@@ -194,8 +194,6 @@ def get_forces_from_sets(data_sets, index):
     else:
         harmonic_displacements = len(data_sets_dict['first_atoms'])
 
-    print harmonic_displacements
-
     if index < harmonic_displacements:
         return forces[index]
 
