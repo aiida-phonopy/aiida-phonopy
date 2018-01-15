@@ -145,10 +145,10 @@ if not run_by_deamon:
                  optimize=Bool(False),
                  use_nac=Bool(False),
                  chunks=Int(120),  # set the number of maximum simultaneous calculations
-                 cutoff=Float(3.0),
+                 cutoff=Float(4.0),
                  # calculate_fc=Bool(False),  # set true to calculate 2nd & 3rd order force constants
-                 recover=load_node(81309), # set workchain to recover
-                 # data_sets=load_node(79931)  # load previous data
+                 # recover=load_node(81309), # set workchain to recover
+                 data_sets=load_node(81481)  # load previous data
                  )
 
     print (result)

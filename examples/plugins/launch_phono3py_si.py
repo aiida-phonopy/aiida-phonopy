@@ -71,7 +71,7 @@ calc.use_parameters(parameters)
 
 # Chose to use forces or force constants
 if True:
-    calc.use_data_sets(load_node(81481))  # This node should contain a ForceSetsData object
+    calc.use_data_sets(load_node(81756))  # This node should contain a ForceSetsData object
 else:
     calc.use_force_constants(load_node(62098))
     calc.use_force_constants_3(load_node(62097))

@@ -176,10 +176,8 @@ def cut_supercells(supercells, data_sets):
                     if not second_atoms['included']:
                         calculation_list.append('structure_{}'.format(i))
                 i += 1
-                print 'test {}'.format(i)
 
-
-        supercells = { key:value for key, value in supercells.items() if key in calculation_list}
+        supercells = {key:value for key, value in supercells.items() if key in calculation_list}
     return supercells
 
 
@@ -194,7 +192,9 @@ def get_forces_from_sets(data_sets, index):
     if data_sets_dict is None:
         harmonic_displacements = data_sets.get_number_of_displacements()
     else:
-        harmonic_displacements = data_sets_dict['first_atoms']
+        harmonic_displacements = len(data_sets_dict['first_atoms'])
+
+    print harmonic_displacements
 
     if index < harmonic_displacements:
         return forces[index]
@@ -214,7 +214,6 @@ def get_forces_from_sets(data_sets, index):
                         return forces[i]
                     i += 1
                 i_ref += 1
-                print 'test2 {}'.format(i)
 
     return None
 
