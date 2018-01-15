@@ -36,7 +36,6 @@ for i, scaled_position in enumerate(scaled_positions):
     structure.append_atom(position=np.dot(scaled_position, cell).tolist(),
                           symbols=symbols[i])
 
-
 # Machine
 machine_dict = {'resources': {'num_machines': 1,
                               'parallel_env': 'mpi*',
@@ -67,13 +66,13 @@ calc = code.new_calc(max_wallclock_seconds=3600,
 calc.label = "test phonopy calculation"
 calc.description = "A much longer description"
 
-calc.use_structure(load_node(56143))
+calc.use_structure(load_node(79024))
 calc.use_code(code)
 calc.use_parameters(parameters)
 
 # Chose to use forces or force constants
 if True:
-    calc.use_data_sets(load_node(56929))  # This node should contain a ForceSetsData object
+    calc.use_data_sets(load_node(81106))  # This node should contain a ForceSetsData object
 else:
     calc.use_force_constants(load_node(25806))  # This node should contain a ForceConstantsData object
 

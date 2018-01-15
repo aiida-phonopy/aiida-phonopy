@@ -56,9 +56,9 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   'symmetry_precision': 1e-5
                                   })
 
-code_to_use = 'VASP'
+#code_to_use = 'VASP'
 #code_to_use = 'QE'
-#code_to_use = 'LAMMPS'
+code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
@@ -145,9 +145,10 @@ if not run_by_deamon:
                  optimize=Bool(False),
                  use_nac=Bool(False),
                  chunks=Int(120),  # set the number of maximum simultaneous calculations
-                 calculate_fc=Bool(False),  # set true to calculate 2nd & 3rd order force constants
-                 # recover=load_node(73762), # set workchain to recover
-                 data_sets=load_node(76509)  # load previous data
+                 cutoff=Float(3.0),
+                 # calculate_fc=Bool(False),  # set true to calculate 2nd & 3rd order force constants
+                 recover=load_node(81309), # set workchain to recover
+                 # data_sets=load_node(79931)  # load previous data
                  )
 
     print (result)
