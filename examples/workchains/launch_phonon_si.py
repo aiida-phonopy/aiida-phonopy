@@ -135,28 +135,30 @@ if code_to_use == 'LAMMPS':
 
     es_settings = ParameterData(dict=settings_dict)
 
-QHAPhonopy = WorkflowFactory('phonopy.qha')
+PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
 # Chose how to run the calculation
 run_by_deamon = False
 if not run_by_deamon:
-    result = run(QHAPhonopy,
+    result = run(PhononPhonopy,
                  structure=structure,
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
-                 num_expansions=Int(10),
+                 pressure=Float(0.0),
+                 optimize=Bool(False),
                  use_nac=Bool(False),
                  )
 
     print (result)
 else:
-    future = submit(QHAPhonopy,
+    future = submit(PhononPhonopy,
                     structure=structure,
                     es_settings=es_settings,
                     ph_settings=ph_settings,
                     # Optional settings
-                    num_expansions=Int(10),
+                    pressure=Float(0),
+                    optimize=Bool(False),
                     use_nac=Bool(False),
                     )
 

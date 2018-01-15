@@ -155,6 +155,68 @@ def get_recover_calc(wc, label):
     return None
 
 
+def cut_supercells(supercells, data_sets):
+
+    if type(data_sets) is Bool:
+        return supercells
+
+    data_sets_dict = data_sets.get_data_sets3()
+
+    if data_sets_dict is None:
+        data_sets_dict = data_sets.get_data_sets()
+        for i in range(data_sets.get_number_of_displacements()):
+            del supercells['structure_{}'.format(i)]
+            print ('remove: structure_{}'.format(i))
+    else:
+        calculation_list = []
+        i = len(data_sets_dict['first_atoms'])
+        for first_atoms in data_sets_dict['first_atoms']:
+            for second_atoms in first_atoms['second_atoms']:
+                if 'included' in second_atoms:
+                    if not second_atoms['included']:
+                        calculation_list.append('structure_{}'.format(i))
+                i += 1
+
+        supercells = {key:value for key, value in supercells.items() if key in calculation_list}
+    return supercells
+
+
+def get_forces_from_sets(data_sets, index):
+
+    if type(data_sets) is Bool:
+        return None
+
+    forces = data_sets.get_forces3()
+    data_sets_dict = data_sets.get_data_sets3()
+
+    if data_sets_dict is None:
+        harmonic_displacements = data_sets.get_number_of_displacements()
+    else:
+        harmonic_displacements = len(data_sets_dict['first_atoms'])
+
+    if index < harmonic_displacements:
+        return forces[index]
+
+    if data_sets_dict is not None:
+        i = i_ref = len(data_sets_dict['first_atoms'])
+        #i_ref = len(data_sets['first_atoms'])
+        for first_atoms in data_sets_dict['first_atoms']:
+            for second_atoms in first_atoms['second_atoms']:
+                if 'included' in second_atoms:
+                    if second_atoms['included']:
+                        if index == i_ref:
+                            return forces[i]
+                        i += 1
+                else:
+                    if index == i_ref:
+                        return forces[i]
+                    i += 1
+                i_ref += 1
+
+    return None
+
+
+
 class PhononPhono3py(WorkChain):
     """
     Workchain to do a phonon calculation using phonopy
@@ -189,7 +251,8 @@ class PhononPhono3py(WorkChain):
         spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
         spec.input("cutoff", valid_type=Float, required=False, default=Float(0))
-        spec.input("recover", required=False, default=Bool(0))
+        spec.input("recover", required=False, default=Bool(False))
+        spec.input("data_sets", required=False, default=Bool(False))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      # cls.create_displacement_calculations,
@@ -315,8 +378,11 @@ class PhononPhono3py(WorkChain):
                                                                          self.inputs.ph_settings,
                                                                          self.inputs.cutoff)
 
+
         self.ctx.data_sets = supercells.pop('data_sets')
         self.ctx.number_of_displacements = len(supercells)
+
+        supercells = cut_supercells(supercells, self.inputs.data_sets)
 
         calcs = {}
 
@@ -349,10 +415,12 @@ class PhononPhono3py(WorkChain):
 
             recover_calc = get_recover_calc(self.inputs.recover, label)
 
+            # Recover calculations (temporal beta patch)
             if recover_calc is not None:
                 self.ctx._content[label] = recover_calc
                 print ('recovered: {}'.format(label))
                 continue
+            # Recover calculations end (temporal beta patch)
 
             JobCalculation, calculation_input = generate_inputs(supercell,
                                                                 # self.inputs.machine,
@@ -374,12 +442,25 @@ class PhononPhono3py(WorkChain):
         self.report('collect data and create force_sets')
 
         wf_inputs = {}
-        for i in range(self.ctx.number_of_displacements):
-            # This has to be changed to make uniform plugin interface
-            try:
-                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_trajectory
-            except:
-                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_array
+        for i in range(self.ctx.data_sets.get_number_of_displacements()):
+
+            forces = get_forces_from_sets(self.inputs.data_sets, i)
+            if forces is not None:
+                array_data = ArrayData()
+                array_data.set_array('forces', np.array([forces]))
+                wf_inputs['forces_{}'.format(i)] = array_data
+                continue
+
+            calc = self.ctx.get('structure_{}'.format(i))
+            print ('collect structure_{}'.format(i))
+            if calc is not None:
+                print ('structure_{} OK'.format(i))
+
+                # This has to be changed to make uniform plugin interface
+                try:
+                    wf_inputs['forces_{}'.format(i)] = calc.out.output_trajectory
+                except:
+                    wf_inputs['forces_{}'.format(i)] = calc.out.output_array
 
         wf_inputs['data_sets'] = self.ctx.data_sets
 
