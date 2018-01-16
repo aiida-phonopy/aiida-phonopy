@@ -257,7 +257,7 @@ class PhononPhono3py(WorkChain):
         spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
         spec.input("cutoff", valid_type=Float, required=False, default=Float(0))
-        spec.input("recover", required=False, default=Bool(False))
+        spec.input("recover", required=False, default=Bool(False)) # temporal patch
         spec.input("data_sets", required=False, default=Bool(False))
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
