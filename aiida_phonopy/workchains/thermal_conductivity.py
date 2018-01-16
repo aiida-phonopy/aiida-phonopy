@@ -94,23 +94,24 @@ class ThermalPhono3py(WorkChain):
 
         is_converged = False
 
-        if 'old_conductivity' in self.ctx:
-            print ('old_conductivity')
-            self.ctx.conductivity = self.ctx.anharmonic.out.kappa.get_array('kappa')
-            is_converged = np.allclose(self.ctx.conductivity, self.ctx.old_conductivity, rtol=0.3, atol=0.1)
-
-        if 'anharmonic' in self.ctx:
-            print ('anharmonic')
+        if 'thermal_conductivity' in self.ctx:
+            print ('thermal test')
             self.ctx.iteration += 1
-            self.ctx.cutoff += float(self.inputs.step) * self.ctx.iteration
+            self.ctx.cutoff += float(self.inputs.step)
+            self.ctx.conductivity = self.ctx.thermal_conductivity.out.kappa.get_array('kappa')
+            self.ctx.input_data_sets = self.ctx.anharmonic.out.force_sets
+            print ('kappa=', self.ctx.thermal_conductivity.out.kappa)
+            if 'old_conductivity' in self.ctx:
+                print ('old_conductivity')
+                is_converged = np.allclose(self.ctx.conductivity, self.ctx.old_conductivity, rtol=0.3, atol=0.1)
+
             self.ctx.old_conductivity = self.ctx.conductivity
-            self.ctx.input_data_sets = self.ctx.anharmonic.out.data_sets
 
         else:
-            print ('else')
+            print ('initial')
             self.ctx.cutoff = self.inputs.step
             self.ctx.iteration = 1
-            self.ctx.input_data_sets = self.ctx.harmonic.out.data_sets
+            self.ctx.input_data_sets = self.ctx.harmonic.out.force_sets
             self.ctx.final_structure = self.ctx.harmonic.out.final_structure
             self.out('final_structure', self.ctx.final_structure)
 
@@ -125,6 +126,10 @@ class ThermalPhono3py(WorkChain):
     def harmonic_calculation(self):
 
         print('start thermal conductivity (pk={})'.format(self.pid))
+
+        if __testing__:
+            self.ctx._content['harmonic'] = load_node(81938)
+            return
 
         self.report('Harmonic calculation')
 
@@ -150,18 +155,21 @@ class ThermalPhono3py(WorkChain):
                         use_nac=Bool(False),
                         cutoff=Float(self.ctx.cutoff),
                         chunks=self.inputs.chunks,
-                        # data_sets=self.ctx.input_data_sets,
-                        data_sets=load_node(81756),
+                        data_sets=self.ctx.input_data_sets,
+                        #data_sets=load_node(81481),
                         )
 
+        print('start phonon3 (pk={})'.format(self.pid))
         return ToContext(anharmonic=future)
 
     def get_thermal_conductivity(self):
 
         JobCalculation, calculation_input = generate_phono3py_params(structure=self.ctx.final_structure,
                                                                      ph_settings=self.inputs.ph_settings,
-                                                                     force_sets=self.ctx.input_data_sets)
+                                                                     force_sets=self.ctx.anharmonic.out.force_sets)
         future = submit(JobCalculation, **calculation_input)
+        print('start phono3py (pk={})'.format(self.pid))
+
         return ToContext(thermal_conductivity=future)
 
     def collect_data(self):

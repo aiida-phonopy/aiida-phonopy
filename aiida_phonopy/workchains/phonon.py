@@ -530,7 +530,7 @@ class PhononPhonopy(WorkChain):
         self.out('dos', self.ctx.phonon_properties.out.dos)
         self.out('band_structure', self.ctx.phonon_properties.out.band_structure)
         self.out('final_structure', self.ctx.final_structure)
-        self.out('data_sets', self.ctx.force_sets)
+        self.out('force_sets', self.ctx.force_sets)
 
         self.report('finish phonon')
 
