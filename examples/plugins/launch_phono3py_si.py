@@ -68,6 +68,7 @@ calc.description = "A much longer description"
 calc.use_structure(load_node(78193))
 calc.use_code(code)
 calc.use_parameters(parameters)
+# calc.use_nac(load_node(0000))
 
 # Chose to use forces or force constants
 if True:
