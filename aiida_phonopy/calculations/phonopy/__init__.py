@@ -114,7 +114,7 @@ class BasePhonopyCalculation(object):
 
         nac_data = inputdict.pop(self.get_linkname('nac_data'), None)
         bands = inputdict.pop(self.get_linkname('bands'), None)
-
+        print bands
 
 
         ##############################

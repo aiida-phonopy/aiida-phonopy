@@ -23,7 +23,7 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
 
 
-def generate_phono3py_params(code, structure, ph_settings, force_sets, nac_data=None):
+def generate_phono3py_params(structure, ph_settings, force_sets, nac_data=None):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
@@ -34,6 +34,12 @@ def generate_phono3py_params(code, structure, ph_settings, force_sets, nac_data=
     :param force_sets: NacData object containing the dielectric tensor and Born effective charges info
     :return: Calculation process object, input dictionary
     """
+
+
+    try:
+        code = Code.get_from_string(ph_settings.dict.code['fc3'])
+    except :
+        code = Code.get_from_string(ph_settings.dict.code)
 
     plugin = code.get_attr('input_plugin')
     PhonopyCalculation = CalculationFactory(plugin)
@@ -77,7 +83,7 @@ class ThermalPhono3py(WorkChain):
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
-        spec.input("step", valid_type=Float, required=False, default=Int(2.0))
+        spec.input("step", valid_type=Float, required=False, default=Float(2.0))
 
         spec.outline(cls.harmonic_calculation,
                      _While(cls.not_converged)(cls.get_data_sets,
@@ -89,16 +95,19 @@ class ThermalPhono3py(WorkChain):
         is_converged = False
 
         if 'old_conductivity' in self.ctx:
+            print ('old_conductivity')
             self.ctx.conductivity = self.ctx.anharmonic.out.kappa.get_array('kappa')
             is_converged = np.allclose(self.ctx.conductivity, self.ctx.old_conductivity, rtol=0.3, atol=0.1)
 
         if 'anharmonic' in self.ctx:
+            print ('anharmonic')
             self.ctx.iteration += 1
             self.ctx.cutoff += float(self.inputs.step) * self.ctx.iteration
             self.ctx.old_conductivity = self.ctx.conductivity
             self.ctx.input_data_sets = self.ctx.anharmonic.out.data_sets
 
         else:
+            print ('else')
             self.ctx.cutoff = self.inputs.step
             self.ctx.iteration = 1
             self.ctx.input_data_sets = self.ctx.harmonic.out.data_sets
@@ -109,7 +118,8 @@ class ThermalPhono3py(WorkChain):
                 self.report('This structure is not dynamically stable. Workchain will stop')
                 exit()
 
-
+        print ('iteration', self.ctx.iteration)
+        print ('is_converged', is_converged)
         return not is_converged
 
     def harmonic_calculation(self):
@@ -130,6 +140,8 @@ class ThermalPhono3py(WorkChain):
 
     def get_data_sets(self):
 
+        print ('cutoff:', self.ctx.cutoff)
+
         future = submit(PhononPhono3py,
                         structure=self.ctx.final_structure,
                         ph_settings=self.inputs.ph_settings,
@@ -138,17 +150,15 @@ class ThermalPhono3py(WorkChain):
                         use_nac=Bool(False),
                         cutoff=Float(self.ctx.cutoff),
                         chunks=self.inputs.chunks,
-                        data_sets=self.ctx.input_data_sets,
+                        # data_sets=self.ctx.input_data_sets,
+                        data_sets=load_node(81756),
                         )
 
         return ToContext(anharmonic=future)
 
     def get_thermal_conductivity(self):
 
-        code_label = self.inputs.ph_settings.get_dict()['code']
-
-        JobCalculation, calculation_input = generate_phono3py_params(code=Code.get_from_string(code_label),
-                                                                     structure=self.ctx.final_structure,
+        JobCalculation, calculation_input = generate_phono3py_params(structure=self.ctx.final_structure,
                                                                      ph_settings=self.inputs.ph_settings,
                                                                      force_sets=self.ctx.input_data_sets)
         future = submit(JobCalculation, **calculation_input)
