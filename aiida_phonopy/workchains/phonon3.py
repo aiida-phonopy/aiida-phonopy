@@ -235,8 +235,14 @@ class PhononPhono3py(WorkChain):
 
     :param es_settings: ParametersData object that contains a dictionary with the setting needed to calculate the electronic structure.
                         The structure of this dictionary strongly depends on the software (VASP, QE, LAMMPS, ...)
-    :param optimize: Set true to perform a crystal structure optimization before the phonon calculation (default: True)
-    :param pressure: Set the external pressure (stress tensor) at which the optimization is performed in KBar (default: 0)
+    :param optimize: (optional) Set true to perform a crystal structure optimization before the phonon calculation (default: True)
+    :param pressure: (optional) Set the external pressure (stress tensor) at which the optimization is performed in KBar (default: 0)
+    :param use_nac: (optional) Bool type object that determines if non-analytical correction term is calculated or not
+    :param calculate_fc: (optional) Bool type object that determines if non-analytical correction term is calculated or not
+    :param chunks: (optional) Int type object that defines the  maximum number of maximum calculations allowed to run simultaneously (default:100)
+    :param cutoff: (optional) Float type object that defined the distance cutoff used in the generation of supercells with displacements in phono3py.
+    :param data_sets: (optional) ForceSetsData type object that contains the forces data from a previous calculation to be reused
+
     """
     @classmethod
     def define(cls, spec):
