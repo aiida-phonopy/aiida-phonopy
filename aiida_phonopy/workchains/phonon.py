@@ -80,7 +80,7 @@ def generate_phonopy_params(code, structure, ph_settings, force_sets=None, force
         inputs.nac_data = nac_data
 
     # bands
-    if nac_data is not None:
+    if bands is not None:
         inputs.bands = bands
 
     if force_constants is None and force_sets is None:
