@@ -153,7 +153,6 @@ class ThermalPhono3py(WorkChain):
                         ph_settings=self.inputs.ph_settings,
                         es_settings=self.inputs.es_settings,
                         optimize=Bool(False),
-                        use_nac=Bool(False),
                         cutoff=Float(self.ctx.cutoff),
                         chunks=self.inputs.chunks,
                         data_sets=self.ctx.input_data_sets,
@@ -165,9 +164,16 @@ class ThermalPhono3py(WorkChain):
 
     def get_thermal_conductivity(self):
 
+        if bool(self.inputs.use_nac):
+            nac_data = self.ctx.harmonic.out.nac_data
+        else:
+            nac_data = None
+
         JobCalculation, calculation_input = generate_phono3py_params(structure=self.ctx.final_structure,
                                                                      ph_settings=self.inputs.ph_settings,
-                                                                     force_sets=self.ctx.anharmonic.out.force_sets)
+                                                                     force_sets=self.ctx.anharmonic.out.force_sets,
+                                                                     nac_data=nac_data)
+
         future = submit(JobCalculation, **calculation_input)
         print('start phono3py (pk={})'.format(self.pid))
 
