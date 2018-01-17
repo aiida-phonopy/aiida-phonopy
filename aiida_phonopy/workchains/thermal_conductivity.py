@@ -27,14 +27,12 @@ def generate_phono3py_params(structure, ph_settings, force_sets, nac_data=None):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
-    :param code: Code object of phono3py
     :param structure: StructureData Object that constains the crystal structure unit cell
     :param ph_settings: ParametersData object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetsData object containing the atomic forces and displacement information
-    :param force_sets: NacData object containing the dielectric tensor and Born effective charges info
+    :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
     :return: Calculation process object, input dictionary
     """
-
 
     try:
         code = Code.get_from_string(ph_settings.dict.code['fc3'])
@@ -101,12 +99,12 @@ class ThermalPhono3py(WorkChain):
             self.ctx.cutoff += float(self.inputs.step)
             self.ctx.conductivity = self.ctx.thermal_conductivity.out.kappa.get_array('kappa')
             self.ctx.input_data_sets = self.ctx.anharmonic.out.force_sets
-            print ('kappa=', self.ctx.thermal_conductivity.out.kappa)
-            if 'old_conductivity' in self.ctx:
-                print ('old_conductivity')
-                is_converged = np.allclose(self.ctx.conductivity, self.ctx.old_conductivity, rtol=0.3, atol=0.1)
 
-            self.ctx.old_conductivity = self.ctx.conductivity
+            print ('kappa=', self.ctx.thermal_conductivity.out.kappa)
+            if 'prev_conductivity' in self.ctx:
+                is_converged = np.allclose(self.ctx.conductivity, self.ctx.prev_conductivity, rtol=0.3, atol=0.1)
+
+            self.ctx.prev_conductivity = self.ctx.conductivity
 
         else:
             print ('initial')
@@ -156,7 +154,7 @@ class ThermalPhono3py(WorkChain):
                         cutoff=Float(self.ctx.cutoff),
                         chunks=self.inputs.chunks,
                         data_sets=self.ctx.input_data_sets,
-                        #data_sets=load_node(81481),
+                        # data_sets=load_node(81481), #  Test purposes only
                         )
 
         print('start phonon3 (pk={})'.format(self.pid))
