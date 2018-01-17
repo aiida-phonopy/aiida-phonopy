@@ -148,7 +148,8 @@ if not run_by_deamon:
                  optimize=Bool(False),
                  use_nac=Bool(False),
                  chunks=Int(120),  # set the number of maximum simultaneous calculations
-                 step=Float(2.0),
+                 initial_cutoff=Float(2.0), # Initial cutoff in Angstrom
+                 step=Float(1.0), # Step cutoff in Angstrom
                  )
     print (result)
 else:

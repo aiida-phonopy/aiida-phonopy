@@ -12,7 +12,7 @@ from aiida.work.workchain import _If, _While
 
 import numpy as np
 
-__testing__ = False
+__testing__ = True
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
@@ -83,7 +83,8 @@ class ThermalPhono3py(WorkChain):
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
-        spec.input("step", valid_type=Float, required=False, default=Float(2.0))
+        spec.input("step", valid_type=Float, required=False, default=Float(1.0))
+        spec.input("initial_cutoff", valid_type=Float, required=False, default=Float(2.0))
 
         spec.outline(cls.harmonic_calculation,
                      _While(cls.not_converged)(cls.get_data_sets,
@@ -109,7 +110,7 @@ class ThermalPhono3py(WorkChain):
 
         else:
             print ('initial')
-            self.ctx.cutoff = self.inputs.step
+            self.ctx.cutoff = float(self.inputs.initial_cutoff)
             self.ctx.iteration = 1
             self.ctx.input_data_sets = self.ctx.harmonic.out.force_sets
             self.ctx.final_structure = self.ctx.harmonic.out.final_structure
@@ -128,7 +129,7 @@ class ThermalPhono3py(WorkChain):
         print('start thermal conductivity (pk={})'.format(self.pid))
 
         if __testing__:
-            self.ctx._content['harmonic'] = load_node(81938)
+            self.ctx._content['harmonic'] = load_node(83559)
             return
 
         self.report('Harmonic calculation')
