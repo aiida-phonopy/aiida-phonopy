@@ -1,3 +1,9 @@
+#############################################################
+# This script is for calculating the thermal conductivity   #
+# using phono3py. This script is an example of the usage of #
+# the ThermalPhono3py Workchain with Si                     #
+#############################################################
+
 from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()

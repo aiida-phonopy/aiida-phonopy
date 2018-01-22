@@ -105,7 +105,7 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
                                       'forc_conv_thr': 1.e-8
                                       })
 
-    if type == 'born_charges':
+    if type == 'born_charges':  # in development (not really usable)
         parameters['CONTROL'].update({'tstress': True,
                                       'tprnfor': True,
                                       'etot_conv_thr': 1.e-8,
