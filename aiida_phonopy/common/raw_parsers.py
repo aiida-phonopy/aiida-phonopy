@@ -331,3 +331,10 @@ def write_fc2_to_hdf5_file(force_constants, filename):
 def write_fc3_to_hdf5_file(force_constants, filename):
     from phono3py.file_IO import write_fc3_to_hdf5
     write_fc3_to_hdf5(force_constants.get_data(), filename)
+
+
+def write_kappa_to_hdf5_file(gp, filename='kappa'):
+    import h5py
+    with h5py.File(filename, 'w') as w:
+        for key in gp:
+            w.create_dataset(key, data=gp[key])

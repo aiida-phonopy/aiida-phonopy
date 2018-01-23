@@ -44,11 +44,16 @@ class Phono3pyParser(Parser):
         # save the outputs
         new_nodes_list = []
 
-        #if self._calc._OUTPUT_KAPPA in list_of_files:
+        # read main output file
         for filename in filter(lambda x: x.startswith(self._calc._OUTPUT_KAPPA), list_of_files):
             outfile = out_folder.get_abs_path(filename)
             kappa_data = parse_kappa(outfile)
-            new_nodes_list.append(('kappa', kappa_data))
+            if '-g' in filename:
+                number = filename.split('-')[2].split('.')[0]
+                new_nodes_list.append(('kappa_{}'.format(number), kappa_data))
+            else:
+                new_nodes_list.append(('kappa', kappa_data))
+
 
         # look at warnings
         with open(out_folder.get_abs_path(self._calc._SCHED_ERROR_FILE)) as f:

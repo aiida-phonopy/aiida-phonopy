@@ -6,11 +6,27 @@ from aiida_phonopy.calculations.phonopy import BasePhonopyCalculation
 
 
 from aiida_phonopy.common.raw_parsers import get_disp_fc3_txt, get_forces_txt, \
-    write_fc2_to_hdf5_file, write_fc3_to_hdf5_file
+    write_fc2_to_hdf5_file, write_fc3_to_hdf5_file, write_kappa_to_hdf5_file
 
 BandStructureData = DataFactory('phonopy.band_structure')
 KpointsData = DataFactory('array.kpoints')
+ArrayData = DataFactory('array')
 ForceConstantsData = DataFactory('phonopy.force_constants')
+
+
+def get_grid_data_files(grid_data):
+
+    gp_data = {}
+    for key in grid_data.get_arraynames():
+        array = grid_data.get_array(key)
+        num = key.split('_')[-1].replace('g', '')
+        array_name = '_'.join(key.split('_')[:-1])
+        try:
+            gp_data[num].update({array_name: array})
+        except KeyError:
+            gp_data[num] = {array_name: array}
+
+    return gp_data
 
 class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
     """
@@ -43,6 +59,13 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
             'additional_parameter': None,
             'linkname': 'force_constants_2nd',
             'docstring': "Use the node defining the 2nd order force constants",
+        }
+
+        retdict['grid_data'] = {
+            'valid_types': ArrayData,
+            'additional_parameter': None,
+            'linkname': 'grid_data',
+            'docstring': "Use the node to include grid points data in distributed calculation",
         }
 
         return retdict
@@ -78,6 +101,29 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
         else:
             raise InputValidationError("either force_sets or force_constants should be specified for this calculation")
 
-        # Set name for output file
-        kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
-        self._internal_retrieve_list += [kappa_filename]
+        grid_data = inputdict.pop(self.get_linkname('grid_data'), None)
+
+        if grid_data is not None:
+            gp_data = get_grid_data_files(grid_data)
+            for gp in gp_data:
+                kappa_g_filename = self._OUTPUT_KAPPA + \
+                               'm{}{}{}'.format(*parameters_data.dict.mesh) + \
+                               '-g{}.hdf5'.format(gp)
+                write_kappa_to_hdf5_file(gp_data[gp],
+                                         filename=tempfolder.get_abs_path(kappa_g_filename))
+
+            self._additional_cmdline_params += ['--read-gamma']
+
+        if 'grid_point' in parameters_data.get_dict():
+            # self._calculation_cmd = [['--gp={}'.format(parameters_data.dict.grid_point)]]
+            gp_string = ','.join([str(gp) for gp in parameters_data.dict.grid_point])
+            self._additional_cmdline_params += ['--gp={}'.format(gp_string), '--write-gamma']
+            for gp in parameters_data.dict.grid_point:
+                kappa_g_filename = self._OUTPUT_KAPPA + \
+                                   'm{}{}{}'.format(*parameters_data.dict.mesh) + \
+                                   '-g{}.hdf5'.format(gp)
+                self._internal_retrieve_list += [kappa_g_filename]
+        else:
+            # Set name for output file
+            kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
+            self._internal_retrieve_list += [kappa_filename]
