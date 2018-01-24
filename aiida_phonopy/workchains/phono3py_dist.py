@@ -31,6 +31,8 @@ def generate_phono3py_params(structure,
                              parameters,
                              force_sets,
                              nac_data=None,
+                             fc2=None,
+                             fc3=None,
                              grid_point=None,
                              grid_data=None):
     """
@@ -40,6 +42,8 @@ def generate_phono3py_params(structure,
     :param parameters: ParametersData object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetsData object containing the atomic forces and displacement information
     :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
+    :param fc2: ForceConstantsData object containing the 2nd order force constants
+    :param fc3: ForceConstantsData object containing the 3rd order force constants
     :param grid_point: List containing the grid points to calculate (in distributed calculation)
     :return: Calculation process object, input dictionary
     """
@@ -76,8 +80,13 @@ def generate_phono3py_params(structure,
     inputs._options.resources = ph_settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = ph_settings.dict.machine['max_wallclock_seconds']
 
-    # data_sets
-    inputs.data_sets = force_sets
+    # data_sets & force constants
+    if force_sets is not None:
+        inputs.data_sets = force_sets
+    if fc2 is not None:
+        inputs.force_constants = fc2
+    if fc3 is not None:
+        inputs.force_constants_3 = fc3
 
     # non-analytical corrections
     if nac_data is not None:
@@ -122,8 +131,8 @@ class Phono3pyDist(WorkChain):
         spec.input("structure", valid_type=StructureData)
         spec.input("parameters", valid_type=ParameterData)
         # Optional arguments
-        #spec.input("force_constants", valid_type=ForceConstantsData, required=False, default=Bool(True))
-        #spec.input("force_constants_3", valid_type=ForceConstantsData, required=False, default=Float(0.0))
+        spec.input("force_constants", valid_type=ForceConstantsData, required=False)
+        spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)
         spec.input("data_sets", valid_type=ForceSetsData)
         spec.input("nac", valid_type=NacData, required=False)
         spec.input("gp_chunks", valid_type=Int, required=False, default=Int(20))
