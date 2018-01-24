@@ -1,5 +1,7 @@
 ########################################################
-# To run this script use the wc_gruneisen pk number:
+# This script plots the mode Gruneisen parameters info
+# calculated using gruneisen WorkChain.
+# To run this script use gruneisen WorkChain pk number:
 # $ python plot_gruneisen.py pknumber
 #########################################################
 from aiida import load_dbenv

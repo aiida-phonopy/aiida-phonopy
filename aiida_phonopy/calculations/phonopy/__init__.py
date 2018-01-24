@@ -17,6 +17,7 @@ BandStructureData = DataFactory('phonopy.band_structure')
 from aiida_phonopy.common.raw_parsers import get_BORN_txt, get_FORCE_CONSTANTS_txt, get_FORCE_SETS_txt, \
     get_phonopy_conf_file_txt, get_poscar_txt
 
+
 class BasePhonopyCalculation(object):
     """
     A basic plugin for calculating force constants using Phonopy.
@@ -114,7 +115,6 @@ class BasePhonopyCalculation(object):
 
         nac_data = inputdict.pop(self.get_linkname('nac_data'), None)
         bands = inputdict.pop(self.get_linkname('bands'), None)
-
 
 
         ##############################

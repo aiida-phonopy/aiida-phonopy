@@ -1,9 +1,12 @@
 ########################################################
 # This is an example of how to use the data from phonon3
-# WorkChain to calculate the thermal conductivity with phono3py
-# To run this script use a phono3py workchain pk number:
+# WorkChain to calculate the thermal conductivity locally
+# with phono3py using the information obtained by phonon3
+# Workchain. To run this script use a phono3 workchain
+# pk number:
 # $ python get_thermal_conductivity.py pknumber
 #########################################################
+
 from aiida import load_dbenv
 load_dbenv()
 

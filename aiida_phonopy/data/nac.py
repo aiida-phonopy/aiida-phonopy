@@ -3,6 +3,7 @@ from aiida.orm.data.structure import StructureData
 
 import numpy
 
+
 class NacData(ArrayData):
     """
     Store the force constants on disk as a numpy array. It requires numpy to be installed.

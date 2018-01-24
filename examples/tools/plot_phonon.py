@@ -1,4 +1,6 @@
 ###################################################
+# This script plots the phonon data calculated using
+# phonon WorkChain.
 # To run this script use the wc_phonon pk number:
 # $ python plot_phonon.py pknumber
 ###################################################

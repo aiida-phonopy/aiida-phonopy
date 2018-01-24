@@ -1,7 +1,7 @@
 ########################################################
 # This is an example of how to use the data from phonon3
 # WorkChain to obtain the input files necessary for running
-# a phono3py calculation.
+# a phono3py calculation "manually".
 # To run this script use a phono3py workchain pk number:
 # $ python get_phono3py_inputs.py pknumber
 #########################################################

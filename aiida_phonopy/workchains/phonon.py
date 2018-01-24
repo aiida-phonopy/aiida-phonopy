@@ -34,17 +34,21 @@ OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
 __testing__ = False
 
-def generate_phonopy_params(code, structure, ph_settings, force_sets=None, force_constants=None, nac_data=None, bands=None):
+def generate_phonopy_params(structure, ph_settings, force_sets=None, force_constants=None, nac_data=None, bands=None):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
-    :param code: Code object of phonopy
     :param structure: StructureData Object that constains the crystal structure unit cell
     :param ph_settings: ParametersData object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetssData object containing the atomic forces and displacement information
     :return: Calculation process object, input dictionary
     """
-    
+
+    try:
+        code = Code.get_from_string(ph_settings.dict.code['fc2'])
+    except :
+        code = Code.get_from_string(ph_settings.dict.code)
+
     plugin = code.get_attr('input_plugin')
     PhonopyCalculation = CalculationFactory(plugin)
 
@@ -471,9 +475,7 @@ class PhononPhonopy(WorkChain):
 
         if 'code' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')
-            code_label = self.inputs.ph_settings.get_dict()['code']
-            JobCalculation, calculation_input = generate_phonopy_params(code=Code.get_from_string(code_label),
-                                                                        structure=self.ctx.final_structure,
+            JobCalculation, calculation_input = generate_phonopy_params(structure=self.ctx.final_structure,
                                                                         ph_settings=self.inputs.ph_settings,
                                                                         force_sets=self.ctx.force_sets)
             future = submit(JobCalculation, **calculation_input)
@@ -513,8 +515,6 @@ class PhononPhonopy(WorkChain):
 
         if 'code' in self.inputs.ph_settings.get_dict():
             print ('remote phonopy FC calculation')
-            code_label = self.inputs.ph_settings.get_dict()['code']
-            phonopy_inputs['code'] = Code.get_from_string(code_label)
             JobCalculation, calculation_input = generate_phonopy_params(**phonopy_inputs)
             future = submit(JobCalculation, **calculation_input)
             print 'phonopy calc:', future.pid
@@ -530,6 +530,7 @@ class PhononPhonopy(WorkChain):
         self.out('dos', self.ctx.phonon_properties.out.dos)
         self.out('band_structure', self.ctx.phonon_properties.out.band_structure)
         self.out('final_structure', self.ctx.final_structure)
+        self.out('force_sets', self.ctx.force_sets)
 
         self.report('finish phonon')
 

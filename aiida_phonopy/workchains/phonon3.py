@@ -166,7 +166,7 @@ def cut_supercells(supercells, data_sets):
         data_sets_dict = data_sets.get_data_sets()
         for i in range(data_sets.get_number_of_displacements()):
             del supercells['structure_{}'.format(i)]
-            print ('remove: structure_{}'.format(i))
+            print ('removed: structure_{}'.format(i))
     else:
         calculation_list = []
         i = len(data_sets_dict['first_atoms'])
@@ -452,15 +452,16 @@ class PhononPhono3py(WorkChain):
 
             forces = get_forces_from_sets(self.inputs.data_sets, i)
             if forces is not None:
+                print ('read_{}'.format(i))
                 array_data = ArrayData()
                 array_data.set_array('forces', np.array([forces]))
                 wf_inputs['forces_{}'.format(i)] = array_data
                 continue
 
             calc = self.ctx.get('structure_{}'.format(i))
-            print ('collect structure_{}'.format(i))
+            #print ('collect structure_{}'.format(i))
             if calc is not None:
-                print ('structure_{} OK'.format(i))
+                print ('calculated_{} OK'.format(i))
 
                 # This has to be changed to make uniform plugin interface
                 try:
