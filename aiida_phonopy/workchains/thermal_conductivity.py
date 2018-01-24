@@ -13,7 +13,7 @@ from aiida.work.workchain import _If, _While
 from aiida_phonopy.workchains.phono3py_dist import generate_phono3py_params
 
 import numpy as np
-__testing__ = True
+__testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
