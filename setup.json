@@ -34,7 +34,8 @@
       "phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy",
       "phonopy.phonon3 = aiida_phonopy.workchains.phonon3: PhononPhono3py",
       "phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy",
-      "phonopy.qha = aiida_phonopy.workchains.qha: QHAPhonopy"
+      "phonopy.phono3py_dist = aiida_phonopy.workchains.phono3py_dist: Phono3pyDist",
+      "phonopy.qha = aiida_phonopy.workchains.qha: QHAPhonopy",
     ]
   }
 }

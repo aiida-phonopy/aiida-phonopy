@@ -24,7 +24,8 @@ ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
-__testing__ = True
+__testing__ = False
+
 
 def generate_phono3py_params(structure,
                              parameters,
@@ -125,13 +126,15 @@ class Phono3pyDist(WorkChain):
         #spec.input("force_constants_3", valid_type=ForceConstantsData, required=False, default=Float(0.0))
         spec.input("data_sets", valid_type=ForceSetsData)
         spec.input("nac", valid_type=NacData, required=False)
-        spec.input("chunks", valid_type=Int, required=False, default=Int(20))
+        spec.input("gp_chunks", valid_type=Int, required=False, default=Int(20))
 
         spec.outline(cls.create_grid_points,
                      cls.calculate_thermal_conductivity,
                      cls.collect_data)
 
     def create_grid_points(self):
+
+        print('start phono3py distributed (pk={})'.format(self.pid))
 
         if 'nac' in self.inputs:
             nac_data = self.ctx.inputs.nac
@@ -150,13 +153,14 @@ class Phono3pyDist(WorkChain):
 
         grid_points = get_grid_points(self.inputs.structure, self.inputs.parameters)
 
-        def chunks(l, n):
+        def chunks(l, m):
+            n = len(l)/m
             for i in range(0, len(l), n):
                 yield l[i:i + n]
 
         calcs = {}
         self.ctx.labels = []
-        for label, gp_range in enumerate(chunks(grid_points, 50)):
+        for label, gp_range in enumerate(chunks(grid_points, int(self.inputs.gp_chunks))):
             JobCalculation, calculation_input = generate_phono3py_params(structure=self.inputs.structure,
                                                                          parameters=self.inputs.parameters,
                                                                          force_sets=self.inputs.data_sets,
@@ -181,7 +185,7 @@ class Phono3pyDist(WorkChain):
             for key in outputs_dict:
                 if key.startswith('kappa') and len(key.split('_')) == 2:
                     num = key.split('_')[1]
-                    print 'num', num
+                    # print 'num', num
                     for array_name in outputs_dict[key].get_arraynames():
                         array = outputs_dict[key].get_array(array_name)
                         data_gp.set_array(array_name+'_'+num, array)
@@ -201,7 +205,7 @@ class Phono3pyDist(WorkChain):
         return ToContext(thermal_conductivity=future)
 
     def collect_data(self):
-        pass
+        self.out('kappa', self.ctx.thermal_conductivity.out.kappa)
 
 if __name__ == '__main__':
     # Silicon structure
@@ -251,7 +255,8 @@ if __name__ == '__main__':
     result = run(Phono3pyDist,
                  structure=structure,
                  parameters=ph_settings,
-                 data_sets=load_node(81481)  # load previous data
+                 data_sets=load_node(81481),  # load previous data
+                 gp_chunks=Int(8)
                  )
 
     print (result)
