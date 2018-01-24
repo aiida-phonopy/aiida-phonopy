@@ -133,7 +133,7 @@ class Phono3pyDist(WorkChain):
         # Optional arguments
         spec.input("force_constants", valid_type=ForceConstantsData, required=False)
         spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)
-        spec.input("data_sets", valid_type=ForceSetsData)
+        spec.input("force_sets", valid_type=ForceSetsData)
         spec.input("nac", valid_type=NacData, required=False)
         spec.input("gp_chunks", valid_type=Int, required=False, default=Int(20))
 
@@ -172,7 +172,7 @@ class Phono3pyDist(WorkChain):
         for label, gp_range in enumerate(chunks(grid_points, int(self.inputs.gp_chunks))):
             JobCalculation, calculation_input = generate_phono3py_params(structure=self.inputs.structure,
                                                                          parameters=self.inputs.parameters,
-                                                                         force_sets=self.inputs.data_sets,
+                                                                         force_sets=self.inputs.force_sets,
                                                                          nac_data=nac_data,
                                                                          grid_point=gp_range)
 
@@ -206,7 +206,7 @@ class Phono3pyDist(WorkChain):
 
         JobCalculation, calculation_input = generate_phono3py_params(structure=self.inputs.structure,
                                                                      parameters=self.inputs.parameters,
-                                                                     force_sets=self.inputs.data_sets,
+                                                                     force_sets=self.inputs.force_sets,
                                                                      nac_data=nac_data,
                                                                      grid_data=data_gp)
 
@@ -264,7 +264,7 @@ if __name__ == '__main__':
     result = run(Phono3pyDist,
                  structure=structure,
                  parameters=ph_settings,
-                 data_sets=load_node(81481),  # load previous data
+                 force_sets=load_node(81481),  # load previous data
                  gp_chunks=Int(8)
                  )
 

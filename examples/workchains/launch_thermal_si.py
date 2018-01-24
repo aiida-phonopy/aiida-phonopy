@@ -150,12 +150,13 @@ if not run_by_deamon:
                  es_settings=es_settings,
                  ph_settings=ph_settings,
                  # Optional settings
-                 # pressure=Float(0),
+                 # pressure=Float(0), # Pressure at which the optimization takes place (no effect if optimize = False)
                  optimize=Bool(False),
                  use_nac=Bool(False),
                  chunks=Int(120),  # set the number of maximum simultaneous calculations
-                 initial_cutoff=Float(2.0), # Initial cutoff in Angstrom
-                 step=Float(1.0), # Step cutoff in Angstrom
+                 initial_cutoff=Float(2.0),  # Initial cutoff in Angstrom
+                 step=Float(1.0),  # Step cutoff in Angstrom
+                 gp_chunks=Int(1)  # Number of computers in distributed phono3py calculation
                  )
     print (result)
 else:

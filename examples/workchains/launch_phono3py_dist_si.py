@@ -74,7 +74,7 @@ if not run_by_deamon:
     result = run(Phono3pyDist,
                  structure=structure,
                  parameters=ph_settings,
-                 data_sets=load_node(81481),  # load phonon3 WorkChain output data_set
+                 force_sets=load_node(81481),  # load phonon3 WorkChain output data_set
                  gp_chunks=Int(8)
                  )
 
@@ -83,7 +83,7 @@ else:
     future = submit(Phono3pyDist,
                     structure=structure,
                     parameters=ph_settings,
-                    data_sets=load_node(81481),  # load phonon3 WorkChain output data_set
+                    force_sets=load_node(81481),  # load phonon3 WorkChain output data_set
                     gp_chunks=Int(8)
                     )
     print future

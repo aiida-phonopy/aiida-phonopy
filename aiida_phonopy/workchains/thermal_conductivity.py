@@ -10,8 +10,9 @@ from aiida.orm import load_node, DataFactory, WorkflowFactory, CalculationFactor
 from aiida.orm.data.base import Str, Float, Bool, Int
 from aiida.work.workchain import _If, _While
 
-import numpy as np
+from aiida_phonopy.workchains.phono3py_dist import generate_phono3py_params
 
+import numpy as np
 __testing__ = True
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
@@ -21,120 +22,7 @@ StructureData = DataFactory('structure')
 
 PhononPhonopy = WorkflowFactory('phonopy.phonon')
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
-
-
-def generate_phono3py_params(structure,
-                             parameters,
-                             force_sets,
-                             nac_data=None,
-                             fc2=None,
-                             fc3=None,
-                             grid_point=None,
-                             grid_data=None):
-    """
-    Generate inputs parameters needed to do a remote phonopy calculation
-
-    :param structure: StructureData Object that constains the crystal structure unit cell
-    :param parameters: ParametersData object containing a dictionary with the phonopy input data
-    :param force_sets: ForceSetsData object containing the atomic forces and displacement information
-    :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
-    :param fc2: ForceConstantsData object containing the 2nd order force constants
-    :param fc3: ForceConstantsData object containing the 3rd order force constants
-    :param grid_point: List containing the grid points to calculate (in distributed calculation)
-    :return: Calculation process object, input dictionary
-    """
-
-    try:
-        code = Code.get_from_string(parameters.dict.code['fc3'])
-    except :
-        code = Code.get_from_string(parameters.dict.code)
-
-    plugin = code.get_attr('input_plugin')
-    PhonopyCalculation = CalculationFactory(plugin)
-
-    # The inputs
-    inputs = PhonopyCalculation.process().get_inputs_template()
-
-    # code
-    inputs.code = code
-
-    # structure
-    inputs.structure = structure
-
-    # Parameters
-    if grid_point is not None:
-        parameters_dic = parameters.get_dict()
-        parameters_dic.update({'grid_point': np.array(grid_point).tolist()})
-        parameters = ParameterData(dict=parameters_dic)
-
-    if grid_data is not None:
-        inputs.grid_data = grid_data
-
-    inputs.parameters = parameters
-
-    # resources
-    inputs._options.resources = parameters.dict.machine['resources']
-    inputs._options.max_wallclock_seconds = parameters.dict.machine['max_wallclock_seconds']
-
-    # data_sets & force constants
-    if force_sets is not None:
-        inputs.data_sets = force_sets
-    if fc2 is not None:
-        inputs.force_constants = fc2
-    if fc3 is not None:
-        inputs.force_constants_3 = fc3
-
-    # non-analytical corrections
-    if nac_data is not None:
-        inputs.nac_data = nac_data
-
-    return PhonopyCalculation.process(), inputs
-
-
-def generate_phono3py_params2(structure, ph_settings, force_sets, nac_data=None):
-    """
-    Generate inputs parameters needed to do a remote phonopy calculation
-
-    :param structure: StructureData Object that constains the crystal structure unit cell
-    :param ph_settings: ParametersData object containing a dictionary with the phonopy input data
-    :param force_sets: ForceSetsData object containing the atomic forces and displacement information
-    :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
-    :return: Calculation process object, input dictionary
-    """
-
-    try:
-        code = Code.get_from_string(ph_settings.dict.code['fc3'])
-    except :
-        code = Code.get_from_string(ph_settings.dict.code)
-
-    plugin = code.get_attr('input_plugin')
-    PhonopyCalculation = CalculationFactory(plugin)
-
-    # The inputs
-    inputs = PhonopyCalculation.process().get_inputs_template()
-
-    # code
-    inputs.code = code
-
-    # structure
-    inputs.structure = structure
-
-    # parameters
-    inputs.parameters = ph_settings
-
-    # resources
-    inputs._options.resources = ph_settings.dict.machine['resources']
-    inputs._options.max_wallclock_seconds = ph_settings.dict.machine['max_wallclock_seconds']
-
-    # data_sets
-    inputs.data_sets = force_sets
-
-    # non-analytical corrections
-    if nac_data is not None:
-        inputs.nac_data = nac_data
-
-    return PhonopyCalculation.process(), inputs
-
+Phono3pyDist = WorkflowFactory('phonopy.phono3py_dist')
 
 class ThermalPhono3py(WorkChain):
 
@@ -147,10 +35,14 @@ class ThermalPhono3py(WorkChain):
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
+        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))
         spec.input("chunks", valid_type=Int, required=False, default=Int(100))
         spec.input("step", valid_type=Float, required=False, default=Float(1.0))
         spec.input("initial_cutoff", valid_type=Float, required=False, default=Float(2.0))
+        spec.input("gp_chunks", valid_type=Int, required=False, default=Int(1))
+        # Convergence criteria
+        spec.input("rtol", valid_type=Float, required=False, default=Float(0.3))
+        spec.input("atol", valid_type=Float, required=False, default=Float(0.1))
 
         spec.outline(cls.harmonic_calculation,
                      _While(cls.not_converged)(cls.get_data_sets,
@@ -162,7 +54,6 @@ class ThermalPhono3py(WorkChain):
         is_converged = False
 
         if 'thermal_conductivity' in self.ctx:
-            print ('thermal test')
             self.ctx.iteration += 1
             self.ctx.cutoff += float(self.inputs.step)
             self.ctx.conductivity = self.ctx.thermal_conductivity.out.kappa.get_array('kappa')
@@ -170,7 +61,9 @@ class ThermalPhono3py(WorkChain):
 
             print ('kappa=', self.ctx.thermal_conductivity.out.kappa)
             if 'prev_conductivity' in self.ctx:
-                is_converged = np.allclose(self.ctx.conductivity, self.ctx.prev_conductivity, rtol=0.3, atol=0.1)
+                is_converged = np.allclose(self.ctx.conductivity, self.ctx.prev_conductivity,
+                                           rtol=float(self.inputs.rtol),
+                                           atol=float(self.inputs.atol))
 
             self.ctx.prev_conductivity = self.ctx.conductivity
 
@@ -183,7 +76,7 @@ class ThermalPhono3py(WorkChain):
             self.out('final_structure', self.ctx.final_structure)
 
             if not self.ctx.harmonic.out.dos.is_stable(tol=1e-3):
-                self.report('This structure is not dynamically stable. Workchain will stop')
+                self.report('This structure is not dynamically stable. WorkChain will stop')
                 exit()
 
         print ('iteration', self.ctx.iteration)
@@ -228,7 +121,7 @@ class ThermalPhono3py(WorkChain):
         print('start phonon3 (pk={})'.format(self.pid))
         return ToContext(anharmonic=future)
 
-    def get_thermal_conductivity(self):
+    def get_thermal_conductivity_old(self):
 
         if bool(self.inputs.use_nac):
             nac_data = self.ctx.harmonic.out.nac_data
@@ -242,6 +135,29 @@ class ThermalPhono3py(WorkChain):
 
         future = submit(JobCalculation, **calculation_input)
         print('start phono3py (pk={})'.format(self.pid))
+
+        return ToContext(thermal_conductivity=future)
+
+    def get_thermal_conductivity(self):
+
+        inputs = {'structure': self.ctx.final_structure,
+                  'parameters': self.inputs.ph_settings,
+                  'force_sets': self.ctx.anharmonic.out.force_sets}
+
+        if bool(self.inputs.use_nac):
+            inputs.update({'nac' : self.ctx.harmonic.out.nac_data})
+
+        print 'chunks:', int(self.inputs.gp_chunks)
+        if int(self.inputs.gp_chunks) > 1:
+            print ('distributed calculation')
+            inputs.update({'gp_chunks' : self.inputs.gp_chunks})
+            future = submit(Phono3pyDist, **inputs)
+        else:
+            print ('Not distributed')
+            JobCalculation, calculation_input = generate_phono3py_params(**inputs)
+            future = submit(JobCalculation, **calculation_input)
+            print ('phono3py (pk = {})'.format(future.pid))
+
 
         return ToContext(thermal_conductivity=future)
 
