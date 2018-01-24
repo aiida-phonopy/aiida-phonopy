@@ -118,10 +118,8 @@ class Phono3pyDist(WorkChain):
     @classmethod
     def define(cls, spec):
         super(Phono3pyDist, cls).define(spec)
-        spec.input("code", valid_type=Str)
         spec.input("structure", valid_type=StructureData)
         spec.input("parameters", valid_type=ParameterData)
-        spec.input("machine", valid_type=ParameterData)
         # Optional arguments
         #spec.input("force_constants", valid_type=ForceConstantsData, required=False, default=Bool(True))
         #spec.input("force_constants_3", valid_type=ForceConstantsData, required=False, default=Float(0.0))
