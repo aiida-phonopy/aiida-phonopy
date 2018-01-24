@@ -23,7 +23,75 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
 
 
-def generate_phono3py_params(structure, ph_settings, force_sets, nac_data=None):
+def generate_phono3py_params(structure,
+                             parameters,
+                             force_sets,
+                             nac_data=None,
+                             fc2=None,
+                             fc3=None,
+                             grid_point=None,
+                             grid_data=None):
+    """
+    Generate inputs parameters needed to do a remote phonopy calculation
+
+    :param structure: StructureData Object that constains the crystal structure unit cell
+    :param parameters: ParametersData object containing a dictionary with the phonopy input data
+    :param force_sets: ForceSetsData object containing the atomic forces and displacement information
+    :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
+    :param fc2: ForceConstantsData object containing the 2nd order force constants
+    :param fc3: ForceConstantsData object containing the 3rd order force constants
+    :param grid_point: List containing the grid points to calculate (in distributed calculation)
+    :return: Calculation process object, input dictionary
+    """
+
+    try:
+        code = Code.get_from_string(parameters.dict.code['fc3'])
+    except :
+        code = Code.get_from_string(parameters.dict.code)
+
+    plugin = code.get_attr('input_plugin')
+    PhonopyCalculation = CalculationFactory(plugin)
+
+    # The inputs
+    inputs = PhonopyCalculation.process().get_inputs_template()
+
+    # code
+    inputs.code = code
+
+    # structure
+    inputs.structure = structure
+
+    # Parameters
+    if grid_point is not None:
+        parameters_dic = parameters.get_dict()
+        parameters_dic.update({'grid_point': np.array(grid_point).tolist()})
+        parameters = ParameterData(dict=parameters_dic)
+
+    if grid_data is not None:
+        inputs.grid_data = grid_data
+
+    inputs.parameters = parameters
+
+    # resources
+    inputs._options.resources = parameters.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = parameters.dict.machine['max_wallclock_seconds']
+
+    # data_sets & force constants
+    if force_sets is not None:
+        inputs.data_sets = force_sets
+    if fc2 is not None:
+        inputs.force_constants = fc2
+    if fc3 is not None:
+        inputs.force_constants_3 = fc3
+
+    # non-analytical corrections
+    if nac_data is not None:
+        inputs.nac_data = nac_data
+
+    return PhonopyCalculation.process(), inputs
+
+
+def generate_phono3py_params2(structure, ph_settings, force_sets, nac_data=None):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
@@ -168,7 +236,7 @@ class ThermalPhono3py(WorkChain):
             nac_data = None
 
         JobCalculation, calculation_input = generate_phono3py_params(structure=self.ctx.final_structure,
-                                                                     ph_settings=self.inputs.ph_settings,
+                                                                     parameters=self.inputs.ph_settings,
                                                                      force_sets=self.ctx.anharmonic.out.force_sets,
                                                                      nac_data=nac_data)
 
