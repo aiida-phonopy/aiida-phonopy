@@ -77,8 +77,8 @@ def generate_phono3py_params(structure,
     inputs.parameters = parameters
 
     # resources
-    inputs._options.resources = ph_settings.dict.machine['resources']
-    inputs._options.max_wallclock_seconds = ph_settings.dict.machine['max_wallclock_seconds']
+    inputs._options.resources = parameters.dict.machine['resources']
+    inputs._options.max_wallclock_seconds = parameters.dict.machine['max_wallclock_seconds']
 
     # data_sets & force constants
     if force_sets is not None:
