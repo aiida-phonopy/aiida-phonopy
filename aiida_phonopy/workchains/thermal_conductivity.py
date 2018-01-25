@@ -24,6 +24,7 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 PhononPhono3py = WorkflowFactory('phonopy.phonon3')
 Phono3pyDist = WorkflowFactory('phonopy.phono3py_dist')
 
+
 class ThermalPhono3py(WorkChain):
 
     @classmethod
@@ -157,7 +158,6 @@ class ThermalPhono3py(WorkChain):
             JobCalculation, calculation_input = generate_phono3py_params(**inputs)
             future = submit(JobCalculation, **calculation_input)
             print ('phono3py (pk = {})'.format(future.pid))
-
 
         return ToContext(thermal_conductivity=future)
 
