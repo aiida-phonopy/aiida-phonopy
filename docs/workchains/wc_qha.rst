@@ -1,5 +1,5 @@
-Quasi-harmonic approximation
-============================
+QHA
+===
 
 This WorkChain performs a quasi-harmonic approximation calculation using Phonopy.
 This WorkChain requires one of the plugins for VASP, QuantumESPRESSO and LAMMPS described in phonon WorkChain.
