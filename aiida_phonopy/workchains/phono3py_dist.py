@@ -135,7 +135,7 @@ class Phono3pyDist(WorkChain):
         spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)
         spec.input("force_sets", valid_type=ForceSetsData)
         spec.input("nac", valid_type=NacData, required=False)
-        spec.input("gp_chunks", valid_type=Int, required=False, default=Int(20))
+        spec.input("gp_chunks", valid_type=Int, required=False, default=Int(10))
 
         spec.outline(cls.create_grid_points,
                      cls.calculate_thermal_conductivity,

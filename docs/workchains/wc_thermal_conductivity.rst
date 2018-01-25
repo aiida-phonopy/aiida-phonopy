@@ -10,16 +10,16 @@ The convergence criteria are given by the user as atol and rtol parameters. The 
 in the same manner of numpy allclose function (https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.allclose.html),
 applied to all values of kappa vs temperature.
 
-.. function:: PhononPhono3py(structure, ph_settings, es_settings [, optimize=True, use_nac=False, pressure= 0.0, calculate_fc=False])
+.. function:: ThermalPhono3py(structure, ph_settings, es_settings [, optimize=True, use_nac=False, pressure= 0.0, calculate_fc=False, gp_chunks=1, gp_chunks=10, initial_cutoff=2.0, step=1.0, atol=0.1, rtol=0.3])
 
    :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
    :param ph_settings: AiiDA ParametersData data object that contains the phonopy input parameters.
    :param es_settings: AiiDA ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
-   :param use_nac: (optional) AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
-   :param optimize: (optional) AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
-   :param pressure: (optional) AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
-   :param gp_chunks: AiiDA Int object that defines the number of computers in which the calculation will be distributed (default: 1).
-   :param chunks: (optional) AiiDA Int object that defines the maximum number of calculation to submit simultaneously. The next set of calculation will not be submitted until the previous set is finished.
+   :param use_nac: AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
+   :param optimize: AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
+   :param pressure: AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
+   :param chunks: AiiDA Int object that defines the maximum number of calculation to submit simultaneously. The next set of calculation will not be submitted until the previous set is finished.
+   :param gp_chunks:  AiiDA Int object that defines the number of computers in which the calculation will be distributed (default: 1).
    :param initial_cutoff: AiiDA Float object that defines initial cutoff distance for phono3py calculation.
    :param step: AiiDA Float object that defines increment of cutoff distance in each iteration.
    :param atol: AiiDA Float object that defines the convergence criteria of thermal conductivity, absolute value (thermal conductivity units).
