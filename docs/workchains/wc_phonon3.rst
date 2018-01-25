@@ -15,6 +15,8 @@ are only implemented for VASP plugin.
    :param optimize: (optional) AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
    :param pressure: (optional) AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
    :param calculate_fc: (optional) AiiDA BooleanData object. Determines if the 2on and 3rd order force constants are calculated. By default this option is False.
+   :param chunks: (optional) AiiDA Int object that defines the maximum number of calculation to submit simultaneously. The next set of calculation will not be submitted until the previous set is finished.
+   :param data_sets: (optional) AiiDA ForceSets object that contains the forces and displacements of a previously calculation. This data_set can be the output of either phonon3 or phonon WorkChains.
 
 
 The results outputs of this WorkChain are the following :

@@ -26,5 +26,9 @@ This plugin is designed to calculate the thermal conductivity using phono3py.
     ParameterData = DataFactory('parameter')
     parameters = ParameterData(dict=parameters_dict)
 
-Either data_sets of force_constants should be used. If data_sets is used force constants will be calculated
-and returned as a calculation output. If force_constants is used the calculation will be faster.
+Either data_sets of force_constants/force_constants_3 should be defined. If data_sets is used force constants
+will be calculated during the thermal conductivity calculation.
+
+The outputs of this plugin are:
+
+* **kappa**: ArrayData object that contains the results stored in kappa-mxxx-gx.hdf5 output file.

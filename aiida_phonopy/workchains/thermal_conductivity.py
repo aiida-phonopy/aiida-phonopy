@@ -80,8 +80,8 @@ class ThermalPhono3py(WorkChain):
                 self.report('This structure is not dynamically stable. WorkChain will stop')
                 exit()
 
-        print ('iteration', self.ctx.iteration)
-        print ('is_converged', is_converged)
+        print ('iteration {}'.format(self.ctx.iteration))
+        print ('is_converged {}'.format(is_converged))
         return not is_converged
 
     def harmonic_calculation(self):
@@ -106,7 +106,7 @@ class ThermalPhono3py(WorkChain):
 
     def get_data_sets(self):
 
-        print ('cutoff:', self.ctx.cutoff)
+        print ('cutoff: {}'.format(self.ctx.cutoff))
 
         future = submit(PhononPhono3py,
                         structure=self.ctx.final_structure,
@@ -122,23 +122,6 @@ class ThermalPhono3py(WorkChain):
         print('start phonon3 (pk={})'.format(self.pid))
         return ToContext(anharmonic=future)
 
-    def get_thermal_conductivity_old(self):
-
-        if bool(self.inputs.use_nac):
-            nac_data = self.ctx.harmonic.out.nac_data
-        else:
-            nac_data = None
-
-        JobCalculation, calculation_input = generate_phono3py_params(structure=self.ctx.final_structure,
-                                                                     parameters=self.inputs.ph_settings,
-                                                                     force_sets=self.ctx.anharmonic.out.force_sets,
-                                                                     nac_data=nac_data)
-
-        future = submit(JobCalculation, **calculation_input)
-        print('start phono3py (pk={})'.format(self.pid))
-
-        return ToContext(thermal_conductivity=future)
-
     def get_thermal_conductivity(self):
 
         inputs = {'structure': self.ctx.final_structure,
@@ -148,13 +131,10 @@ class ThermalPhono3py(WorkChain):
         if bool(self.inputs.use_nac):
             inputs.update({'nac' : self.ctx.harmonic.out.nac_data})
 
-        print 'chunks:', int(self.inputs.gp_chunks)
         if int(self.inputs.gp_chunks) > 1:
-            print ('distributed calculation')
             inputs.update({'gp_chunks' : self.inputs.gp_chunks})
             future = submit(Phono3pyDist, **inputs)
         else:
-            print ('Not distributed')
             JobCalculation, calculation_input = generate_phono3py_params(**inputs)
             future = submit(JobCalculation, **calculation_input)
             print ('phono3py (pk = {})'.format(future.pid))
