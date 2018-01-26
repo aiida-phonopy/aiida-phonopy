@@ -1,4 +1,9 @@
-# Works run by the daemon (using submit)
+###############################################################
+# This script is for calculating the thermal conductivity     #
+# using phono3py using a distributed scheme. This script,     #
+# mimics the interface of phono3py code and needs the outputs #
+# of phonon3 to WorkChain.                                    #
+###############################################################
 
 from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
@@ -75,7 +80,7 @@ if not run_by_deamon:
                  structure=structure,
                  parameters=ph_settings,
                  force_sets=load_node(81481),  # load phonon3 WorkChain output data_set
-                 gp_chunks=Int(8)
+                 gp_chunks=Int(8)  # number of computers in which distribute the calculations
                  )
 
     print (result)
