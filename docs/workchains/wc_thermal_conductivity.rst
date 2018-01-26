@@ -28,3 +28,7 @@ applied to all values of kappa vs temperature.
 The results outputs of this WorkChain are the following :
 
 * **kappa**: ArrayData object that contains the results stored in kappa-mxxx-gx.hdf5 output file.
+* **final_structure**: StructureData object that contains the optimized unit cell. If no optimization is performed this contains the same StructureData object provided as a input.
+* **thermal_properties**: ArrayData object that contains the harmonic thermal properties calculated using phonopy. These include the entropy, free energy and heat capacity at constant volume.
+* **dos**: PhononDosData object that contains the harmonic phonon full and partial density of states.
+* **band_structure**: BandStructureData object that contains the harmonic phonon band structure.

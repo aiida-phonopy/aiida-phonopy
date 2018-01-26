@@ -3,7 +3,6 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
 from aiida.work.run import run, submit, async
 
 from aiida.orm import load_node, DataFactory, WorkflowFactory, CalculationFactory, Code
@@ -74,7 +73,11 @@ class ThermalPhono3py(WorkChain):
             self.ctx.iteration = 1
             self.ctx.input_data_sets = self.ctx.harmonic.out.force_sets
             self.ctx.final_structure = self.ctx.harmonic.out.final_structure
+            # Add all harmonic data tooutputs
             self.out('final_structure', self.ctx.final_structure)
+            self.out('thermal_properties', self.ctx.harmonic.out.thermal_properties)
+            self.out('dos', self.ctx.harmonic.out.dos)
+            self.out('band_structure', self.ctx.harmonic.out.band_structure)
 
             if not self.ctx.harmonic.out.dos.is_stable(tol=1e-3):
                 self.report('This structure is not dynamically stable. WorkChain will stop')
