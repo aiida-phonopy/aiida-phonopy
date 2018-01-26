@@ -11,12 +11,12 @@ using the phonopy plugin provided in this package.
 
 .. function:: PhononPhonopy(structure, ph_settings, es_settings [, optimize=True, pressure=0.0, use_nac=False])
 
-   :param structure: AiiDA StructureData object that contains the crystal unit cell structure.
-   :param ph_settings: AiiDA ParametersData data  object that contains the phonopy input parameters.
-   :param es_settings: AiiDA ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
-   :param optimize: (optional) AiiDA BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
-   :param pressure: (optional) AiiDA FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
-   :param use_nac: (optional) AiiDA BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is False.
+   :param structure: StructureData object that contains the crystal unit cell structure.
+   :param ph_settings: ParametersData data  object that contains the phonopy input parameters.
+   :param es_settings: ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
+   :param optimize: (optional) BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
+   :param pressure: (optional) FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
+   :param use_nac: (optional) BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is False.
 
 - ph_settings: This object contains a dictionary with all input parameters for phonopy. See plugins section for more information. Additional dictionary entries can be added to request a remote phonopy calculation. See example in examples/workchains/launh_phonon_gan ::
 
