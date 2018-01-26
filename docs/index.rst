@@ -12,6 +12,6 @@ Welcome to aiida-phonopy's documentation!
    install
    introduction
    data/index
-   plugins/index
+   codes/index
    workchains/index
 
