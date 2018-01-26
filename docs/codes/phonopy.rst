@@ -10,7 +10,7 @@ This plugin is designed to calculate the harmonic force constants, thermal prope
    :param parameters: ParametersData data object that contains the phonopy input parameters
    :param data_sets: ForceSetsData object that contains the forces, directions and detail of all the supercells with displacements (equivalent to FORCE_SETS file in phonopy)
    :param force_constants: AiiDA ForceConstants object that contains the force constants
-   :param nac_data: (optional) ForceSetsData object that contains the Born effective charges and the dielectric tensor
+   :param nac_data: (optional) NacData object that contains the Born effective charges and the dielectric tensor
 
 - input parameters should be dictionary with the following entries ::
 

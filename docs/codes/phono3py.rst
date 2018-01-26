@@ -10,7 +10,7 @@ This plugin is designed to calculate the thermal conductivity using phono3py.
    :param data_sets: ForceSetsData object that contains the forces, directions and detail of all the supercells with displacements (equivalent to FORCE_SETS file in phonopy)
    :param force_constants: ForceConstants object that contains the 2nd order force constants
    :param force_constants_3: ForceConstants object that contains the 3rd order force constants
-   :param nac_data: (optional) ForceSetsData object that contains the Born effective charges and the dielectric tensor
+   :param nac_data: (optional) NacData object that contains the Born effective charges and the dielectric tensor
 
 - input parameters should be dictionary with the following entries ::
 
