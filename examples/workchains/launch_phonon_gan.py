@@ -3,7 +3,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit, async
+from aiida.work.run import run, submit
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.base import Str, Float, Bool
 

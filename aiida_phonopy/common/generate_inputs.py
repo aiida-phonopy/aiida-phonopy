@@ -2,11 +2,7 @@
 # in 3 functions: generate_vasp_params(), generate_qe_params() and generate_lammps_params().
 # generate_inputs() function at the end of the file decides which function to use according to the plugin
 
-from aiida.work.run import run, submit, async
 from aiida.orm import Code, CalculationFactory, DataFactory
-from aiida.orm.data.base import Str
-# from aiida.orm.data.upf import UpfData
-
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
