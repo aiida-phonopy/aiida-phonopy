@@ -51,6 +51,8 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
 
     def _create_additional_files(self, tempfolder, inputdict):
 
+        self._additional_cmdline_params = ['--thm']
+
         data_sets = inputdict.pop(self.get_linkname('data_sets'), None)
         force_constants = inputdict.pop(self.get_linkname('force_constants'), None)
         bands = inputdict.pop(self.get_linkname('bands'), None)

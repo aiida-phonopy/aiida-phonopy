@@ -80,7 +80,7 @@ if not run_by_deamon:
                  structure=structure,
                  parameters=ph_settings,
                  force_sets=load_node(81481),  # load phonon3 WorkChain output data_set
-                 gp_chunks=Int(8)  # number of computers in which distribute the calculations
+                 gp_chunks=Int(2)  # number of computers in which distribute the calculations
                  )
 
     print (result)
@@ -89,7 +89,7 @@ else:
                     structure=structure,
                     parameters=ph_settings,
                     force_sets=load_node(81481),  # load phonon3 WorkChain output data_set
-                    gp_chunks=Int(8)
+                    gp_chunks=Int(2)
                     )
     print future
     print('Running workchain with pk={}'.format(future.pid))

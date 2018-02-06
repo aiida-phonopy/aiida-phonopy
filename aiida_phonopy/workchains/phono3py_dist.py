@@ -13,7 +13,6 @@ from aiida.work.run import run, submit
 from aiida.orm.data.base import Str, Float, Bool, Int
 
 import numpy as np
-from aiida_phonopy.common.generate_inputs import generate_inputs
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ForceSetsData = DataFactory('phonopy.force_sets')

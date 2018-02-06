@@ -52,6 +52,7 @@ class Phono3pyParser(Parser):
                 number = filename.split('-')[2].split('.')[0]
                 new_nodes_list.append(('kappa_{}'.format(number), kappa_data))
             else:
+                print ('kappa_file:', kappa_data)
                 new_nodes_list.append(('kappa', kappa_data))
 
 

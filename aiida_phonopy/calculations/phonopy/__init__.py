@@ -33,8 +33,8 @@ class BasePhonopyCalculation(object):
     # initialize with default files that should always be retrieved, additional files are added in the specific plugin
     _internal_retrieve_list = []
 
-    # Initialize list of commands to be specified for each specific plugin
-    _additional_cmdline_params = ['--thm']
+    # Initialize list of commands to be specified for each specific plugin (lists should be empty)
+    _additional_cmdline_params = []
     _calculation_cmd = []
 
     @classproperty

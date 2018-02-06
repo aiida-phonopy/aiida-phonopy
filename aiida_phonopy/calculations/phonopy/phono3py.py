@@ -43,7 +43,6 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
         super(Phono3pyCalculation, self)._init_internal_params()
 
         self._default_parser = 'phono3py'
-
         self._calculation_cmd = [['--br']]
 
     @classproperty
@@ -79,6 +78,9 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
         parameters_data = inputdict[self.get_linkname('parameters')]
         structure = inputdict[self.get_linkname('structure')]
 
+        self._additional_cmdline_params = ['--thm']
+        #self._internal_retrieve_list = []
+
         if fc3 and fc2 is not None:
             fc2_filename = tempfolder.get_abs_path(self._INPUT_FC2)
             write_fc2_to_hdf5_file(fc2, fc2_filename)
@@ -113,17 +115,17 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
                                          filename=tempfolder.get_abs_path(kappa_g_filename))
 
             self._additional_cmdline_params += ['--read-gamma']
-
-        if 'grid_point' in parameters_data.get_dict():
-            # self._calculation_cmd = [['--gp={}'.format(parameters_data.dict.grid_point)]]
-            gp_string = ','.join([str(gp) for gp in parameters_data.dict.grid_point])
-            self._additional_cmdline_params += ['--gp={}'.format(gp_string), '--write-gamma']
-            for gp in parameters_data.dict.grid_point:
-                kappa_g_filename = self._OUTPUT_KAPPA + \
-                                   'm{}{}{}'.format(*parameters_data.dict.mesh) + \
-                                   '-g{}.hdf5'.format(gp)
-                self._internal_retrieve_list += [kappa_g_filename]
         else:
-            # Set name for output file
-            kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
-            self._internal_retrieve_list += [kappa_filename]
+            if 'grid_point' in parameters_data.get_dict():
+                gp_string = ','.join([str(gp) for gp in parameters_data.dict.grid_point])
+                self._additional_cmdline_params += ['--gp={}'.format(gp_string), '--write-gamma']
+                for gp in parameters_data.dict.grid_point:
+                    kappa_g_filename = self._OUTPUT_KAPPA + \
+                                       'm{}{}{}'.format(*parameters_data.dict.mesh) + \
+                                       '-g{}.hdf5'.format(gp)
+                    self._internal_retrieve_list += [kappa_g_filename]
+                return
+
+        # Set name for output file
+        kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
+        self._internal_retrieve_list += [kappa_filename]
