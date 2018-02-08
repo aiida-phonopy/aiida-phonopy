@@ -6,6 +6,7 @@
 #Import the modules needed to run this script
 import os
 from os.path import exists
+import numpy as np
 
 #define spaces: four spaces == indent_N (N=1,2,3..)
 indent_1, indent_2, indent_3, indent_4 = (' '*4, ' '*8, ' '*12, ' '*16)
@@ -48,6 +49,15 @@ with open(title,'wt') as f:
     f.write("# Define structure\n")
 
     with open('POSCAR', 'rt', encoding='utf-8') as f1:
+        line_number=0
         for line in f1:
-            print(line)
+            line_number=line_number+1
+            if line_number==2:
+                a = float(line)
+                print(a,type(a))
+            if line_number==3:
+                lattice_vector_1=line.split()
+                lattice_vector_1=list(map(float, lattice_vector_1))
+                lattice_vector_1=np.array(lattice_vector_1)
+                print(lattice_vector_1[:],type(lattice_vector_1))
 
