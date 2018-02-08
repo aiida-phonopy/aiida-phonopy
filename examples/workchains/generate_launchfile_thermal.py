@@ -46,5 +46,8 @@ with open(title,'wt') as f:
     f.write("ParameterData = DataFactory('parameter')\n")
     f.write("import numpy as np\n")
     f.write("# Define structure\n")
-#    with open('POSCAR', 'r') as f1:
+
+    with open('POSCAR', 'rt', encoding='utf-8') as f1:
+        for line in f1:
+            print(line)
 
