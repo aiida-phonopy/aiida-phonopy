@@ -120,7 +120,42 @@ def read_vasp(filename='POSCAR'):
         total_num_of_atoms = sum(int_num_of_atom_list)
         print(total_num_of_atoms)
 #        numofatoms = f.readline().split()
+    if not vasp5:
+        atom_symbols = poscar_headline.split()
+        int_num_of_atom_list = list(map(int, str_num_of_atom_list))
+        total_num_of_atoms  = sum(int_num_of_atom_list)
+        print(total_num_of_atoms)
 
+    #Now, we check whether Selective dynamics is in POSCAR
+    #and read the type of coordinates
+    sd = f.readline()
+    selective_dynamics = sd[0].lower()=='s'
+    print(sd, selective_dynamics)
+
+    if selective_dynamics:
+        coordinate_type = f.readline()
+        print(coordinate_type)
+    else:
+        coordinate_type = sd
+        print(coordinate_type)
+    #check the readed coordinates is in Direct or Cartesian
+    cartesian = coordinate_type[0].lower()=='c' or  coordinate_type[0].lower()=='k'
+    #initialize the array for atomic coordiantes
+    atomic_coordinates =  np.empty((total_num_of_atoms, 3))
+
+    if selective_dynamics:
+        #initialize the array for selective flags
+        selective_flags = np.empty((total_num_of_atoms, 3), dtype=bool)
+    #read atomic coordinates and the selective_flags
+    for atom in range(total_num_of_atoms):
+        ac = f.readline().split()
+        atomic_coordinates[atom] = (float(ac[0]), float(ac[1]), float(ac[2]))
+        if selective_dynamics:
+            flag_list = []
+            for flag in ac[3:6]:
+                flag_list.append(flag == 'T')
+            selective_flags[atom] = flag_list
+    print(selective_flags)
 
 
 
