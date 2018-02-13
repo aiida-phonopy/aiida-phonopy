@@ -188,7 +188,7 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
                               )
 
     pseudos = {}
-    print ('symbols: {}'.format(unique_symbols))
+    print ('PAW symbols: {}'.format(unique_symbols))
     for symbol in unique_symbols:
         pseudos[symbol] = paw_cls.load_paw(family=family_name,
                                            symbol=symbol)[0]
