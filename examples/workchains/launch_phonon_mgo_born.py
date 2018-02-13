@@ -31,7 +31,7 @@ scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
                   (0.0000000,  0.5000000,  0.0000000),
                   (0.0000000,  0.0000000,  0.5000000)]
 
-symbols=['Mg', 'Mg', 'Mg', 'Mg', 'O', 'O', 'O', 'O']
+symbols=['Mg', 'Mg', 'Mg', 'K', 'O', 'O', 'O', 'O']
 
 positions = np.dot(scaled_positions, cell)
 

@@ -178,6 +178,17 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
 
     unique_symbols = np.unique([site.kind_name for site in structure.sites]).tolist()
 
+    # Temporal fix for multi pseudpotentials elements
+    import os
+    element_list = os.listdir(folder_path)
+    for i, element in enumerate(unique_symbols):
+        if not element in element_list:
+            for e in element_list:
+                if e.split('_')[0] == element:
+                    unique_symbols[i] = e
+                    break
+
+
     paw_cls = PawData()
     if folder_path is not None:
         paw_cls.import_family(folder_path,
@@ -195,6 +206,7 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
         pseudos[symbol] = paw_cls.load_paw(family=family_name,
                                            symbol=symbol)[0]
 
+    print ('pseudos', pseudos)
     return pseudos
 
 
