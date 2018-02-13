@@ -177,6 +177,7 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
     PawData = DataFactory('vasp.paw')
 
     unique_symbols = np.unique([site.kind_name for site in structure.sites]).tolist()
+    pot_names = list(unique_symbols)
 
     # Temporal fix for multi pseudpotentials elements
     import os
@@ -185,9 +186,8 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
         if not element in element_list:
             for e in element_list:
                 if e.split('_')[0] == element:
-                    unique_symbols[i] = e
+                    pot_names[i] = e
                     break
-
 
     paw_cls = PawData()
     if folder_path is not None:
@@ -202,9 +202,9 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
     print ('PAW symbols: {}'.format(unique_symbols))
     print ('folder path: {}'.format(folder_path))
 
-    for symbol in unique_symbols:
+    for pn, symbol in zip(pot_names, unique_symbols):
         pseudos[symbol] = paw_cls.load_paw(family=family_name,
-                                           symbol=symbol)[0]
+                                           symbol=pn)[0]
 
     print ('pseudos', pseudos)
     return pseudos
