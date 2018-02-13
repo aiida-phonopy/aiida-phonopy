@@ -188,6 +188,7 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
                               )
 
     pseudos = {}
+    print ('symbols: {}'.format(unique_symbols))
     for symbol in unique_symbols:
         pseudos[symbol] = paw_cls.load_paw(family=family_name,
                                            symbol=symbol)[0]
@@ -308,8 +309,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
         kpoints.set_kpoints_mesh(settings.dict.kpoints_mesh,
                                  offset=kpoints_offset)
     else:
-        print ('no kpoint definition in input')
-        exit()
+        raise InputValidationError('no kpoint definition in input. Define either kpoints_density or kpoints_mesh')
 
     inputs.kpoints = kpoints
 
@@ -324,7 +324,7 @@ def generate_inputs(structure, es_settings, type=None, pressure=0.0):
         try:
             plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
         except InputValidationError:
-            raise InputValidationError('Not provided code for {} calculation type'.format(type))
+            raise InputValidationError('No code provided for {} calculation type'.format(type))
 
     if plugin in ['vasp.vasp']:
         return generate_vasp_params(structure, es_settings, type=type, pressure=pressure)
