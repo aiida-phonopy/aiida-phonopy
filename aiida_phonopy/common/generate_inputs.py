@@ -316,7 +316,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     return VaspCalculation.process(), inputs
 
 
-def generate_inputs(structure, es_settings, type=None, pressure=0.0, machine=None):
+def generate_inputs(structure, es_settings, type=None, pressure=0.0):
 
     try:
         plugin = Code.get_from_string(es_settings.dict.code[type]).get_attr('input_plugin')
