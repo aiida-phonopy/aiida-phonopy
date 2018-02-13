@@ -3,6 +3,7 @@
 # generate_inputs() function at the end of the file decides which function to use according to the plugin
 
 from aiida.orm import Code, CalculationFactory, DataFactory
+from aiida.common.exceptions import InputValidationError
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -320,7 +321,10 @@ def generate_inputs(structure, es_settings, type=None, pressure=0.0, machine=Non
     try:
         plugin = Code.get_from_string(es_settings.dict.code[type]).get_attr('input_plugin')
     except:
-        plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
+        try:
+            plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
+        except InputValidationError:
+            raise InputValidationError('Not provided code for {} calculation type'.format(type))
 
     if plugin in ['vasp.vasp']:
         return generate_vasp_params(structure, es_settings, type=type, pressure=pressure)

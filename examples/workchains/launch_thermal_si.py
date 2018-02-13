@@ -82,7 +82,8 @@ if code_to_use == 'VASP':
     }
 
     settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                              'forces': 'vasp@stern_in'},
+                              'forces': 'vasp@stern_in',
+                              'born_charges': 'vasp@stern_in'}, # needed if NAC calculation is requested
                      'parameters': incar_dict,
                      # 'kpoints_density': 0.5,  # k-point density (higher priority)
                      'kpoints_mesh': [2, 2, 2],  # k-point mesh (gamma centered)
