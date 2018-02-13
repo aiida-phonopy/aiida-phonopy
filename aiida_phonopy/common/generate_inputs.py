@@ -222,7 +222,8 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     # machine
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
-
+    # inputs._options._parser_name = 'vasp.pymatgen'
+    # Use for all the set functions in calculation.
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)

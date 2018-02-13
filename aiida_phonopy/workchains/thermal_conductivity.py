@@ -132,7 +132,7 @@ class ThermalPhono3py(WorkChain):
                   'force_sets': self.ctx.anharmonic.out.force_sets}
 
         if bool(self.inputs.use_nac):
-            inputs.update({'nac' : self.ctx.harmonic.out.nac_data})
+            inputs.update({'nac_data': self.ctx.harmonic.out.nac_data})
 
         if int(self.inputs.gp_chunks) > 1:
             inputs.update({'gp_chunks' : self.inputs.gp_chunks})
