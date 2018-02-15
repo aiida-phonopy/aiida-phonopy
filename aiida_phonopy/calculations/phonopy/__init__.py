@@ -123,6 +123,8 @@ class BasePhonopyCalculation(object):
 
         # =================== prepare the python input files =====================
 
+        self._create_additional_files(tempfolder, inputdict)
+
         cell_txt = get_poscar_txt(structure)
         input_txt = get_phonopy_conf_file_txt(parameters_data, bands=bands)
 
@@ -140,8 +142,6 @@ class BasePhonopyCalculation(object):
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)
             self._additional_cmdline_params += ['--nac']
-
-        self._create_additional_files(tempfolder, inputdict)
 
         # ============================ calcinfo ================================
 

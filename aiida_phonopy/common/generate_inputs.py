@@ -199,14 +199,14 @@ def get_pseudos_vasp(structure, family_name, folder_path=None):
                               )
 
     pseudos = {}
-    print ('PAW symbols: {}'.format(unique_symbols))
-    print ('folder path: {}'.format(folder_path))
+    # print ('PAW symbols: {}'.format(unique_symbols))
+    # print ('folder path: {}'.format(folder_path))
 
     for name, symbol in zip(pseudo_names, unique_symbols):
         pseudos[symbol] = paw_cls.load_paw(family=family_name,
                                            symbol=name)[0]
 
-    print ('pseudos', pseudos)
+    # print ('pseudos', pseudos)
     return pseudos
 
 
@@ -240,6 +240,8 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
     # inputs._options._parser_name = 'vasp.pymatgen'
     # Use for all the set functions in calculation.
+    # inputs._options = dict(inputs._options)
+    # inputs._options['_parser_name'] = 'vasp.pymatgen'
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)

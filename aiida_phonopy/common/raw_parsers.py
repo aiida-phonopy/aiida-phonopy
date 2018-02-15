@@ -115,10 +115,7 @@ def parse_kappa(filename):
 def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
     from phonopy.structure.cells import get_primitive, get_supercell
     from phonopy.structure.symmetry import Symmetry
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
-
-    print ('inside born parameters')
-
+    from phonopy.structure.atoms import PhonopyAtoms
     from phonopy.interface.vasp import get_born_OUTCAR, _get_indep_borns
 
 

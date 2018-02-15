@@ -171,8 +171,6 @@ def create_forces_set(**kwargs):
 
     return {'force_sets': force_sets}
 
-
-@wf_like_calculation
 @workfunction
 def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     """
@@ -201,6 +199,7 @@ def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     force_constants = ForceConstantsData(data=phonon.get_force_constants())
 
     return {'force_constants': force_constants}
+
 
 @workfunction
 def get_nac_from_data(**kwargs):
@@ -244,6 +243,7 @@ def get_path_using_seekpath(structure, band_resolution=30):
                                        unitcell=phonopy_structure.get_cell())
     return band_structure
 
+
 @workfunction
 def get_primitive(structure, ph_settings):
 
@@ -275,14 +275,14 @@ def get_properties_from_phonopy(**kwargs):
     :param structure: StructureData Object
     :param ph_settings: Parametersdata object containing a dictionary with the data needed to run phonopy:
             supercells matrix, primitive matrix and q-points mesh.
-    :param force_constants: ForceConstantsData object containing the 2nd order force constants
-    :param nac: ArrayData object from a single point calculation data containing dielectric tensor and Born charges
-    :return: phonopy thermal properties and DOS
+    :param force_constants: (optional)ForceConstantsData object containing the 2nd order force constants
+    :param force_sets: (optional) ForceSetsData object containing the phonopy force sets
+    :param nac: (optional) ArrayData object from a single point calculation data containing dielectric tensor and Born charges
+    :return: phonon band structure, force constants, thermal properties and DOS
     """
 
     structure = kwargs.pop('structure')
     ph_settings = kwargs.pop('ph_settings')
-    force_constants = kwargs.pop('force_constants')
     bands = kwargs.pop('bands')
 
     from phonopy import Phonopy
@@ -292,7 +292,15 @@ def get_properties_from_phonopy(**kwargs):
                      primitive_matrix=ph_settings.dict.primitive,
                      symprec=ph_settings.dict.symmetry_precision)
 
-    phonon.set_force_constants(force_constants.get_data())
+    if 'force_constants' in kwargs:
+        force_constants = kwargs.pop('force_constants')
+        phonon.set_force_constants(force_constants.get_data())
+
+    else:
+        force_sets = kwargs.pop('force_sets')
+        phonon.set_displacement_dataset(force_sets.get_force_sets())
+        phonon.produce_force_constants()
+        force_constants = ForceConstantsData(data=phonon.get_force_constants())
 
     if 'nac_data' in kwargs:
         print ('use born charges')
@@ -328,15 +336,16 @@ def get_properties_from_phonopy(**kwargs):
     thermal_properties.set_array('heat_capacity', cv * normalization_factor)
 
     # BAND STRUCTURE
-    # band_structure = get_path_using_seekpath2(phonon.get_primitive())
     phonon.set_band_structure(bands.get_bands())
     band_structure = BandStructureData(bands=bands.get_bands(),
                                        labels=bands.get_labels(),
                                        unitcell=bands.get_unitcell())
 
     band_structure.set_band_structure_phonopy(phonon.get_band_structure())
-
-    return {'thermal_properties': thermal_properties, 'dos': dos, 'band_structure': band_structure}
+    return {'thermal_properties': thermal_properties,
+            'dos': dos,
+            'band_structure': band_structure,
+            'force_constants': force_constants}
 
 
 class PhononPhonopy(WorkChain):
@@ -373,7 +382,6 @@ class PhononPhonopy(WorkChain):
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      cls.create_displacement_calculations,
-                     cls.get_force_constants,
                      cls.calculate_phonon_properties,
                      cls.collect_data)
 
@@ -418,13 +426,13 @@ class PhononPhonopy(WorkChain):
         # Load data from nodes
         if __testing__:
             from aiida.orm import load_node
-            nodes = [30078, 30081]  # VASP
+            nodes = [96661, 96664]  # VASP
             labels = ['structure_1', 'structure_0']
             for pk, label in zip(nodes, labels):
                 future = load_node(pk)
                 self.ctx._content[label] = future
 
-            self.ctx._content['single_point'] = load_node(30084)
+            #self.ctx._content['single_point'] = load_node(96667)
             return
 
         # Forces
@@ -438,7 +446,6 @@ class PhononPhonopy(WorkChain):
 
             calculation_input._label = label
             future = submit(JobCalculation, **calculation_input)
-            # print label, future.pid
             self.report('{} pk = {}'.format(label, future.pid))
 
             calcs[label] = future
@@ -456,10 +463,7 @@ class PhononPhonopy(WorkChain):
 
         return ToContext(**calcs)
 
-    def get_force_constants(self):
-
-        print ('calculate force constants')
-        self.report('calculate force constants')
+    def calculate_phonon_properties(self):
 
         wf_inputs = {}
         for i in range(self.ctx.number_of_displacements):
@@ -468,42 +472,14 @@ class PhononPhonopy(WorkChain):
                 wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_trajectory
             except:
                 wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_array
-
         wf_inputs['data_sets'] = self.ctx.data_sets
 
         self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
 
-        if 'code' in self.inputs.ph_settings.get_dict():
-            print ('remote phonopy FC calculation')
-            JobCalculation, calculation_input = generate_phonopy_params(structure=self.ctx.final_structure,
-                                                                        ph_settings=self.inputs.ph_settings,
-                                                                        force_sets=self.ctx.force_sets)
-            future = submit(JobCalculation, **calculation_input)
-            print 'phonopy FC calc:', future.pid
-
-            return ToContext(phonopy_output=future)
-        else:
-            print ('local phonopy FC calculation')
-            self.ctx.phonopy_output = get_force_constants_from_phonopy(structure=self.ctx.final_structure,
-                                                                       ph_settings=self.inputs.ph_settings,
-                                                                       force_sets=self.ctx.force_sets)
-
-        return
-
-    def calculate_phonon_properties(self):
-
-        # print self.ctx._get_dict()
-        print ('calculate phonon properties')
-        self.report('calculate phonon properties')
-
-        force_constants = self.ctx.phonopy_output.out.force_constants
-        self.out('force_constants', force_constants)
-
         bands = get_path_using_seekpath(self.ctx.primitive_structure, band_resolution=30)
-
         phonopy_inputs = {'structure': self.ctx.final_structure,
                           'ph_settings': self.inputs.ph_settings,
-                          'force_constants': force_constants,
+                          'force_sets' : self.ctx.force_sets,
                           'bands': bands}
 
         if 'single_point' in self.ctx:
@@ -514,18 +490,23 @@ class PhononPhonopy(WorkChain):
             self.out('nac_data', nac_data['nac_data'])
 
         if 'code' in self.inputs.ph_settings.get_dict():
-            print ('remote phonopy FC calculation')
+            self.report('remote phonopy calculation')
+
             JobCalculation, calculation_input = generate_phonopy_params(**phonopy_inputs)
             future = submit(JobCalculation, **calculation_input)
-            print 'phonopy calc:', future.pid
+            print ('phonopy calculation: {}'.format(future.pid))
 
             return ToContext(phonon_properties=future)
         else:
-            print ('local phonopy calculation')
+            self.report('local phonopy calculation')
+
             self.ctx.phonon_properties = get_properties_from_phonopy(**phonopy_inputs)
+
+        return
 
     def collect_data(self):
 
+        self.out('force_constants', self.ctx.phonon_properties.out.force_constants)
         self.out('thermal_properties', self.ctx.phonon_properties.out.thermal_properties)
         self.out('dos', self.ctx.phonon_properties.out.dos)
         self.out('band_structure', self.ctx.phonon_properties.out.band_structure)

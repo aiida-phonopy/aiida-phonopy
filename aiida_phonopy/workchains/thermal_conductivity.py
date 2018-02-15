@@ -73,7 +73,7 @@ class ThermalPhono3py(WorkChain):
             self.ctx.iteration = 1
             self.ctx.input_data_sets = self.ctx.harmonic.out.force_sets
             self.ctx.final_structure = self.ctx.harmonic.out.final_structure
-            # Add all harmonic data tooutputs
+            # Add all harmonic data outputs
             self.out('final_structure', self.ctx.final_structure)
             self.out('thermal_properties', self.ctx.harmonic.out.thermal_properties)
             self.out('dos', self.ctx.harmonic.out.dos)

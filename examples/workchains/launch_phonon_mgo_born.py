@@ -31,7 +31,7 @@ scaled_positions=[(0.0000000,  0.0000000,  0.0000000),
                   (0.0000000,  0.5000000,  0.0000000),
                   (0.0000000,  0.0000000,  0.5000000)]
 
-symbols=['Mg', 'Mg', 'Mg', 'K', 'O', 'O', 'O', 'O']
+symbols=['Mg', 'Mg', 'Mg', 'Mg', 'O', 'O', 'O', 'O']
 
 positions = np.dot(scaled_positions, cell)
 
@@ -96,8 +96,8 @@ if not run_by_deamon:
                  ph_settings=ph_settings,
                  # Optional settings
                  # pressure=Float(0),
-                 optimize=Bool(True),
-                 use_nac=Bool(True)
+                 optimize=Bool(False),
+                 use_nac=Bool(False)
                  )
 
     print (result)

@@ -111,31 +111,31 @@ class NacData(ArrayData):
 
         if np.linalg.det(structure_born.cell) < np.linalg.det(primitive_cell):
 
-            inv_pmat = np.identity(3)
+            # inv_pmat = np.identity(3)
+            # pcell = get_primitive(ucell, inv_pmat, symprec=symprec)
+
             inv_smat = np.linalg.inv(target_mat)
 
             scell = get_supercell(ucell, inv_smat, symprec=symprec)
-            pcell = get_primitive(ucell, inv_pmat, symprec=symprec)
 
-            s2u = scell.get_supercell_to_unitcell_map()
-            map_unitcell = scell.get_unitcell_to_unitcell_map()
+            s2p = scell.get_supercell_to_unitcell_map()
+            map_primitive = scell.get_unitcell_to_unitcell_map()
 
-            reduced_born = [born_charges[map_unitcell[i]] for i in s2u]
+            reduced_born = [born_charges[map_primitive[i]] for i in s2p]
 
         else:
 
-            inv_smat = np.identity(3)
-            inv_pmat = np.linalg.inv(target_mat)
+            # inv_smat = np.identity(3)
+            # scell = get_supercell(ucell, inv_smat, symprec=symprec)
 
-            scell = get_supercell(ucell, inv_smat, symprec=symprec)
+            inv_pmat = np.linalg.inv(target_mat)
 
             pcell = get_primitive(ucell, inv_pmat, symprec=symprec)
 
-            s2u = pcell.get_primitive_to_supercell_map()
+            s2p = pcell.get_supercell_to_primitive_map()
+            map_primitive = pcell.get_primitive_to_primitive_map()
 
-            map_unitcell = scell.get_unitcell_to_unitcell_map()
-
-            reduced_born = [born_charges[map_unitcell[i]] for i in s2u]
+            reduced_born = [born_charges[map_primitive[i]] for i in s2p]
 
         factor = Hartree * Bohr
         non_anal = {'born': reduced_born,
