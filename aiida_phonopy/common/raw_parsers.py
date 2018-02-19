@@ -113,8 +113,6 @@ def parse_kappa(filename):
 
 # Generate text strings for files from AIIDA OBJECTS
 def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
-    from phonopy.structure.cells import get_primitive, get_supercell
-    from phonopy.structure.symmetry import Symmetry
     from phonopy.structure.atoms import PhonopyAtoms
     try:
         from phonopy.structure.symmetry import elaborate_borns_and_epsilon
