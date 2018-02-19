@@ -119,6 +119,7 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
     try:
         from phonopy.structure.symmetry import elaborate_borns_and_epsilon
     except ImportError:
+        # Old version of phonopy
         from phonopy.interface.vasp import _get_indep_borns as elaborate_borns_and_epsilon
 
     born_charges = nac_data.get_array('born_charges')
