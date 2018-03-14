@@ -248,34 +248,42 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
     if type == 'optimize':
         incar.update({
+            'NPAR': 4,
             'PREC': 'Accurate',
             'ISTART': 0,
             'IBRION': 2,
             'ISIF': 3,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
-            'EDIFF': -1e-08,
-            'EDIFFG': -1e-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.',
             'PSTRESS': pressure})  # unit: kb -> kB
 
         if not 'NSW' in incar:
-            incar.update({'NSW': 100})
+            incar.update({'NSW': 300})
+        if  not 'EDIFF' in incar:
+            incar.update({'EDIFF': 1.0E-9})
+        if not 'EDIFFG' in incar:
+            incar.update({'EDIFFG': -1.0E-6})
 
     elif type == 'optimize_constant_volume':
         incar.update({
+            'NPAR': 4,
             'PREC': 'Accurate',
             'ISTART': 0,
             'IBRION': 2,
             'ISIF': 4,
-            'NSW': 100,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
-            'EDIFF': 1e-08,
-            'EDIFFG': -1e-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
+
+        if not 'NSW' in incar:
+            incar.update({'NSW': 300})
+        if  not 'EDIFF' in incar:
+            incar.update({'EDIFF': 1.0E-9})
+        if not 'EDIFFG' in incar:
+            incar.update({'EDIFFG': -1.0E-6})
 
     elif type == 'forces':
         incar.update({
@@ -283,7 +291,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ISYM': 0,
             'ISTART': 0,
             'IBRION': -1,
-            'NSW': 1,
+            'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
             'EDIFF': 1e-08,
@@ -295,7 +303,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'PREC': 'Accurate',
             'LEPSILON': '.TRUE.',
             'ISTART': 0,
-            'IBRION': 1,
+            'IBRION': -1,
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
