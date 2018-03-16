@@ -248,7 +248,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
     if type == 'optimize':
         incar.update({
-            'NPAR': 4,
             'PREC': 'Accurate',
             'ISTART': 0,
             'IBRION': 2,
@@ -261,14 +260,9 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
         if not 'NSW' in incar:
             incar.update({'NSW': 300})
-        if  not 'EDIFF' in incar:
-            incar.update({'EDIFF': 1.0E-9})
-        if not 'EDIFFG' in incar:
-            incar.update({'EDIFFG': -1.0E-6})
 
     elif type == 'optimize_constant_volume':
         incar.update({
-            'NPAR': 4,
             'PREC': 'Accurate',
             'ISTART': 0,
             'IBRION': 2,
@@ -280,10 +274,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
         if not 'NSW' in incar:
             incar.update({'NSW': 300})
-        if  not 'EDIFF' in incar:
-            incar.update({'EDIFF': 1.0E-9})
-        if not 'EDIFFG' in incar:
-            incar.update({'EDIFFG': -1.0E-6})
 
     elif type == 'forces':
         incar.update({
@@ -294,7 +284,6 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
-            'EDIFF': 1e-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
@@ -307,9 +296,13 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
-            'EDIFF': 1e-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
+
+    if not 'EDIFF' in incar:
+        incar.update({'EDIFF': 1.0E-9})
+    if not 'EDIFFG' in incar:
+        incar.update({'EDIFFG': -1.0E-6})
 
     inputs.parameters = ParameterData(dict=incar)
 
