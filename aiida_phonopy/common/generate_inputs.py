@@ -316,7 +316,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
 
     if 'kpoints_density' in settings.get_dict():
 #        kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
-        if type == 'born_charges':
+        if type == 'born_charges' or type == 'optimize' or type == 'optimize_constant_volume':
             def multiplier(x): 
                 if x > 0.5:
                     y = 0.3*x
@@ -325,8 +325,8 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
                 elif 0 < x < 0.2:
                     y = 0.7*x
                 return y
-            born_kpoints_density = multiplier(settings.dict.kpoints_density)
-            kpoints.set_kpoints_mesh_from_density(born_kpoints_density)
+            new_kpoints_density = multiplier(settings.dict.kpoints_density)
+            kpoints.set_kpoints_mesh_from_density(new_kpoints_density)
         else:
             kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
 
@@ -336,10 +336,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
         else:
             kpoints_offset = [0.0, 0.0, 0.0]
 
-        if type == 'born_charges':
-            def multiplier(x): return 3*x
-            born_kpoints_mesh_list = list(map(multiplier, settings.dict.kpoints_mesh))
-            kpoints.set_kpoints_mesh(born_kpoints_mesh_list,
+        if type == 'born_charges' or type == 'optimize' or type == 'optimize_constant_volume':
+            def multiplier(x): return 4*x
+            new_kpoints_mesh_list = list(map(multiplier, settings.dict.kpoints_mesh))
+            kpoints.set_kpoints_mesh(new_kpoints_mesh_list,
                                      offset=kpoints_offset)
         else:
             kpoints.set_kpoints_mesh(settings.dict.kpoints_mesh,
