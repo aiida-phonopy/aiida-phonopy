@@ -310,7 +310,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'PREC': 'Accurate',
             'LEPSILON': '.TRUE.',
             'ISTART': 0,
-            'IBRION': 1,
+            'IBRION': -1,
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
@@ -318,7 +318,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'LREAL': '.FALSE.'})
 
     if not 'EDIFF' in incar:
-             incar.update({'EDIFF': 1.0E-9})
+             incar.update({'EDIFF': 1.0E-8})
     if not 'EDIFFG' in incar:
              incar.update({'EDIFFG': -1.0E-6})
 
