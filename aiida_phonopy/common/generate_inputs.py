@@ -284,6 +284,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
+            'EDIFF': 1E-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
@@ -296,6 +297,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'NSW': 0,
             'LWAVE': '.FALSE.',
             'LCHARG': '.FALSE.',
+            'EDIFF': 1E-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
