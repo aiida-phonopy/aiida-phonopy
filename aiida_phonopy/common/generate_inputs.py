@@ -300,6 +300,8 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'EDIFF': 1E-08,
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
+        if 'NPAR' in incar:
+            del incar['NPAR']
 
     if not 'EDIFF' in incar:
         incar.update({'EDIFF': 1.0E-9})
