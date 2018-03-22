@@ -332,7 +332,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
 
-    if 'kpoints_density' in settings.get_dict():
+    if 'kpoints_density_{}'.format(type) in settings.get_dict():
+        kpoints.set_kpoints_mesh_from_density(settings.get_dict()['kpoints_density_{}'.format(type)])
+
+    elif 'kpoints_density' in settings.get_dict():
         kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
 
     elif 'kpoints_mesh' in settings.get_dict():
