@@ -338,6 +338,15 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     elif 'kpoints_density' in settings.get_dict():
         kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
 
+    elif 'kpoints_mesh_{}'.format(type) in settings.get_dict():
+        if 'kpoints_offset' in settings.get_dict():
+            kpoints_offset = settings.dict.kpoints_offset
+        else:
+            kpoints_offset = [0.0, 0.0, 0.0]
+
+        kpoints.set_kpoints_mesh(settings.get_dict()['kpoints_mesh_{}'.format(type)],
+                                 offset=kpoints_offset)
+
     elif 'kpoints_mesh' in settings.get_dict():
         if 'kpoints_offset' in settings.get_dict():
             kpoints_offset = settings.dict.kpoints_offset
