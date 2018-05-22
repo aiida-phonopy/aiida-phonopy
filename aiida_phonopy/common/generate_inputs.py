@@ -177,51 +177,26 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
     return LammpsCalculation.process(), inputs
 
 
-def get_pseudos_vasp(structure, family_name, folder_path=None):
+def get_potential_vasp(structure, family_name):
     """
     Set the pseudo to use for all atomic kinds, picking pseudos from the
     family with name family_name.
 
     :note: The structure must already be set.
 
-    :param family_name: the name of the group containing the pseudos
+    :param family_name: the name of the group containing the paws
     """
     import numpy as np
 
-    PawData = DataFactory('vasp.paw')
+    pot_cls = DataFactory('vasp.potcar')
 
     unique_symbols = np.unique([site.kind_name for site in structure.sites]).tolist()
-    pseudo_names = list(unique_symbols)
+    pots = {}
+    for s in list(unique_symbols):
+        pots[s] = pot_cls.find_one(full_name=s, family=family_name)
+        pots[s] = pot_cls.find_one(full_name=s, family=family_name)
 
-    # Temporal fix for multi pseudpotentials elements
-    import os
-    element_list = os.listdir(folder_path)
-    for i, element in enumerate(unique_symbols):
-        if not element in element_list:
-            for e in element_list:
-                if e.split('_')[0] == element:
-                    pseudo_names[i] = e
-                    break
-
-    paw_cls = PawData()
-    if folder_path is not None:
-        paw_cls.import_family(folder_path,
-                              familyname=family_name,
-                              family_desc='temporal family',
-                              # store=True,
-                              stop_if_existing=False
-                              )
-
-    pseudos = {}
-    # print ('PAW symbols: {}'.format(unique_symbols))
-    # print ('folder path: {}'.format(folder_path))
-
-    for name, symbol in zip(pseudo_names, unique_symbols):
-        pseudos[symbol] = paw_cls.load_paw(family=family_name,
-                                           symbol=name)[0]
-
-    # print ('pseudos', pseudos)
-    return pseudos
+    return pots
 
 
 def generate_vasp_params(structure, settings, type=None, pressure=0.0):
@@ -325,8 +300,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs.parameters = ParameterData(dict=incar)
 
     # POTCAR (pseudo potentials)
-    inputs.paw = get_pseudos_vasp(structure, settings.dict.pseudos_family,
-                                  folder_path=settings.dict.family_folder)
+    inputs.potential = get_potential_vasp(structure, settings.dict.pot_family)
 
     # KPOINTS
     kpoints = KpointsData()
