@@ -75,6 +75,10 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
     # machine
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
+    if 'queue_name' in settings.get_dict()['machine']:
+        inputs._options.queue_name = settings.dict.machine['queue_name']
+    if 'import_sys_environment' in settings.get_dict()['machine']:
+        inputs._options.import_sys_environment = settings.dict.machine['import_sys_environment']
 
     # Parameters
     parameters = dict(settings.dict.parameters)
@@ -149,8 +153,18 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
 
+    if 'queue_name' in settings.get_dict()['machine']:
+        inputs._options.queue_name = settings.dict.machine['queue_name']
+    if 'import_sys_environment' in settings.get_dict()['machine']:
+        inputs._options.import_sys_environment = settings.dict.machine['import_sys_environment']
+
     inputs.structure = structure
     inputs.potential = ParameterData(dict=settings.dict.potential)
+
+    if type == 'forces':
+        if 'parameters' in settings.get_dict():
+            lammps_parameters = dict(settings.dict.parameters)
+            inputs.parameters = ParameterData(dict=lammps_parameters)
 
     # if code.get_input_plugin_name() == 'lammps.optimize':
     if type == 'optimize':
@@ -238,6 +252,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     # machine
     inputs._options.resources = settings.dict.machine['resources']
     inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
+    if 'queue_name' in settings.get_dict()['machine']:
+        inputs._options.queue_name = settings.dict.machine['queue_name']
+    if 'import_sys_environment' in settings.get_dict()['machine']:
+        inputs._options.import_sys_environment = settings.dict.machine['import_sys_environment']
     # inputs._options._parser_name = 'vasp.pymatgen'
     # Use for all the set functions in calculation.
     # inputs._options = dict(inputs._options)

@@ -1,6 +1,6 @@
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
+# from aiida import load_dbenv, is_dbenv_loaded
+# if not is_dbenv_loaded():
+#    load_dbenv()
 
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.work.run import run, submit
@@ -40,9 +40,11 @@ for i, scaled_position in enumerate(scaled_positions):
 
 # Machine
 machine_dict = {'resources': {'num_machines': 1,
-                              'parallel_env': 'mpi*',
-                              'tot_num_mpiprocs': 16},
+                              'parallel_env': 'smp',
+                              'tot_num_mpiprocs': 1},
                 'max_wallclock_seconds': 3600 * 10,
+                'queue_name': 'iqtc04.q',
+                'import_sys_environment': False
                 }
 
 
@@ -118,16 +120,23 @@ if code_to_use == 'LAMMPS':
     potential ={'pair_style': 'tersoff',
                 'data': tersoff_si}
 
-    parameters = {'relaxation': 'tri',  # iso/aniso/tri
-                  'pressure': 0.0,  # kbars
-                  'vmax': 0.000001,  # Angstrom^3
-                  'energy_tolerance': 1.0e-25,  # eV
-                  'force_tolerance': 1.0e-25,  # eV angstrom
-                  'max_evaluations': 1000000,
-                  'max_iterations': 500000}
+    parameters = {'units': 'metal',
+                  'relax': {
+                      'type': 'tri',  # iso/aniso/tri
+                       'pressure': 0.0,  # bars
+                       'vmax': 0.000001,  # Angstrom^3
+                  },
+                  'minimize': {
+                      'energy_tolerance': 1.0e-25,  # eV
+                      'force_tolerance': 1.0e-25,  # eV angstrom
+                      'max_evaluations': 1000000,
+                      'max_iterations': 500000
+                  },
+                  'lammps_version': '28 Jun 2014'
+                  }
 
-    settings_dict = {'code': {'optimize': 'lammps_optimize@boston_in',
-                              'forces': 'lammps_force@boston_in'},
+    settings_dict = {'code': {'optimize': 'lammps_optimize@iqtc',
+                              'forces': 'lammps_force@iqtc'},
                      'parameters': parameters,
                      'potential': potential,
                      'machine': machine_dict

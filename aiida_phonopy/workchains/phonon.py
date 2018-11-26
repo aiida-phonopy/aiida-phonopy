@@ -106,7 +106,7 @@ def wf_like_calculation(work_function):
 
 
 def phonopy_bulk_from_structure(structure):
-    from phonopy.structure.atoms import Atoms as PhonopyAtoms
+    from phonopy.api_phonopy import Atoms as PhonopyAtoms
     bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
