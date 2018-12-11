@@ -194,7 +194,6 @@ def get_potential_vasp(structure, family_name):
     pots = {}
     for s in list(unique_symbols):
         pots[s] = pot_cls.find_one(full_name=s, family=family_name)
-        pots[s] = pot_cls.find_one(full_name=s, family=family_name)
 
     return pots
 
@@ -300,7 +299,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
     inputs.parameters = ParameterData(dict=incar)
 
     # POTCAR (pseudo potentials)
-    inputs.potential = get_potential_vasp(structure, settings.dict.pot_family)
+    inputs.potential = get_potential_vasp(structure, settings.dict.pseudos_family)
 
     # KPOINTS
     kpoints = KpointsData()

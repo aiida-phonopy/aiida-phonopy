@@ -1,6 +1,6 @@
-# from aiida import load_dbenv, is_dbenv_loaded
-# if not is_dbenv_loaded():
-#    load_dbenv()
+#
+#  Attention:
+# use "verdi run launch_phonon_si.py" to run this script
 
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.work.run import run, submit
@@ -41,7 +41,7 @@ for i, scaled_position in enumerate(scaled_positions):
 # Machine
 machine_dict = {'resources': {'num_machines': 1,
                               'parallel_env': 'smp',
-                              'tot_num_mpiprocs': 1},
+                              'tot_num_mpiprocs': 8},
                 'max_wallclock_seconds': 3600 * 10,
                 'queue_name': 'iqtc04.q',
                 'import_sys_environment': False
@@ -63,9 +63,9 @@ ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
                                   # 'machine': machine_dict
                                   })
 
-# code_to_use = 'VASP'
+code_to_use = 'VASP'
 #code_to_use = 'QE'
-code_to_use = 'LAMMPS'
+# code_to_use = 'LAMMPS'
 
 # VASP SPECIFIC
 if code_to_use == 'VASP':
@@ -79,12 +79,11 @@ if code_to_use == 'VASP':
         'GGA'    : 'PS'
     }
 
-    settings_dict = {'code': {'optimize': 'vasp@stern_in',
-                              'forces': 'vasp@stern_in'},
+    settings_dict = {'code': {'optimize': 'vasp@iqtc',
+                              'forces': 'vasp@iqtc'},
                      'parameters': incar_dict,
                      'kpoints_density': 0.5,  # k-point density,
                      'pseudos_family': 'pbe_test_family',
-                     'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
                      }
 

@@ -89,7 +89,6 @@ if code_to_use == 'VASP':
                      'kpoints_mesh': [2, 2, 2],  # k-point mesh (gamma centered)
                      'kpoints_offset': [0.5, 0.5, 0.5],  # k-point offset
                      'pseudos_family': 'pbe_test_family',
-                     'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
                      }
 
