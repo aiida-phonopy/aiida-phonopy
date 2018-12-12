@@ -1,18 +1,9 @@
-# Works run by the daemon (using submit)
-
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
-
 from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
-
-from aiida.orm.data.base import Str, Float, Bool
-from aiida.work.workchain import _If, _While
-
+from aiida.work import workfunction
+from aiida.orm import (Code, CalculationFactory, load_node, DataFactory,
+                       WorkflowFactory)
+from aiida.orm.data.base import Float, Bool
+from aiida.work.workchain import if_
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
 
@@ -34,7 +25,10 @@ OptimizeStructure = WorkflowFactory('phonopy.optimize')
 
 __testing__ = False
 
-def generate_phonopy_params(structure, ph_settings, force_sets=None, force_constants=None, nac_data=None, bands=None):
+
+def generate_phonopy_params(structure, ph_settings,
+                            force_sets=None, force_constants=None,
+                            nac_data=None, bands=None):
     """
     Generate inputs parameters needed to do a remote phonopy calculation
 
@@ -160,16 +154,17 @@ def create_forces_set(**kwargs):
     :return: ForceSetsData object that contains the atomic forces and displacements info (datasets dict in phonopy)
 
     """
-    data_sets = kwargs.pop('data_sets')
+    data_sets = kwargs.get('data_sets')
     force_sets = ForceSetsData(data_sets=data_sets.get_data_sets())
 
     forces = []
     for i in range(data_sets.get_number_of_displacements()):
-        forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[-1])
+        forces.append(kwargs.get('forces_{}'.format(i)).get_array('forces')[-1])
 
     force_sets.set_forces(forces)
 
     return {'force_sets': force_sets}
+
 
 @workfunction
 def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
@@ -207,9 +202,10 @@ def get_nac_from_data(**kwargs):
     Worfunction to extract nac ArrayData object from calc
     """
 
-    nac_data = NacData(structure=kwargs.pop('structure'),
-                       born_charges=kwargs.pop('born_charges').get_array('born_charges'),
-                       epsilon=kwargs.pop('epsilon').get_array('epsilon')[-1])
+    nac_data = NacData(
+        structure=kwargs.get('structure'),
+        born_charges=kwargs.get('born_charges').get_array('born_charges'),
+        epsilon=kwargs.get('epsilon').get_array('epsilon')[-1])
 
     return {'nac_data': nac_data}
 
@@ -231,11 +227,13 @@ def get_path_using_seekpath(structure, band_resolution=30):
     for set in path_data['path']:
         band_ranges.append([labels[set[0]], labels[set[1]]])
 
-    bands =[]
+    bands = []
     for q_start, q_end in band_ranges:
         band = []
         for i in range(band_resolution+1):
-            band.append(np.array(q_start) + (np.array(q_end) - np.array(q_start)) / band_resolution * i)
+            band.append(
+                np.array(q_start) + (np.array(q_end) - np.array(q_start))
+                / band_resolution * i)
         bands.append(band)
 
     band_structure = BandStructureData(bands=bands,
@@ -281,9 +279,9 @@ def get_properties_from_phonopy(**kwargs):
     :return: phonon band structure, force constants, thermal properties and DOS
     """
 
-    structure = kwargs.pop('structure')
-    ph_settings = kwargs.pop('ph_settings')
-    bands = kwargs.pop('bands')
+    structure = kwargs.get('structure')
+    ph_settings = kwargs.get('ph_settings')
+    bands = kwargs.get('bands')
 
     from phonopy import Phonopy
 
@@ -293,36 +291,41 @@ def get_properties_from_phonopy(**kwargs):
                      symprec=ph_settings.dict.symmetry_precision)
 
     if 'force_constants' in kwargs:
-        force_constants = kwargs.pop('force_constants')
+        force_constants = kwargs.get('force_constants')
         phonon.set_force_constants(force_constants.get_data())
 
     else:
-        force_sets = kwargs.pop('force_sets')
+        force_sets = kwargs.get('force_sets')
         phonon.set_displacement_dataset(force_sets.get_force_sets())
         phonon.produce_force_constants()
         force_constants = ForceConstantsData(data=phonon.get_force_constants())
 
     if 'nac_data' in kwargs:
-        print ('use born charges')
-        nac_data = kwargs.pop('nac_data')
+        print('use born charges')
+        nac_data = kwargs.get('nac_data')
         primitive = phonon.get_primitive()
-        nac_parameters = nac_data.get_born_parameters_phonopy(primitive_cell=primitive.get_cell())
+        nac_parameters = nac_data.get_born_parameters_phonopy(
+            primitive_cell=primitive.get_cell())
         phonon.set_nac_params(nac_parameters)
 
     # Normalization factor primitive to unit cell
-    normalization_factor = phonon.unitcell.get_number_of_atoms()/phonon.primitive.get_number_of_atoms()
+    normalization_factor = (phonon.unitcell.get_number_of_atoms()
+                            / phonon.primitive.get_number_of_atoms())
 
     # DOS
-    phonon.set_mesh(ph_settings.dict.mesh, is_eigenvectors=True, is_mesh_symmetry=False)
+    phonon.set_mesh(ph_settings.dict.mesh,
+                    is_eigenvectors=True,
+                    is_mesh_symmetry=False)
     phonon.set_total_DOS(tetrahedron_method=True)
     phonon.set_partial_DOS(tetrahedron_method=True)
 
     total_dos = phonon.get_total_DOS()
     partial_dos = phonon.get_partial_DOS()
-    dos = PhononDosData(frequencies=total_dos[0],
-                        dos=total_dos[1]*normalization_factor,
-                        partial_dos=np.array(partial_dos[1])*normalization_factor,
-                        atom_labels=np.array(phonon.primitive.get_chemical_symbols()))
+    dos = PhononDosData(
+        frequencies=total_dos[0],
+        dos=total_dos[1]*normalization_factor,
+        partial_dos=np.array(partial_dos[1]) * normalization_factor,
+        atom_labels=np.array(phonon.primitive.get_chemical_symbols()))
 
     # THERMAL PROPERTIES (per primtive cell)
     phonon.set_thermal_properties()
@@ -331,7 +334,8 @@ def get_properties_from_phonopy(**kwargs):
     # Stores thermal properties (per unit cell) data in DB as a workflow result
     thermal_properties = ArrayData()
     thermal_properties.set_array('temperature', t)
-    thermal_properties.set_array('free_energy', free_energy * normalization_factor)
+    thermal_properties.set_array('free_energy',
+                                 free_energy * normalization_factor)
     thermal_properties.set_array('entropy', entropy * normalization_factor)
     thermal_properties.set_array('heat_capacity', cv * normalization_factor)
 
@@ -376,31 +380,33 @@ class PhononPhonopy(WorkChain):
         spec.input("ph_settings", valid_type=ParameterData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional arguments
-        spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
-        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))
+        spec.input("optimize",
+                   valid_type=Bool, required=False, default=Bool(True))
+        spec.input("pressure",
+                   valid_type=Float, required=False, default=Float(0.0))
+        spec.input("use_nac",
+                   valid_type=Bool, required=False, default=Bool(False))
 
-        spec.outline(_If(cls.use_optimize)(cls.optimize),
+        spec.outline(if_(cls.use_optimize)(cls.optimize),
                      cls.create_displacement_calculations,
                      cls.calculate_phonon_properties,
                      cls.collect_data)
 
     def use_optimize(self):
-        print('start phonon (pk={})'.format(self.pid))
+        self.report('start phonon (pk={})'.format(self.pid))
         return self.inputs.optimize
 
     def optimize(self):
-        print ('start optimize')
-        future = submit(OptimizeStructure,
-                        structure=self.inputs.structure,
-                        es_settings=self.inputs.es_settings,
-                        pressure=self.inputs.pressure,
-                        )
+        self.report('start optimize')
+        future = self.submit(OptimizeStructure,
+                             structure=self.inputs.structure,
+                             es_settings=self.inputs.es_settings,
+                             pressure=self.inputs.pressure)
         if __testing__:
             self.ctx._content['optimize'] = load_node(9357)
             return
 
-        print ('optimize workchain: {}'.format(future.pid))
+        self.report('optimize workchain: {}'.format(future.pid))
 
         return ToContext(optimized=future)
 
@@ -409,16 +415,20 @@ class PhononPhonopy(WorkChain):
 
         if 'optimized' in self.ctx:
             self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
-            self.out('optimized_data', self.ctx.optimized.out.optimized_structure_data)
+            self.out('optimized_data',
+                     self.ctx.optimized.out.optimized_structure_data)
         else:
             self.ctx.final_structure = self.inputs.structure
 
-        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure, self.inputs.ph_settings)['primitive_structure']
+        self.ctx.primitive_structure = get_primitive(
+            self.ctx.final_structure,
+            self.inputs.ph_settings)['primitive_structure']
 
-        supercells = create_supercells_with_displacements_using_phonopy(self.ctx.final_structure,
-                                                                        self.inputs.ph_settings)
+        supercells = create_supercells_with_displacements_using_phonopy(
+            self.ctx.final_structure,
+            self.inputs.ph_settings)
 
-        self.ctx.data_sets = supercells.pop('data_sets')
+        self.ctx.data_sets = supercells.get('data_sets')
         self.ctx.number_of_displacements = len(supercells)
 
         calcs = {}
@@ -438,14 +448,15 @@ class PhononPhonopy(WorkChain):
         # Forces
         for label, supercell in supercells.iteritems():
 
-            JobCalculation, calculation_input = generate_inputs(supercell,
-                                                                # self.inputs.machine,
-                                                                self.inputs.es_settings,
-                                                                # pressure=self.input.pressure,
-                                                                type='forces')
+            JobCalculation, calculation_input = generate_inputs(
+                supercell,
+                # self.inputs.machine,
+                self.inputs.es_settings,
+                # pressure=self.input.pressure,
+                type='forces')
 
             calculation_input._label = label
-            future = submit(JobCalculation, **calculation_input)
+            future = self.submit(JobCalculation, **calculation_input)
             self.report('{} pk = {}'.format(label, future.pid))
 
             calcs[label] = future
@@ -453,63 +464,70 @@ class PhononPhonopy(WorkChain):
         # Born charges
         if bool(self.inputs.use_nac):
             self.report('calculate born charges')
-            JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
-                                                                self.inputs.es_settings,
-                                                                # pressure=self.input.pressure,
-                                                                type='born_charges')
-            future = submit(JobCalculation, **calculation_input)
-            print ('single_point: {}'.format(future.pid))
+            JobCalculation, calculation_input = generate_inputs(
+                self.ctx.primitive_structure,
+                self.inputs.es_settings,
+                # pressure=self.input.pressure,
+                type='born_charges')
+            future = self.submit(JobCalculation, **calculation_input)
+            self.report('single_point: {}'.format(future.pid))
             calcs['single_point'] = future
 
         return ToContext(**calcs)
 
     def calculate_phonon_properties(self):
-
         wf_inputs = {}
         for i in range(self.ctx.number_of_displacements):
             # This has to be changed to make uniform plugin interface
             try:
-                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_trajectory
+                wf_inputs['forces_{}'.format(i)] = self.ctx[
+                    'structure_{}'.format(i)].out.output_trajectory
             except:
-                wf_inputs['forces_{}'.format(i)] = self.ctx.get('structure_{}'.format(i)).out.output_array
+                wf_inputs['forces_{}'.format(i)] = self.ctx[
+                    'structure_{}'.format(i)].out.output_array
         wf_inputs['data_sets'] = self.ctx.data_sets
 
         self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
 
-        bands = get_path_using_seekpath(self.ctx.primitive_structure, band_resolution=30)
+        bands = get_path_using_seekpath(self.ctx.primitive_structure,
+                                        band_resolution=30)
         phonopy_inputs = {'structure': self.ctx.final_structure,
                           'ph_settings': self.inputs.ph_settings,
-                          'force_sets' : self.ctx.force_sets,
+                          'force_sets': self.ctx.force_sets,
                           'bands': bands}
 
         if 'single_point' in self.ctx:
-            nac_data = get_nac_from_data(born_charges=self.ctx.single_point.out.born_charges,
-                                         epsilon=self.ctx.single_point.out.output_array,
-                                         structure=self.ctx.single_point.inp.structure)
+            nac_data = get_nac_from_data(
+                born_charges=self.ctx.single_point.out.born_charges,
+                epsilon=self.ctx.single_point.out.output_array,
+                structure=self.ctx.single_point.inp.structure)
             phonopy_inputs.update(nac_data)
             self.out('nac_data', nac_data['nac_data'])
 
         if 'code' in self.inputs.ph_settings.get_dict():
             self.report('remote phonopy calculation')
-
-            JobCalculation, calculation_input = generate_phonopy_params(**phonopy_inputs)
-            future = submit(JobCalculation, **calculation_input)
-            print ('phonopy calculation: {}'.format(future.pid))
+            JobCalculation, calculation_input = generate_phonopy_params(
+                **phonopy_inputs)
+            future = self.submit(JobCalculation, **calculation_input)
+            self.report('phonopy calculation: {}'.format(future.pid))
 
             return ToContext(phonon_properties=future)
         else:
             self.report('local phonopy calculation')
 
-            self.ctx.phonon_properties = get_properties_from_phonopy(**phonopy_inputs)
+            self.ctx.phonon_properties = get_properties_from_phonopy(
+                **phonopy_inputs)
 
         return
 
     def collect_data(self):
-
-        self.out('force_constants', self.ctx.phonon_properties.out.force_constants)
-        self.out('thermal_properties', self.ctx.phonon_properties.out.thermal_properties)
+        self.out('force_constants',
+                 self.ctx.phonon_properties.out.force_constants)
+        self.out('thermal_properties',
+                 self.ctx.phonon_properties.out.thermal_properties)
         self.out('dos', self.ctx.phonon_properties.out.dos)
-        self.out('band_structure', self.ctx.phonon_properties.out.band_structure)
+        self.out('band_structure',
+                 self.ctx.phonon_properties.out.band_structure)
         self.out('final_structure', self.ctx.final_structure)
         self.out('force_sets', self.ctx.force_sets)
 

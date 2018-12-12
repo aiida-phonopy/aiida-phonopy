@@ -2,11 +2,11 @@ from aiida.common.exceptions import InputValidationError
 from aiida.orm.calculation.job import JobCalculation
 from aiida.common.utils import classproperty
 from aiida.orm import DataFactory
-from aiida_phonopy.calculations.phonopy import BasePhonopyCalculation
-
-
-from aiida_phonopy.common.raw_parsers import get_disp_fc3_txt, get_forces_txt, \
-    write_fc2_to_hdf5_file, write_fc3_to_hdf5_file, write_kappa_to_hdf5_file
+from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
+from aiida_phonopy.common.raw_parsers import (get_disp_fc3_txt, get_forces_txt,
+                                              write_fc2_to_hdf5_file,
+                                              write_fc3_to_hdf5_file,
+                                              write_kappa_to_hdf5_file)
 
 BandStructureData = DataFactory('phonopy.band_structure')
 KpointsData = DataFactory('array.kpoints')
@@ -27,6 +27,7 @@ def get_grid_data_files(grid_data):
             gp_data[num] = {array_name: array}
 
     return gp_data
+
 
 class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
     """
@@ -64,7 +65,8 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
             'valid_types': ArrayData,
             'additional_parameter': None,
             'linkname': 'grid_data',
-            'docstring': "Use the node to include grid points data in distributed calculation",
+            'docstring': ("Use the node to include grid points data in "
+                          "distributed calculation"),
         }
 
         return retdict
@@ -92,7 +94,8 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
 
         elif data_sets is not None:
             disp_fc3_filename = tempfolder.get_abs_path(self._INPUT_DISP_FC3)
-            disp_f3c_txt = get_disp_fc3_txt(structure, parameters_data, data_sets)
+            disp_f3c_txt = get_disp_fc3_txt(
+                structure, parameters_data, data_sets)
             with open(disp_fc3_filename, 'w') as infile:
                 infile.write(disp_f3c_txt)
 
@@ -101,7 +104,9 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
             with open(forces_filename, 'w') as infile:
                 infile.write(forces_txt)
         else:
-            raise InputValidationError("either force_sets or force_constants should be specified for this calculation")
+            msg = ("either force_sets or force_constants should be specified "
+                   "for this calculation")
+            raise InputValidationError(msg)
 
         grid_data = inputdict.pop(self.get_linkname('grid_data'), None)
 
@@ -111,21 +116,26 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
                 kappa_g_filename = self._OUTPUT_KAPPA + \
                                'm{}{}{}'.format(*parameters_data.dict.mesh) + \
                                '-g{}.hdf5'.format(gp)
-                write_kappa_to_hdf5_file(gp_data[gp],
-                                         filename=tempfolder.get_abs_path(kappa_g_filename))
+                write_kappa_to_hdf5_file(
+                    gp_data[gp],
+                    filename=tempfolder.get_abs_path(kappa_g_filename))
 
             self._additional_cmdline_params += ['--read-gamma']
         else:
             if 'grid_point' in parameters_data.get_dict():
-                gp_string = ','.join([str(gp) for gp in parameters_data.dict.grid_point])
-                self._additional_cmdline_params += ['--gp={}'.format(gp_string), '--write-gamma']
+                gp_string = ','.join(
+                    [str(gp) for gp in parameters_data.dict.grid_point])
+                self._additional_cmdline_params += [
+                    '--gp={}'.format(gp_string), '--write-gamma']
                 for gp in parameters_data.dict.grid_point:
-                    kappa_g_filename = self._OUTPUT_KAPPA + \
-                                       'm{}{}{}'.format(*parameters_data.dict.mesh) + \
-                                       '-g{}.hdf5'.format(gp)
+                    kappa_g_filename = (
+                        self._OUTPUT_KAPPA +
+                        'm{}{}{}'.format(*parameters_data.dict.mesh) +
+                        '-g{}.hdf5'.format(gp))
                     self._internal_retrieve_list += [kappa_g_filename]
                 return
 
         # Set name for output file
-        kappa_filename = self._OUTPUT_KAPPA + 'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh)
+        kappa_filename = (self._OUTPUT_KAPPA +
+                          'm{}{}{}.hdf5'.format(*parameters_data.dict.mesh))
         self._internal_retrieve_list += [kappa_filename]

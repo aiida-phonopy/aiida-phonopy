@@ -1,6 +1,8 @@
-# This file is used to generate inputs for the 3 different supported codes: VASP, QE and LAMMPS. This is implemented
-# in 3 functions: generate_vasp_params(), generate_qe_params() and generate_lammps_params().
-# generate_inputs() function at the end of the file decides which function to use according to the plugin
+# This file is used to generate inputs for the 3 different supported
+# codes: VASP, QE and LAMMPS. This is implemented in 3 functions:
+# generate_vasp_params(), generate_qe_params() and
+# generate_lammps_params(). generate_inputs() function at the end of
+# the file decides which function to use according to the plugin
 
 from aiida.orm import Code, CalculationFactory, DataFactory
 from aiida.common.exceptions import InputValidationError
@@ -10,7 +12,8 @@ ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
 
-# Function obtained from aiida's quantumespresso plugin. Copied here for convenience
+# Function obtained from aiida's quantumespresso plugin. Copied here
+# for convenience
 def get_pseudos_qe(structure, family_name):
     """
     Set the pseudo to use for all atomic kinds, picking pseudos from the
@@ -47,13 +50,13 @@ def get_pseudos_qe(structure, family_name):
 
 
 def generate_qe_params(structure, settings, pressure=0.0, type=None):
+    """Generate the input parameters needed to run a calculation for PW
 
-    """
-    Generate the input parameters needed to run a calculation for PW (Quantum Espresso)
-
-    :param structure:  StructureData object containing the crystal structure
-    :param machine:  ParametersData object containing a dictionary with the computational resources information
-    :param settings:  ParametersData object containing a dictionary with the INCAR parameters
+    :param structure: StructureData object containing the crystal structure
+    :param machine: ParametersData object containing a dictionary with the
+                    computational resources information
+    :param settings: ParametersData object containing a dictionary with the
+                     INCAR parameters
     :return: Calculation process object, input dictionary
     """
 
@@ -93,7 +96,7 @@ def generate_qe_params(structure, settings, pressure=0.0, type=None):
                                       'forc_conv_thr': 1.e-8})
         parameters['CELL'] = {'press': pressure,
                               'press_conv_thr': 1.e-3,
-                               'cell_dynamics': 'bfgs',  # Quasi-Newton algorithm
+                              'cell_dynamics': 'bfgs',  # Quasi-Newton algorithm
                               #   'cell_dofree': 'all'
                               }  # Degrees of movement
         parameters['IONS'] = {'ion_dynamics': 'bfgs',
@@ -135,7 +138,8 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
     Generate the input paramemeters needed to run a calculation for LAMMPS
 
     :param structure: StructureData object
-    :param settings: ParametersData object containing a dictionary with the LAMMPS parameters
+    :param settings: ParametersData object containing a dictionary with the
+                     LAMMPS parameters
     :return: Calculation process object, input dictionary
     """
 
@@ -151,12 +155,14 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
 
     # machine
     inputs._options.resources = settings.dict.machine['resources']
-    inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
+    inputs._options.max_wallclock_seconds = settings.dict.machine[
+        'max_wallclock_seconds']
 
     if 'queue_name' in settings.get_dict()['machine']:
         inputs._options.queue_name = settings.dict.machine['queue_name']
     if 'import_sys_environment' in settings.get_dict()['machine']:
-        inputs._options.import_sys_environment = settings.dict.machine['import_sys_environment']
+        inputs._options.import_sys_environment = settings.dict.machine[
+            'import_sys_environment']
 
     inputs.structure = structure
     inputs.potential = ParameterData(dict=settings.dict.potential)
@@ -168,7 +174,7 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
 
     # if code.get_input_plugin_name() == 'lammps.optimize':
     if type == 'optimize':
-        print ('optimize inside')
+        print('optimize inside')
 
         lammps_parameters = dict(settings.dict.parameters)
         lammps_parameters.update({'pressure': pressure})  # pressure kb
@@ -190,7 +196,8 @@ def get_potential_vasp(structure, family_name):
 
     pot_cls = DataFactory('vasp.potcar')
 
-    unique_symbols = np.unique([site.kind_name for site in structure.sites]).tolist()
+    unique_symbols = np.unique([site.kind_name
+                                for site in structure.sites]).tolist()
     pots = {}
     for s in list(unique_symbols):
         pots[s] = pot_cls.find_one(full_name=s, family=family_name)

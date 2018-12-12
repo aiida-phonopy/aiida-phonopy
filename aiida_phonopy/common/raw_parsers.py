@@ -21,7 +21,8 @@ def parse_FORCE_CONSTANTS(filename):
             fcfile.readline()
             tensor = []
             for k in range(3):
-                tensor.append([float(x) for x in fcfile.readline().strip().split()])
+                tensor.append([float(x)
+                               for x in fcfile.readline().strip().split()])
             force_constants[i, j] = np.array(tensor)
     return ForceConstantsData(data=force_constants)
 
@@ -41,10 +42,11 @@ def parse_partial_DOS(filename, structure, parameters):
                      primitive_matrix=parameters.dict.primitive,
                      symprec=parameters.dict.symmetry_precision)
 
-    dos = PhononDosData(frequencies=partial_dos.T[0],
-                        dos=np.sum(partial_dos[:, 1:], axis=1),
-                        partial_dos=partial_dos[:, 1:].T,
-                        atom_labels=phonon.get_primitive().get_chemical_symbols())
+    dos = PhononDosData(
+        frequencies=partial_dos.T[0],
+        dos=np.sum(partial_dos[:, 1:], axis=1),
+        partial_dos=partial_dos[:, 1:].T,
+        atom_labels=phonon.get_primitive().get_chemical_symbols())
 
     return dos
 
@@ -124,18 +126,20 @@ def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
     epsilon = nac_data.get_array('epsilon')
     structure_born = nac_data.get_structure()
 
-    ucell = PhonopyAtoms(symbols=[site.kind_name for site in structure_born.sites],
-                         positions=[site.position for site in structure_born.sites],
-                         cell=structure_born.cell)
+    ucell = PhonopyAtoms(
+        symbols=[site.kind_name for site in structure_born.sites],
+        positions=[site.position for site in structure_born.sites],
+        cell=structure_born.cell)
 
-    reduced_borns, epsilon, atom_indices = elaborate_borns_and_epsilon(ucell,
-                                                                       born_charges,
-                                                                       epsilon,
-                                                                       primitive_matrix=None,
-                                                                       supercell_matrix=None,
-                                                                       is_symmetry=True,
-                                                                       symmetrize_tensors=False,
-                                                                       symprec=1.e-5)
+    reduced_borns, epsilon, atom_indices = elaborate_borns_and_epsilon(
+        ucell,
+        born_charges,
+        epsilon,
+        primitive_matrix=None,
+        supercell_matrix=None,
+        is_symmetry=True,
+        symmetrize_tensors=False,
+        symprec=1.e-5)
 
     born_txt = "# epsilon and Z* of atoms "
     born_txt += ' '.join(["%d" % n for n in atom_indices + 1]) + '\n'
@@ -162,7 +166,8 @@ def get_FORCE_SETS_txt(data_sets_object):
     force_sets_txt += "%-5d\n" % len(displacements)
     for count, disp in enumerate(displacements):
         force_sets_txt += "\n%-5d\n" % (disp['number'] + 1)
-        force_sets_txt += "%20.16f %20.16f %20.16f\n" % (tuple(disp['displacement']))
+        force_sets_txt += "%20.16f %20.16f %20.16f\n" % (
+            tuple(disp['displacement']))
 
         for f in forces[count]:
             force_sets_txt += "%15.10f %15.10f %15.10f\n" % (tuple(f))
@@ -189,7 +194,8 @@ def get_poscar_txt(structure, use_direct=True):
     atom_type_unique = np.unique(types, return_index=True)
     sort_index = np.argsort(atom_type_unique[1])
     elements = np.array(atom_type_unique[0])[sort_index]
-    elements_count = np.diff(np.append(np.array(atom_type_unique[1])[sort_index], [len(types)]))
+    elements_count = np.diff(np.append(
+        np.array(atom_type_unique[1])[sort_index], [len(types)]))
 
     poscar_txt = '# VASP POSCAR generated using aiida workflow '
     poscar_txt += '\n1.0\n'
@@ -245,12 +251,12 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
                               symprec=parameters_data.dict.symmetry_precision)
 
     w = StringIO.StringIO()
-    w.write("natom: %d\n" %  dataset['natom'])
+    w.write("natom: %d\n" % dataset['natom'])
 
     num_first = len(dataset['first_atoms'])
-    w.write("num_first_displacements: %d\n" %  num_first)
+    w.write("num_first_displacements: %d\n" % num_first)
     if 'cutoff_distance' in dataset:
-        w.write("cutoff_distance: %f\n" %  dataset['cutoff_distance'])
+        w.write("cutoff_distance: %f\n" % dataset['cutoff_distance'])
 
     num_second = 0
     num_disp_files = 0
@@ -264,8 +270,8 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
             else:
                 num_disp_files += 1
 
-    w.write("num_second_displacements: %d\n" %  num_second)
-    w.write("num_displacements_created: %d\n" %  num_disp_files)
+    w.write("num_second_displacements: %d\n" % num_second)
+    w.write("num_displacements_created: %d\n" % num_disp_files)
 
     w.write("first_atoms:\n")
     count1 = 1
@@ -280,7 +286,6 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
         count1 += 1
 
         included = None
-        distance = 0.0
         atom2 = -1
         for disp2 in disp1['second_atoms']:
             if atom2 != disp2['number']:
@@ -316,7 +321,9 @@ def get_forces_txt(force_sets):
 
     from phono3py.file_IO import write_FORCES_FC3
 
-    write_FORCES_FC3(force_sets.get_data_sets3(), force_sets.get_forces3(), fp=w)
+    write_FORCES_FC3(force_sets.get_data_sets3(),
+                     force_sets.get_forces3(),
+                     fp=w)
     w.seek(0)
     lines = w.read()
     w.close()
