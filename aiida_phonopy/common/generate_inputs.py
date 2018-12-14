@@ -1,11 +1,7 @@
-# This file is used to generate inputs for the 3 different supported
-# codes: VASP, QE and LAMMPS. This is implemented in 3 functions:
-# generate_vasp_params(), generate_qe_params() and
-# generate_lammps_params(). generate_inputs() function at the end of
-# the file decides which function to use according to the plugin
-
-from aiida.orm import Code, CalculationFactory, DataFactory
+import sys
+from aiida.orm import Code, CalculationFactory, DataFactory, WorkflowFactory
 from aiida.common.exceptions import InputValidationError
+from aiida.common.extendeddicts import AttributeDict
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -183,69 +179,31 @@ def generate_lammps_params(structure, settings, type=None, pressure=0.0):
     return LammpsCalculation.process(), inputs
 
 
-def get_potential_vasp(structure, family_name):
-    """
-    Set the pseudo to use for all atomic kinds, picking pseudos from the
-    family with name family_name.
-
-    :note: The structure must already be set.
-
-    :param family_name: the name of the group containing the paws
-    """
-    import numpy as np
-
-    pot_cls = DataFactory('vasp.potcar')
-
-    unique_symbols = np.unique([site.kind_name
-                                for site in structure.sites]).tolist()
-    pots = {}
-    for s in list(unique_symbols):
-        pots[s] = pot_cls.find_one(full_name=s, family=family_name)
-
-    return pots
-
-
-def generate_vasp_params(structure, settings, type=None, pressure=0.0):
+def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     """
     Generate the input paramemeters needed to run a calculation for VASP
 
     :param structure:  StructureData object containing the crystal structure
-    :param settings:  ParametersData object containing a dictionary with the INCAR parameters
+    :param settings:  ParametersData object containing a dictionary with the
+        INCAR parameters
     :return: Calculation process object, input dictionary
     """
     try:
-        code = settings.dict.code[type]
+        code = settings.get_dict()['code'][calc_type]
     except:
-        code = settings.dict.code
+        code = settings.get_dict()['code']
 
-    plugin = Code.get_from_string(code).get_attr('input_plugin')
-
-    VaspCalculation = CalculationFactory(plugin)
-
-    inputs = VaspCalculation.process().get_inputs_template()
-
-    # code
-    inputs.code = Code.get_from_string(code)
-
-    # structure
-    inputs.structure = structure
-
-    # machine
-    inputs._options.resources = settings.dict.machine['resources']
-    inputs._options.max_wallclock_seconds = settings.dict.machine['max_wallclock_seconds']
-    if 'queue_name' in settings.get_dict()['machine']:
-        inputs._options.queue_name = settings.dict.machine['queue_name']
-    if 'import_sys_environment' in settings.get_dict()['machine']:
-        inputs._options.import_sys_environment = settings.dict.machine['import_sys_environment']
-    # inputs._options._parser_name = 'vasp.pymatgen'
-    # Use for all the set functions in calculation.
-    # inputs._options = dict(inputs._options)
-    # inputs._options['_parser_name'] = 'vasp.pymatgen'
+    VaspWorkflow = WorkflowFactory('vasp.vasp')
+    builder = VaspWorkflow.get_builder()
+    builder.code = Code.get_from_string(code)
+    builder.structure = structure
+    options = ParameterData(dict=settings.get_dict()['options'])
+    builder.options = options
 
     # INCAR (parameters)
     incar = dict(settings.dict.parameters)
 
-    if type == 'optimize':
+    if calc_type == 'optimize':
         incar.update({
             'PREC': 'Accurate',
             'ISTART': 0,
@@ -257,10 +215,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'LREAL': '.FALSE.',
             'PSTRESS': pressure})  # unit: kb -> kB
 
-        if not 'NSW' in incar:
+        if 'NSW' not in incar:
             incar.update({'NSW': 300})
 
-    elif type == 'optimize_constant_volume':
+    elif calc_type == 'optimize_constant_volume':
         incar.update({
             'PREC': 'Accurate',
             'ISTART': 0,
@@ -271,10 +229,10 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
-        if not 'NSW' in incar:
+        if 'NSW' not in incar:
             incar.update({'NSW': 300})
 
-    elif type == 'forces':
+    elif calc_type == 'forces':
         incar.update({
             'PREC': 'Accurate',
             'ISYM': 0,
@@ -286,7 +244,7 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
-    elif type == 'born_charges':
+    elif calc_type == 'born_charges':
         incar.update({
             'PREC': 'Accurate',
             'LEPSILON': '.TRUE.',
@@ -298,34 +256,37 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
             'ADDGRID': '.TRUE.',
             'LREAL': '.FALSE.'})
 
-    if not 'EDIFF' in incar:
-             incar.update({'EDIFF': 1.0E-8})
-    if not 'EDIFFG' in incar:
-             incar.update({'EDIFFG': -1.0E-6})
+    if 'EDIFF' not in incar:
+        incar.update({'EDIFF': 1.0E-8})
+    if 'EDIFFG' not in incar:
+        incar.update({'EDIFFG': -1.0E-6})
 
-    inputs.parameters = ParameterData(dict=incar)
-
-    # POTCAR (pseudo potentials)
-    inputs.potential = get_potential_vasp(structure, settings.dict.pseudos_family)
+    builder.parameters = ParameterData(dict=incar)
+    builder.potential_family = ParameterData(
+        dict=settings.get_dict()['potential_family'])
+    builder.potential_mapping = ParameterData(
+        dict=settings.get_dict()['potential_mapping'])
 
     # KPOINTS
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
 
-    if 'kpoints_density_{}'.format(type) in settings.get_dict():
-        kpoints.set_kpoints_mesh_from_density(settings.get_dict()['kpoints_density_{}'.format(type)])
+    if 'kpoints_density_{}'.format(calc_type) in settings.get_dict():
+        kpoints.set_kpoints_mesh_from_density(
+            settings.get_dict()['kpoints_density_{}'.format(calc_type)])
 
     elif 'kpoints_density' in settings.get_dict():
         kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
 
-    elif 'kpoints_mesh_{}'.format(type) in settings.get_dict():
+    elif 'kpoints_mesh_{}'.format(calc_type) in settings.get_dict():
         if 'kpoints_offset' in settings.get_dict():
             kpoints_offset = settings.dict.kpoints_offset
         else:
             kpoints_offset = [0.0, 0.0, 0.0]
 
-        kpoints.set_kpoints_mesh(settings.get_dict()['kpoints_mesh_{}'.format(type)],
-                                 offset=kpoints_offset)
+        kpoints.set_kpoints_mesh(
+            settings.get_dict()['kpoints_mesh_{}'.format(calc_type)],
+            offset=kpoints_offset)
 
     elif 'kpoints_mesh' in settings.get_dict():
         if 'kpoints_offset' in settings.get_dict():
@@ -336,31 +297,38 @@ def generate_vasp_params(structure, settings, type=None, pressure=0.0):
         kpoints.set_kpoints_mesh(settings.dict.kpoints_mesh,
                                  offset=kpoints_offset)
     else:
-        raise InputValidationError('no kpoint definition in input. Define either kpoints_density or kpoints_mesh')
+        raise InputValidationError(
+            'no kpoint definition in input. '
+            'Define either kpoints_density or kpoints_mesh')
 
-    inputs.kpoints = kpoints
+    builder.kpoints = kpoints
 
-    return VaspCalculation.process(), inputs
+    return builder
 
 
-def generate_inputs(structure, es_settings, type=None, pressure=0.0):
+def generate_inputs(structure, es_settings, calc_type=None, pressure=0.0):
 
     try:
-        plugin = Code.get_from_string(es_settings.dict.code[type]).get_attr('input_plugin')
+        plugin = Code.get_from_string(
+            es_settings.get_dict()['code'][calc_type]).get_attr('input_plugin')
     except:
         try:
-            plugin = Code.get_from_string(es_settings.dict.code).get_attr('input_plugin')
+            plugin = Code.get_from_string(
+                es_settings.get_dict()['code']).get_attr('input_plugin')
         except InputValidationError:
-            raise InputValidationError('No code provided for {} calculation type'.format(type))
+            raise InputValidationError(
+                'No code provided for {} calculation type'.format(calc_type))
 
     if plugin in ['vasp.vasp']:
-        return generate_vasp_params(structure, es_settings, type=type, pressure=pressure)
+        return generate_vasp_params(structure, es_settings,
+                                    calc_type=calc_type, pressure=pressure)
 
     elif plugin in ['quantumespresso.pw']:
-        return generate_qe_params(structure, es_settings, type=type, pressure=pressure)
+        return generate_qe_params(structure, es_settings,
+                                  calc_type=calc_type, pressure=pressure)
 
     elif plugin in ['lammps.force', 'lammps.optimize', 'lammps.md']:
-        return generate_lammps_params(structure, es_settings, type=type, pressure=pressure)
+        return generate_lammps_params(structure, es_settings,
+                                      calc_type=calc_type, pressure=pressure)
     else:
-        print ('No supported plugin')
-        exit()
+        sys.exit(0)
