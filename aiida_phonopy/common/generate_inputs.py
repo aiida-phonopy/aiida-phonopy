@@ -1,7 +1,7 @@
 import sys
 from aiida.orm import Code, CalculationFactory, DataFactory, WorkflowFactory
 from aiida.common.exceptions import InputValidationError
-from aiida.common.extendeddicts import AttributeDict
+from aiida.orm.data.base import Str
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -188,20 +188,27 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
         INCAR parameters
     :return: Calculation process object, input dictionary
     """
-    try:
-        code = settings.get_dict()['code'][calc_type]
-    except:
-        code = settings.get_dict()['code']
 
+    code_name = settings.get_dict()['code']
+    if calc_type in code_name:
+        code_name = settings.get_dict()['code'][calc_type]
+    code = Code.get_from_string(code_name)
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
-    builder.code = Code.get_from_string(code)
+    builder.code = code
     builder.structure = structure
     options = ParameterData(dict=settings.get_dict()['options'])
     builder.options = options
+    parser_settings_dict = settings.get_dict()['parser_settings']
+    if 'parser_settings' not in settings.get_dict():
+        parser_settings_dict = {'add_forces': True}
+    else:
+        parser_settings_dict.update({'add_forces': True})
+    settings_dict = {'parser_settings': parser_settings_dict}
+    builder.settings = DataFactory('parameter')(dict=settings_dict)
 
     # INCAR (parameters)
-    incar = dict(settings.dict.parameters)
+    incar = dict(settings.get_dict()['parameters'])
 
     if calc_type == 'optimize':
         incar.update({
@@ -262,8 +269,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
         incar.update({'EDIFFG': -1.0E-6})
 
     builder.parameters = ParameterData(dict=incar)
-    builder.potential_family = ParameterData(
-        dict=settings.get_dict()['potential_family'])
+    builder.potential_family = Str(settings.get_dict()['potential_family'])
     builder.potential_mapping = ParameterData(
         dict=settings.get_dict()['potential_mapping'])
 
@@ -303,7 +309,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
 
     builder.kpoints = kpoints
 
-    return builder
+    return builder, None
 
 
 def generate_inputs(structure, es_settings, calc_type=None, pressure=0.0):
