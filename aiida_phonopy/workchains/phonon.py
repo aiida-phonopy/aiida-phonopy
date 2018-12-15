@@ -26,70 +26,6 @@ OptimizeStructure = WorkflowFactory('phonopy.optimize')
 __testing__ = False
 
 
-def generate_phonopy_params(structure, ph_settings,
-                            force_sets=None, force_constants=None,
-                            nac_data=None, bands=None):
-    """Generate inputs parameters needed to do a remote phonopy calculation
-
-    :param structure: StructureData Object that constains the crystal
-        structure unit cell
-    :param ph_settings: ParameterData object containing a dictionary with the
-        phonopy input data
-    :param force_sets: ForceSetsData object containing the atomic forces and
-        displacement information
-    :return: Calculation process object, input dictionary
-    """
-
-    try:
-        code = Code.get_from_string(ph_settings.get_dict()['code']['fc2'])
-    except :
-        code = Code.get_from_string(ph_settings.get_dict()['code'])
-
-    plugin = code.get_attr('input_plugin')
-    PhonopyCalculation = CalculationFactory(plugin)
-
-    # The inputs
-    inputs = PhonopyCalculation.process().get_inputs_template()
-
-    # code
-    inputs.code = code
-
-    # structure
-    inputs.structure = structure
-
-    # parameters
-    inputs.parameters = ph_settings
-
-    # resources
-    options = ph_settings.get_dict()['options']
-    inputs.options.resources = options['resources']
-    inputs.options.max_wallclock_seconds = options['max_wallclock_seconds']
-
-    # data_sets
-    inputs.data_sets = force_sets
-
-    # data_sets
-    if force_sets is not None:
-        inputs.data_sets = force_sets
-
-    # force constants
-    if force_constants is not None:
-        inputs.force_constants = force_constants
-
-    # non-analytical corrections
-    if nac_data is not None:
-        inputs.nac_data = nac_data
-
-    # bands
-    if bands is not None:
-        inputs.bands = bands
-
-    if force_constants is None and force_sets is None:
-        Exception('Either force sets or force constants must be set!')
-
-    return PhonopyCalculation.process(), inputs
-
-
 def wf_like_calculation(work_function):
     """This function defines decorator to emulate the output stored in
     self.ctx of remote calculations in local workfunctions
@@ -222,7 +158,7 @@ def get_nac_from_data(**kwargs):
     nac_data = NacData(
         structure=kwargs.get('structure'),
         born_charges=kwargs.get('born_charges').get_array('born_charges'),
-        epsilon=kwargs.get('epsilon').get_array('epsilon')[-1])
+        epsilon=kwargs.get('epsilon').get_array('epsilon'))
 
     return {'nac_data': nac_data}
 
@@ -539,7 +475,7 @@ class PhononPhonopy(WorkChain):
 
         if 'code' in self.inputs.ph_settings.get_dict():
             self.report('remote phonopy calculation')
-            JobCalculation, calculation_input = generate_phonopy_params(
+            JobCalculation, calculation_input = self.generate_phonopy_params(
                 **phonopy_inputs)
             future = self.submit(JobCalculation, **calculation_input)
             self.report('phonopy calculation: {}'.format(future.pk))
@@ -567,3 +503,62 @@ class PhononPhonopy(WorkChain):
         self.report('finish phonon')
 
         return
+
+    def generate_phonopy_params(self, structure, ph_settings,
+                                force_sets=None, force_constants=None,
+                                nac_data=None, bands=None):
+        """Generate inputs parameters needed to do a remote phonopy calculation
+
+        :param structure: StructureData Object that constains the crystal
+            structure unit cell
+        :param ph_settings: ParameterData object containing a dictionary with
+            the phonopy input data
+        :param force_sets: ForceSetsData object containing the atomic forces
+            and displacement information
+        :return: Calculation process object, input dictionary
+        """
+
+        code = Code.get_from_string(ph_settings.get_dict()['code'])
+        plugin = code.get_attr('input_plugin')
+        PhonopyCalculation = CalculationFactory(plugin)
+
+        # The inputs
+        inputs = PhonopyCalculation.process().get_inputs_template()
+
+        # code
+        inputs.code = code
+
+        # structure
+        inputs.structure = structure
+
+        # parameters
+        inputs.parameters = ph_settings
+
+        # resources
+        options = ph_settings.get_dict()['options']
+        inputs.options.resources = options['resources']
+        inputs.options.max_wallclock_seconds = options['max_wallclock_seconds']
+
+        # data_sets
+        inputs.data_sets = force_sets
+
+        # data_sets
+        if force_sets is not None:
+            inputs.data_sets = force_sets
+
+        # force constants
+        if force_constants is not None:
+            inputs.force_constants = force_constants
+
+        # non-analytical corrections
+        if nac_data is not None:
+            inputs.nac_data = nac_data
+
+        # bands
+        if bands is not None:
+            inputs.bands = bands
+
+        if force_constants is None and force_sets is None:
+            Exception('Either force sets or force constants must be set!')
+
+        return PhonopyCalculation.process(), inputs
