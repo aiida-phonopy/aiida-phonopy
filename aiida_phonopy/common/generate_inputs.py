@@ -58,26 +58,29 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     :return: Calculation process object, input dictionary
     """
 
-    code_name = settings.get_dict()['code']
-    if calc_type in code_name:
-        code_name = settings.get_dict()['code'][calc_type]
+    if calc_type is None:
+        settings_dict = settings.get_dict()
+    else:
+        settings_dict = settings.get_dict()[calc_type]
+    code_name = settings_dict['code']
     code = Code.get_from_string(code_name)
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
+
     builder.code = code
     builder.structure = structure
-    options = ParameterData(dict=settings.get_dict()['options'])
+    options = ParameterData(dict=settings_dict['options'])
     builder.options = options
-    parser_settings_dict = settings.get_dict()['parser_settings']
-    if 'parser_settings' not in settings.get_dict():
+    parser_settings_dict = settings_dict['parser_settings']
+    if 'parser_settings' not in settings_dict:
         parser_settings_dict = {'add_forces': True}
     else:
         parser_settings_dict.update({'add_forces': True})
-    settings_dict = {'parser_settings': parser_settings_dict}
-    builder.settings = DataFactory('parameter')(dict=settings_dict)
+    builder.settings = DataFactory('parameter')(
+        dict={'parser_settings': parser_settings_dict})
 
     # INCAR (parameters)
-    incar = dict(settings.get_dict()['parameters'])
+    incar = dict(settings_dict['parameters'])
     keys_lower = [key.lower() for key in incar]
     if 'ediff' not in keys_lower:
         incar.update({'EDIFF': 1.0E-8})
@@ -85,38 +88,38 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
         incar.update({'EDIFFG': -1.0E-6})
 
     builder.parameters = ParameterData(dict=incar)
-    builder.potential_family = Str(settings.get_dict()['potential_family'])
+    builder.potential_family = Str(settings_dict['potential_family'])
     builder.potential_mapping = ParameterData(
-        dict=settings.get_dict()['potential_mapping'])
+        dict=settings_dict['potential_mapping'])
 
     # KPOINTS
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
 
-    if 'kpoints_density_{}'.format(calc_type) in settings.get_dict():
+    if 'kpoints_density_{}'.format(calc_type) in settings_dict:
         kpoints.set_kpoints_mesh_from_density(
-            settings.get_dict()['kpoints_density_{}'.format(calc_type)])
+            settings_dict['kpoints_density_{}'.format(calc_type)])
 
-    elif 'kpoints_density' in settings.get_dict():
-        kpoints.set_kpoints_mesh_from_density(settings.dict.kpoints_density)
+    elif 'kpoints_density' in settings_dict:
+        kpoints.set_kpoints_mesh_from_density(settings_dict['kpoints_density'])
 
-    elif 'kpoints_mesh_{}'.format(calc_type) in settings.get_dict():
-        if 'kpoints_offset' in settings.get_dict():
-            kpoints_offset = settings.dict.kpoints_offset
+    elif 'kpoints_mesh_{}'.format(calc_type) in settings_dict:
+        if 'kpoints_offset' in settings_dict:
+            kpoints_offset = settings_dict['kpoints_offset']
         else:
             kpoints_offset = [0.0, 0.0, 0.0]
 
         kpoints.set_kpoints_mesh(
-            settings.get_dict()['kpoints_mesh_{}'.format(calc_type)],
+            settings_dict['kpoints_mesh_{}'.format(calc_type)],
             offset=kpoints_offset)
 
-    elif 'kpoints_mesh' in settings.get_dict():
-        if 'kpoints_offset' in settings.get_dict():
-            kpoints_offset = settings.dict.kpoints_offset
+    elif 'kpoints_mesh' in settings_dict:
+        if 'kpoints_offset' in settings_dict:
+            kpoints_offset = settings_dict['kpoints_offset']
         else:
             kpoints_offset = [0.0, 0.0, 0.0]
 
-        kpoints.set_kpoints_mesh(settings.dict.kpoints_mesh,
+        kpoints.set_kpoints_mesh(settings_dict['kpoints_mesh'],
                                  offset=kpoints_offset)
     else:
         raise InputValidationError(
@@ -131,7 +134,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
 def generate_inputs(structure, es_settings, calc_type=None, pressure=0.0):
     if calc_type:
         plugin = Code.get_from_string(
-            es_settings.get_dict()['code'][calc_type]).get_attr('input_plugin')
+            es_settings.get_dict()[calc_type]['code']).get_attr('input_plugin')
     else:
         plugin = Code.get_from_string(
             es_settings.get_dict()['code']).get_attr('input_plugin')
