@@ -36,11 +36,12 @@ def parse_partial_DOS(filename, structure, parameters):
     bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
-
-    phonon = Phonopy(bulk,
-                     supercell_matrix=parameters.dict.supercell,
-                     primitive_matrix=parameters.dict.primitive,
-                     symprec=parameters.dict.symmetry_precision)
+    params_dict = parameters.get_dict()
+    phonon = Phonopy(
+        bulk,
+        supercell_matrix=params_dict['supercell_matrix'],
+        primitive_matrix=params_dict['primitive_matrix'],
+        symprec=params_dict['symmetry_precision'])
 
     dos = PhononDosData(
         frequencies=partial_dos.T[0],
@@ -175,7 +176,6 @@ def get_FORCE_SETS_txt(data_sets_object):
 
 
 def get_FORCE_CONSTANTS_txt(force_constants_object):
-
     force_constants = force_constants_object.get_data()
 
     # Write FORCE CONSTANTS
@@ -220,9 +220,11 @@ def get_poscar_txt(structure, use_direct=True):
 
 def get_phonopy_conf_file_txt(parameters_object, bands=None):
     parameters = parameters_object.get_dict()
-    input_file = 'DIM = {} {} {}\n'.format(*np.diag(parameters['supercell']))
+    supercell_matrix = np.array(parameters['supercell_matrix']).ravel()
+    vals = " {}" * len(supercell_matrix)
+    input_file = ('DIM =' + vals + '\n').format(*supercell_matrix)
     input_file += 'PRIMITIVE_AXIS = {} {} {}  {} {} {}  {} {} {}\n'.format(
-        *np.array(parameters['primitive']).reshape((1, 9))[0])
+        *np.array(parameters['primitive_matrix']).ravel())
     input_file += 'MESH = {} {} {}\n'.format(*parameters['mesh'])
 
     if bands is not None:

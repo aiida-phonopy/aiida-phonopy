@@ -72,10 +72,10 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     options = ParameterData(dict=settings_dict['options'])
     builder.options = options
     parser_settings_dict = settings_dict['parser_settings']
-    if 'parser_settings' not in settings_dict:
-        parser_settings_dict = {'add_forces': True}
-    else:
+    if 'parser_settings' in settings_dict:
         parser_settings_dict.update({'add_forces': True})
+    else:
+        parser_settings_dict = {'add_forces': True}
     builder.settings = DataFactory('parameter')(
         dict={'parser_settings': parser_settings_dict})
 
@@ -128,7 +128,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
 
     builder.kpoints = kpoints
 
-    return builder, None
+    return builder
 
 
 def generate_inputs(structure, es_settings, calc_type=None, pressure=0.0):

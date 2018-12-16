@@ -3,9 +3,7 @@ import numpy
 
 
 class ForceSetsData(ArrayData):
-    """
-    Store the force constants on disk as a numpy array. It requires numpy to be installed.
-    """
+    """Store the force constants on disk as a numpy array."""
 
     def __init__(self, *args, **kwargs):
         super(ForceSetsData, self).__init__(*args, **kwargs)
