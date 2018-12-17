@@ -47,11 +47,11 @@ class BasePhonopyCalculation(object):
                 'docstring': ("Use a node that specifies the phonopy "
                               "parameters for the namelists"),
             },
-            "data_sets": {
+            "force_sets": {
                 'valid_types': ForceSetsData,
                 'additional_parameter': None,
-                'linkname': 'data_sets',
-                'docstring': ("Use a node that specifies the data_sets "
+                'linkname': 'force_sets',
+                'docstring': ("Use a node that specifies the force_sets "
                               "for the namelists"),
             },
             "force_constants": {
@@ -81,7 +81,6 @@ class BasePhonopyCalculation(object):
                 'docstring': "Use the node defining the band structure to use",
             }
         }
-
 
     def _create_additional_files(self, tempfolder, inputs_params):
         pass

@@ -169,28 +169,35 @@ class PhononPhonopy(WorkChain):
                    valid_type=Float, required=False, default=Float(0.0))
         spec.input("use_nac",
                    valid_type=Bool, required=False, default=Bool(False))
+        spec.input("run_phonopy",
+                   valid_type=Bool, required=False, default=Bool(False))
         spec.input("remote_phonopy",
                    valid_type=Bool, required=False, default=Bool(False))
 
         spec.outline(cls.check_ph_settings,
                      if_(cls.use_optimize)(cls.optimize),
                      cls.create_displacements,
-                     cls.run_displacement_and_nac_calculations,
+                     cls.run_force_and_nac_calculations,
                      cls.create_force_sets,
+                     cls.set_default_outputs,
                      cls.prepare_phonopy_inputs,
-                     if_(cls.remote_phonopy)(
-                         cls.create_phonopy_builder,
-                         cls.run_phonopy_remote,
-                         cls.collect_data,
-                     ).else_(
-                         cls.run_phonopy_in_workchain,
-                     ))
+                     if_(cls.run_phonopy)(
+                         if_(cls.remote_phonopy)(
+                             cls.create_phonopy_builder,
+                             cls.run_phonopy_remote,
+                             cls.collect_data,
+                         ).else_(
+                             cls.run_phonopy_in_workchain,
+                         )))
 
     def use_optimize(self):
         return self.inputs.optimize
 
     def remote_phonopy(self):
         return self.inputs.remote_phonopy
+
+    def run_phonopy(self):
+        return self.inputs.run_phonopy
 
     def check_ph_settings(self):
         self.report('check ph_settings')
@@ -272,8 +279,8 @@ class PhononPhonopy(WorkChain):
 
         self.ctx.disp_dataset = disp_dataset
 
-    def run_displacement_and_nac_calculations(self):
-        self.report('run displacement calculations')
+    def run_force_and_nac_calculations(self):
+        self.report('run force calculations')
 
         # Forces
         for i in range(self.ctx.disp_dataset['number_of_displacements']):
@@ -330,17 +337,22 @@ class PhononPhonopy(WorkChain):
         self.ctx.force_sets = ForceSetsData(data_sets=data_sets)
         self.ctx.force_sets.set_forces(forces)
 
-    def prepare_phonopy_inputs(self):
-        self.ctx.band_paths = get_path_using_seekpath(
-            self.ctx.primitive_structure,
-            band_resolution=30)
-
         if 'single_point' in self.ctx:
             self.ctx.nac_data = get_nac_from_data(
                 born_charges=self.ctx.single_point.out.output_born_charges,
                 epsilon=self.ctx.single_point.out.output_dielectrics,
                 structure=self.ctx.single_point.inp.structure)
+
+    def set_default_outputs(self):
+        self.out('final_structure', self.ctx.final_structure)
+        self.out('force_sets', self.ctx.force_sets)
+        if 'nac_data' in self.ctx:
             self.out('nac_data', self.ctx.nac_data['nac_data'])
+
+    def prepare_phonopy_inputs(self):
+        self.ctx.band_paths = get_path_using_seekpath(
+            self.ctx.primitive_structure,
+            band_resolution=30)
 
     def create_phonopy_builder(self):
         """Generate input parameters for a remote phonopy calculation"""
@@ -360,7 +372,7 @@ class PhononPhonopy(WorkChain):
         if 'force_constants' in self.ctx:
             builder.force_constants = self.force_constants
         elif 'force_sets' in self.ctx:
-            builder.data_sets = self.ctx.force_sets
+            builder.force_sets = self.ctx.force_sets
         if 'nac_data' in self.ctx:
             builder.nac_data = self.ctx.nac_data
         if 'band_paths' in self.ctx:
@@ -384,24 +396,22 @@ class PhononPhonopy(WorkChain):
     def run_phonopy_in_workchain(self):
         self.report('phonopy calculation in workchain')
 
-        structure = self.ctx.final_structure
-        ph_settings = self.ctx.ph_settings
-        force_sets = self.ctx.force_sets
-        bands = self.ctx.band_paths
+        ph_settings_dict = self.ctx.ph_settings.get_dict()
 
         from phonopy import Phonopy
 
         phonon = Phonopy(
-            phonopy_bulk_from_structure(structure),
-            supercell_matrix=ph_settings.get_dict()['supercell_matrix'],
-            primitive_matrix=ph_settings.get_dict()['primitive_matrix'],
-            symprec=ph_settings.get_dict()['symmetry_precision'])
+            phonopy_bulk_from_structure(self.ctx.final_structure),
+            supercell_matrix=ph_settings_dict['supercell_matrix'],
+            primitive_matrix=ph_settings_dict['primitive_matrix'],
+            symprec=ph_settings_dict['symmetry_precision'])
 
         if 'force_constants' in self.ctx:
             force_constants = self.ctx.force_constants
             phonon.set_force_constants(force_constants.get_data())
         else:
-            phonon.set_displacement_dataset(force_sets.get_force_sets())
+            phonon.set_displacement_dataset(
+                self.ctx.force_sets.get_force_sets())
             phonon.produce_force_constants()
             force_constants = ForceConstantsData(
                 data=phonon.get_force_constants())
@@ -417,7 +427,7 @@ class PhononPhonopy(WorkChain):
                                 / phonon.primitive.get_number_of_atoms())
 
         # DOS
-        phonon.set_mesh(ph_settings.get_dict()['mesh'],
+        phonon.set_mesh(ph_settings_dict['mesh'],
                         is_eigenvectors=True,
                         is_mesh_symmetry=False)
         phonon.set_total_DOS(tetrahedron_method=True)
@@ -445,6 +455,7 @@ class PhononPhonopy(WorkChain):
                                      cv * normalization_factor)
 
         # BAND STRUCTURE
+        bands = self.ctx.band_paths
         phonon.set_band_structure(bands.get_bands())
         band_structure = BandStructureData(bands=bands.get_bands(),
                                            labels=bands.get_labels(),
@@ -456,8 +467,6 @@ class PhononPhonopy(WorkChain):
         self.out('thermal_properties', thermal_properties)
         self.out('dos', dos)
         self.out('band_structure', band_structure)
-        self.out('final_structure', self.ctx.final_structure)
-        self.out('force_sets', force_sets)
 
         self.report('finish phonon')
 
@@ -469,7 +478,5 @@ class PhononPhonopy(WorkChain):
         self.out('dos', self.ctx.phonon_properties.out.dos)
         self.out('band_structure',
                  self.ctx.phonon_properties.out.band_structure)
-        self.out('final_structure', self.ctx.final_structure)
-        self.out('force_sets', self.ctx.force_sets)
 
         self.report('finish phonon')
