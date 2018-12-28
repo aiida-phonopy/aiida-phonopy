@@ -12,6 +12,7 @@ ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 ArrayData = DataFactory('array')
 BandStructureData = DataFactory('phonopy.band_structure')
+NacData = DataFactory('phonopy.nac')
 
 
 class BasePhonopyCalculation(object):
@@ -68,7 +69,7 @@ class BasePhonopyCalculation(object):
                 'docstring': "Use a node for the structure",
             },
             "nac_data": {
-                'valid_types': ArrayData,
+                'valid_types': NacData,
                 'additional_parameter': None,
                 'linkname': 'nac_data',
                 'docstring': ("Use a node for the Non-analitical "

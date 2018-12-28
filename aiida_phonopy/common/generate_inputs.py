@@ -1,5 +1,4 @@
-import sys
-from aiida.orm import Code, CalculationFactory, DataFactory, WorkflowFactory
+from aiida.orm import Code, DataFactory, WorkflowFactory
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.data.base import Str
 
@@ -71,11 +70,18 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     builder.structure = structure
     options = ParameterData(dict=settings_dict['options'])
     builder.options = options
-    parser_settings_dict = settings_dict['parser_settings']
+
+    # Force setting
+    force_setting_dict = {'add_forces': {'link_name': 'output_forces',
+                                         'type': 'array',
+                                         'quantities': ['forces']}}
     if 'parser_settings' in settings_dict:
-        parser_settings_dict.update({'add_forces': True})
+        parser_settings_dict = settings_dict['parser_settings']
     else:
-        parser_settings_dict = {'add_forces': True}
+        parser_settings_dict = {}
+    if 'add_forces' not in parser_settings_dict:
+        parser_settings_dict.update(force_setting_dict)
+
     builder.settings = DataFactory('parameter')(
         dict={'parser_settings': parser_settings_dict})
 
