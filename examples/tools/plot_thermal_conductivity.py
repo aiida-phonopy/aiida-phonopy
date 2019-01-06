@@ -306,9 +306,9 @@ ir_grid_points = np.arange(np.prod(mesh), dtype='intc')
 grid_mapping_table = np.arange(np.prod(mesh), dtype='intc')
 
 
-from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 kappados = KappaDOS(mode_kappa=mode_kappa,
-                    cell=phonopy_bulk_from_structure(structure),
+                    cell=phonopy_atoms_from_structure(structure),
                     frequencies=frequency,
                     mesh=mesh,
                     grid_address=grid_address,

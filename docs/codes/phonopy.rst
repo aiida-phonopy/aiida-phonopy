@@ -22,7 +22,7 @@ This plugin is designed to calculate the harmonic force constants, thermal prope
                                      [0.0, 0.0, 1.0]],
                        'distance': 0.01,
                        'mesh': [40, 40, 40],
-                       'symmetry_precision': 1e-5}
+                       'symmetry_tolerance': 1e-5}
     ParameterData = DataFactory('parameter')
     parameters = ParameterData(dict=parameters_dict)
 

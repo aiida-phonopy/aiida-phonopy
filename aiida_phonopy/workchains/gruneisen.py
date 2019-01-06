@@ -28,12 +28,12 @@ __testing__ = False
 
 def get_phonon(structure, force_constants, ph_settings, nac_data=None):
     from phonopy import Phonopy
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
-    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+    phonon = Phonopy(phonopy_atoms_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
-                     symprec=ph_settings.dict.symmetry_precision)
+                     symprec=ph_settings.dict.symmetry_tolerance)
 
     if force_constants is not None:
         phonon.set_force_constants(force_constants.get_data())
@@ -49,12 +49,12 @@ def get_phonon(structure, force_constants, ph_settings, nac_data=None):
 def get_commensurate(structure, ph_settings):
     from phonopy import Phonopy
     from phonopy.harmonic.dynmat_to_fc import DynmatToForceConstants
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
-    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+    phonon = Phonopy(phonopy_atoms_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
-                     symprec=ph_settings.dict.symmetry_precision)
+                     symprec=ph_settings.dict.symmetry_tolerance)
 
     primitive = phonon.get_primitive()
     supercell = phonon.get_supercell()
@@ -101,17 +101,17 @@ def get_force_constants(phonon_origin, gruneisen, commensurate, volumes):
 
 def get_thermal_properties(structure, ph_settings, force_constants_list):
     from phonopy import Phonopy
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     free_energy_list = []
     entropy_list = []
     cv_list = []
     temperature = None
     for fc in force_constants_list:
-        phonon = Phonopy(phonopy_bulk_from_structure(structure),
+        phonon = Phonopy(phonopy_atoms_from_structure(structure),
                          ph_settings.dict.supercell,
                          primitive_matrix=ph_settings.dict.primitive,
-                         symprec=ph_settings.dict.symmetry_precision)
+                         symprec=ph_settings.dict.symmetry_tolerance)
 
         # Normalization factor primitive to unit cell
         normalization_factor = phonon.unitcell.get_number_of_atoms()/phonon.primitive.get_number_of_atoms()

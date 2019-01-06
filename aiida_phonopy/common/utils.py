@@ -3,18 +3,10 @@ from aiida.work import workfunction
 from aiida.orm import DataFactory
 
 
-def phonopy_bulk_from_structure(structure):
-    from phonopy.api_phonopy import Atoms as PhonopyAtoms
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-    return bulk
-
-
 def get_path_using_seekpath(structure, band_resolution=30):
     import seekpath
 
-    phonopy_structure = phonopy_bulk_from_structure(structure)
+    phonopy_structure = phonopy_atoms_from_structure(structure)
     cell = phonopy_structure.get_cell()
     scaled_positions = phonopy_structure.get_scaled_positions()
     numbers = phonopy_structure.get_atomic_numbers()
@@ -60,10 +52,10 @@ def get_force_constants_from_phonopy(structure, ph_settings, force_sets):
     # Generate phonopy phonon object
 
     phonon = Phonopy(
-        phonopy_bulk_from_structure(structure),
+        phonopy_atoms_from_structure(structure),
         ph_settings.get_dict()['supercell_matrix'],
         primitive_matrix=ph_settings.get_dict()['primitive_matrix'],
-        symprec=ph_settings.get_dict()['symmetry_precision'])
+        symprec=ph_settings.get_dict()['symmetry_tolerance'])
 
     phonon.generate_displacements(distance=ph_settings.dict.distance)
 
@@ -92,10 +84,10 @@ def get_primitive(structure, ph_settings):
     from phonopy import Phonopy
 
     phonon = Phonopy(
-        phonopy_bulk_from_structure(structure),
+        phonopy_atoms_from_structure(structure),
         supercell_matrix=ph_settings.get_dict()['supercell_matrix'],
         primitive_matrix=ph_settings.get_dict()['primitive_matrix'],
-        symprec=ph_settings.get_dict()['symmetry_precision'])
+        symprec=ph_settings.get_dict()['symmetry_tolerance'])
     primitive_phonopy = phonon.get_primitive()
 
     primitive_cell = primitive_phonopy.get_cell()
@@ -116,3 +108,11 @@ def phonopy_atoms_to_structure(cell):
     for symbol, position in zip(symbols, positions):
         structure.append_atom(position=position, symbols=symbol)
     return structure
+
+
+def phonopy_atoms_from_structure(structure):
+    from phonopy.structure.atoms import PhonopyAtoms
+    cell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
+                        positions=[site.position for site in structure.sites],
+                        cell=structure.cell)
+    return cell

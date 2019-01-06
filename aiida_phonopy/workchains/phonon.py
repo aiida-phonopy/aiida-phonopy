@@ -4,7 +4,7 @@ from aiida.orm.data.base import Float, Bool, Int
 from aiida.work.workchain import if_
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
-from aiida_phonopy.common.utils import (phonopy_bulk_from_structure,
+from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
                                         phonopy_atoms_to_structure,
                                         get_nac_from_data,
                                         get_path_using_seekpath)
@@ -28,46 +28,66 @@ class PhononPhonopy(WorkChain):
 
     :param structure: StructureData object that contains the crystal structure
         unit cell
-    :param ph_settings: ParametersData object that contains a dictionary with
-        the data needed to run phonopy:
-            'supercell_matrix': [[2,0,0],
-                                 [0,2,0],
-                                 [0,0,2]],
+    :param cell_matrices: ArrayData object having supercell matrix and
+        optionally primitive matrix. (default: primitive_matrix = unit matrix)
+            'supercell_matrix': [[2, 0, 0],
+                                 [0, 2, 0],
+                                 [0, 0, 2]],
             'primitive_matrix': [[1.0, 0.0, 0.0],
                                  [0.0, 1.0, 0.0],
-                                 [0.0, 0.0, 1.0]],
-            'distance': 0.01,
-            'mesh': [40, 40, 40],
-            # 'code': 'phonopy@boston'
-        'code' is include to run phonopy remotely otherwise run phonopy localy.
+                                 [0.0, 0.0, 1.0]]
     :param es_settings: ParametersData object that contains a dictionary with
-        the setting needed to calculate the electronic structure. The
-        structure of this dictionary strongly depends on the software
-        (VASP, QE, LAMMPS, ...)
+        the setting needed to calculate the electronic structure:
+            {'forces': force_config,
+             'nac': nac_config}
+        where force_config and nac_config are used for the supercell force
+        calculation and Born effective charges and dielectric constant
+        calculation in primitive cell, respectively.
+    :ph_settings: ParameterData object. Needed to run phonon calculation.
+        {'mesh': [20, 20, 20]}. Optional. (default: {mesh: [20, 20, 20]})
     :param optimize: Set true to perform a crystal structure optimization
         before the phonon calculation (default: True)
     :param pressure: Set the external pressure (stress tensor) at which the
         optimization is performed in KBar (default: 0)
+    :is_nac: Bool object. Whether running non-analytical term correction.
+        Optional. (default: False)
+    :run_phonopy: Bool object. Whether running phonon calculation or not.
+        Optional. (default: False)
+    :remote_phonopy: Bool object. Whether running phonon calculation or not.
+        Optional. (default: False)
+    :code: Code object. Needed to run phonopy remotely. Optional.
+    :options: ParameterData object. Needed to run phonopy remotely. Optional.
+    :distance: Float object. Displacement distance. Optional. (default: 0.01)
+    :symmetry_tolerance: Float object. Symmetry tolerance. Optional.
+        (default: 1e-5)
+
     """
     @classmethod
     def define(cls, spec):
         super(PhononPhonopy, cls).define(spec)
-        spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("structure", valid_type=StructureData, required=True)
+        spec.input("cell_matrices", valid_type=ArrayData, required=True)
+        spec.input("es_settings", valid_type=ParameterData, required=True)
         # Optional arguments
+        spec.input('code', valid_type=Code, required=False)
+        spec.input('options', valid_type=ParameterData, required=False)
+        spec.input("ph_settings", valid_type=ParameterData, required=False)
+        spec.input("is_nac",
+                   valid_type=Bool, required=False, default=Bool(False))
         spec.input("optimize",
                    valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure",
                    valid_type=Float, required=False, default=Float(0.0))
-        spec.input("is_nac",
-                   valid_type=Bool, required=False, default=Bool(False))
+        spec.input("distance",
+                   valid_type=Float, required=False, default=Float(0.01))
+        spec.input("symmetry_tolerance",
+                   valid_type=Float, required=False, default=Float(1e-5))
         spec.input("run_phonopy",
                    valid_type=Bool, required=False, default=Bool(False))
         spec.input("remote_phonopy",
                    valid_type=Bool, required=False, default=Bool(False))
 
-        spec.outline(cls.check_ph_settings,
+        spec.outline(cls.check_settings,
                      if_(cls.use_optimize)(cls.optimize),
                      cls.set_unitcell,
                      cls.create_displacements,
@@ -97,27 +117,47 @@ class PhononPhonopy(WorkChain):
     def is_nac(self):
         return self.inputs.is_nac
 
-    def check_ph_settings(self):
+    def check_settings(self):
         self.report('check ph_settings')
 
-        ph_settings_dict = self.inputs.ph_settings.get_dict()
+        if 'ph_settings' in self.inputs:
+            ph_settings_dict = self.inputs.ph_settings.get_dict()
+        else:
+            ph_settings_dict = {}
 
-        if 'supercell_matrix' not in ph_settings_dict:
-            raise RuntimeError("supercell_matrix is not set.")
-        if 'primitive_matrix' not in ph_settings_dict:
-            ph_settings_dict['primitive_matrix'] = np.eye(3, dtype='double')
-        if 'distance' not in ph_settings_dict:
-            ph_settings_dict['distance'] = 0.01
+        cell_keys = self.inputs.cell_matrices.get_arraynames()
+        if 'supercell_matrix' not in cell_keys:
+            raise RuntimeError(
+                "supercell_matrix is not found in cell_matrices.")
+        else:
+            dim = self.inputs.cell_matrices.get_array('supercell_matrix')
+            if len(dim.ravel()) == 3:
+                smat = np.diag(dim)
+            else:
+                smat = np.array(dim)
+            if not np.issubdtype(smat.dtype, np.integer):
+                raise TypeError("supercell_matrix is not integer matrix.")
+            else:
+                ph_settings_dict['supercell_matrix'] = smat.tolist()
+        if 'primitive_matrix' in cell_keys:
+            pmat = self.inputs.cell_matrices.get_array('primitive_matrix')
+        else:
+            pmat = np.eye(3)
+        ph_settings_dict['primitive_matrix'] = pmat.astype(float).tolist()
+
         if 'mesh' not in ph_settings_dict:
             ph_settings_dict['mesh'] = [20, 20, 20]
-        if 'symmetry_precision' not in ph_settings_dict:
-            ph_settings_dict['symmetry_precision'] = 1e-5
-        if 'code' not in ph_settings_dict and self.inputs.remote_phonopy:
-            raise RuntimeError("code has to be specified in ph_settings.")
-        if 'code' in ph_settings_dict and 'options' not in ph_settings_dict:
-            raise RuntimeError(
-                "options of code has to be specified in ph_settings.")
+        ph_settings_dict['distance'] = float(self.inputs.distance)
+        tolerance = float(self.inputs.symmetry_tolerance)
+        ph_settings_dict['symmetry_tolerance'] = tolerance
+
+        if self.inputs.run_phonopy and self.inputs.remote_phonopy:
+            if 'code' not in self.inputs or 'options' not in self.inputs:
+                raise RuntimeError("code and options have to be specified.")
+
         self.ctx.ph_settings = ParameterData(dict=ph_settings_dict)
+
+        self.report("Phonon settings: %s" % ph_settings_dict)
 
     def optimize(self):
         self.report('start optimize')
@@ -156,10 +196,10 @@ class PhononPhonopy(WorkChain):
 
         # Generate phonopy phonon object
         phonon = Phonopy(
-            phonopy_bulk_from_structure(self.ctx.final_structure),
+            phonopy_atoms_from_structure(self.ctx.final_structure),
             supercell_matrix=ph_settings_dict['supercell_matrix'],
             primitive_matrix=ph_settings_dict['primitive_matrix'],
-            symprec=ph_settings_dict['symmetry_precision'])
+            symprec=ph_settings_dict['symmetry_tolerance'])
 
         self.ctx.primitive_structure = phonopy_atoms_to_structure(
             phonon.primitive)
@@ -189,7 +229,7 @@ class PhononPhonopy(WorkChain):
             self.to_context(**{label: future})
 
         # Born charges
-        if bool(self.inputs.is_nac):
+        if self.inputs.is_nac:
             self.report('calculate born charges and dielectric constant')
             builder = generate_inputs(self.ctx.primitive_structure,
                                       self.inputs.es_settings,
@@ -218,6 +258,7 @@ class PhononPhonopy(WorkChain):
         self.ctx.force_sets.set_forces(forces)
 
     def create_nac_params(self):
+        self.report('create nac data')
         self.ctx.nac_data = get_nac_from_data(
             born_charges=self.ctx.born_and_epsilon.out.output_born_charges,
             epsilon=self.ctx.born_and_epsilon.out.output_dielectrics,
@@ -239,18 +280,12 @@ class PhononPhonopy(WorkChain):
 
         self.report("create phonopy process builder")
 
-        ph_settings_dict = self.ctx.ph_settings.get_dict()
-        code = Code.get_from_string(ph_settings_dict['code'])
-        builder = code.get_builder()
-
+        builder = self.inputs.code.get_builder()
         builder.structure = self.ctx.final_structure
         builder.parameters = self.ctx.ph_settings
-        options = ph_settings_dict['options']
-        builder.options.resources = options['resources']
-        max_wallclock_seconds = options['max_wallclock_seconds']
-        builder.options.max_wallclock_seconds = max_wallclock_seconds
+        builder.options = self.inputs.options.get_dict()  # dict
         if 'force_constants' in self.ctx:
-            builder.force_constants = self.force_constants
+            builder.force_constants = self.ctx.force_constants
         elif 'force_sets' in self.ctx:
             builder.force_sets = self.ctx.force_sets
         if 'nac_data' in self.ctx:
@@ -265,7 +300,7 @@ class PhononPhonopy(WorkChain):
         self.ctx.phonopy_builder = builder
 
     def run_phonopy_remote(self):
-        if 'code' in self.ctx.ph_settings.get_dict():
+        if 'code' in self.inputs:
             self.report('remote phonopy calculation')
             future = self.submit(self.ctx.phonopy_builder)
             self.report('phonopy calculation: {}'.format(future.pk))
@@ -281,10 +316,10 @@ class PhononPhonopy(WorkChain):
         from phonopy import Phonopy
 
         phonon = Phonopy(
-            phonopy_bulk_from_structure(self.ctx.final_structure),
+            phonopy_atoms_from_structure(self.ctx.final_structure),
             supercell_matrix=ph_settings_dict['supercell_matrix'],
             primitive_matrix=ph_settings_dict['primitive_matrix'],
-            symprec=ph_settings_dict['symmetry_precision'])
+            symprec=ph_settings_dict['symmetry_tolerance'])
 
         if 'force_constants' in self.ctx:
             force_constants = self.ctx.force_constants

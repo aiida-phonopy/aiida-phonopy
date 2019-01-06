@@ -41,7 +41,7 @@ def parse_partial_DOS(filename, structure, parameters):
         bulk,
         supercell_matrix=params_dict['supercell_matrix'],
         primitive_matrix=params_dict['primitive_matrix'],
-        symprec=params_dict['symmetry_precision'])
+        symprec=params_dict['symmetry_tolerance'])
 
     dos = PhononDosData(
         frequencies=partial_dos.T[0],
@@ -243,14 +243,14 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
 def get_disp_fc3_txt(structure, parameters_data, force_sets):
     from phono3py.file_IO import write_cell_yaml
     from phonopy.structure.cells import get_supercell
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     import StringIO
 
     dataset = force_sets.get_data_sets3()
-    supercell = get_supercell(phonopy_bulk_from_structure(structure),
+    supercell = get_supercell(phonopy_atoms_from_structure(structure),
                               parameters_data.dict.supercell,
-                              symprec=parameters_data.dict.symmetry_precision)
+                              symprec=parameters_data.dict.symmetry_tolerance)
 
     w = StringIO.StringIO()
     w.write("natom: %d\n" % dataset['natom'])

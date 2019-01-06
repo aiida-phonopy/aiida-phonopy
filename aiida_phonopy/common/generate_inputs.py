@@ -1,6 +1,6 @@
 from aiida.orm import Code, DataFactory, WorkflowFactory
 from aiida.common.exceptions import InputValidationError
-from aiida.orm.data.base import Str
+from aiida.orm.data.base import Str, Bool
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -70,6 +70,8 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     builder.structure = structure
     options = ParameterData(dict=settings_dict['options'])
     builder.options = options
+
+    builder.clean_workdir = Bool(False)
 
     # Force setting
     force_setting_dict = {'add_forces': {'link_name': 'output_forces',
