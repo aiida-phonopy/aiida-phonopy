@@ -61,12 +61,11 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
         settings_dict = settings.get_dict()
     else:
         settings_dict = settings.get_dict()[calc_type]
-    code_name = settings_dict['code']
-    code = Code.get_from_string(code_name)
+    code_string = settings_dict['code_string']
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
 
-    builder.code = code
+    builder.code = Code.get_from_string(code_string)
     builder.structure = structure
     options = ParameterData(dict=settings_dict['options'])
     builder.options = options
@@ -139,16 +138,17 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     return builder
 
 
-def generate_inputs(structure, es_settings, calc_type=None, pressure=0.0):
+def generate_inputs(structure, calculator_settings, calc_type=None,
+                    pressure=0.0):
     if calc_type:
-        plugin = Code.get_from_string(
-            es_settings.get_dict()[calc_type]['code']).get_attr('input_plugin')
+        code = Code.get_from_string(
+            calculator_settings.get_dict()[calc_type]['code_string'])
     else:
-        plugin = Code.get_from_string(
-            es_settings.get_dict()['code']).get_attr('input_plugin')
+        code = Code.get_from_string(
+            calculator_settings.get_dict()['code_string'])
 
-    if plugin in ['vasp.vasp']:
-        return generate_vasp_params(structure, es_settings,
+    if code.get_attr('input_plugin') in ['vasp.vasp']:
+        return generate_vasp_params(structure, calculator_settings,
                                     calc_type=calc_type, pressure=pressure)
     else:
         raise RuntimeError("Code could not be found.")
