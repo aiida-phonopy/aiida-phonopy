@@ -1,4 +1,4 @@
-from aiida.orm import Code, DataFactory, WorkflowFactory
+from aiida.orm import Code, DataFactory, WorkflowFactory, CalculationFactory
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.data.base import Str, Bool
 
@@ -47,7 +47,30 @@ vasp_configs = {'optimize':
                  'LREAL': '.FALSE.'}}
 
 
-def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
+def vasp_immigrant(settings):
+    builders = []
+    for i, conf in enumerate(settings):
+        code = Code.get_from_string(conf['code_string'])
+        resources = conf['resources']
+        potcar_spec = conf['potcar_spec']
+        settings_dict = conf['settings']
+        calculation_folder = conf['calculation_folder']
+
+        calc_cls = CalculationFactory('vasp.vasp')
+        label = conf['label']
+        process, inputs = calc_cls.immigrant(code,
+                                             calculation_folder,
+                                             potcar_spec=potcar_spec,
+                                             resources=resources,
+                                             settings=settings_dict,
+                                             label=label)
+        builders.append(inputs)
+
+    return builders
+
+
+def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
+                         label=None):
     """
     Generate the input paramemeters needed to run a calculation for VASP
 
@@ -64,7 +87,8 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
     code_string = settings_dict['code_string']
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
-
+    if label:
+        builder.label = label
     builder.code = Code.get_from_string(code_string)
     builder.structure = structure
     options = ParameterData(dict=settings_dict['options'])
@@ -139,7 +163,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0):
 
 
 def generate_inputs(structure, calculator_settings, calc_type=None,
-                    pressure=0.0):
+                    pressure=0.0, label=None):
     if calc_type:
         code = Code.get_from_string(
             calculator_settings.get_dict()[calc_type]['code_string'])
@@ -149,6 +173,7 @@ def generate_inputs(structure, calculator_settings, calc_type=None,
 
     if code.get_attr('input_plugin') in ['vasp.vasp']:
         return generate_vasp_params(structure, calculator_settings,
-                                    calc_type=calc_type, pressure=pressure)
+                                    calc_type=calc_type, pressure=pressure,
+                                    label=label)
     else:
         raise RuntimeError("Code could not be found.")
