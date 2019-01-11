@@ -1,6 +1,7 @@
-from aiida.orm import DataFactory
-
 import numpy as np
+from aiida.orm import DataFactory
+from aiida_phonopy.common.utils import phonopy_atoms_from_structure
+
 
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
@@ -121,78 +122,41 @@ def parse_kappa(filename):
 
 
 # Generate text strings for files from AIIDA OBJECTS
-def get_BORN_txt(nac_data, symprec=1.e-5, parameters=None, structure=None):
-    from phonopy.structure.atoms import PhonopyAtoms
-    try:
-        from phonopy.structure.symmetry import elaborate_borns_and_epsilon
-    except ImportError:
-        # Old version of phonopy
-        from phonopy.interface.vasp import _get_indep_borns as elaborate_borns_and_epsilon
+def get_BORN_txt(nac_data, parameter_data, structure):
+    from phonopy.file_IO import get_BORN_lines
 
+    parameters = parameter_data.get_dict()
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
-    structure_born = nac_data.get_structure()
+    unitcell = phonopy_atoms_from_structure(structure)
+    params = {'supercell_matrix': parameters['supercell_matrix']}
+    if 'symmetry_tolerance' in parameters:
+        params['symprec'] = parameters['symmetry_tolerance']
+    if 'primitive_matrix' in parameters:
+        params['primitive_matrix'] = parameters['primitive_matrix']
+    lines = get_BORN_lines(unitcell, born_charges, epsilon, **params)
 
-    ucell = PhonopyAtoms(
-        symbols=[site.kind_name for site in structure_born.sites],
-        positions=[site.position for site in structure_born.sites],
-        cell=structure_born.cell)
-
-    reduced_borns, epsilon, atom_indices = elaborate_borns_and_epsilon(
-        ucell,
-        born_charges,
-        epsilon,
-        primitive_matrix=None,
-        supercell_matrix=None,
-        is_symmetry=True,
-        symmetrize_tensors=False,
-        symprec=1.e-5)
-
-    born_txt = "# epsilon and Z* of atoms "
-    born_txt += ' '.join(["%d" % n for n in atom_indices + 1]) + '\n'
-    for num in epsilon.flatten():
-        born_txt += ('{0:4.8f} '.format(num))
-    born_txt += ('\n')
-
-    for atom in reduced_borns:
-        for num in atom.flatten():
-            born_txt += ('{0:4.8f} '.format(num))
-        born_txt += ('\n')
-
-    return born_txt
+    return "\n".join(lines)
 
 
-def get_FORCE_SETS_txt(data_sets_object):
-    data_sets = data_sets_object.get_force_sets()
+def get_FORCE_SETS_txt(force_sets, displacements_dataset):
+    from phonopy.file_IO import get_FORCE_SETS_lines
 
-    displacements = data_sets['first_atoms']
-    forces = [x['forces'] for x in data_sets['first_atoms']]
+    forces = force_sets.get_array('force_sets')
+    dataset = displacements_dataset.get_dict()
+    lines = get_FORCE_SETS_lines(dataset, forces=forces)
 
-    # Write FORCE_SETS
-    force_sets_txt = "%-5d\n" % data_sets['natom']
-    force_sets_txt += "%-5d\n" % len(displacements)
-    for count, disp in enumerate(displacements):
-        force_sets_txt += "\n%-5d\n" % (disp['number'] + 1)
-        force_sets_txt += "%20.16f %20.16f %20.16f\n" % (
-            tuple(disp['displacement']))
-
-        for f in forces[count]:
-            force_sets_txt += "%15.10f %15.10f %15.10f\n" % (tuple(f))
-    return force_sets_txt
+    return "\n".join(lines)
 
 
 def get_FORCE_CONSTANTS_txt(force_constants_object):
-    force_constants = force_constants_object.get_data()
+    from phonopy.file_IO import get_FORCE_CONSTANTS_lines
 
-    # Write FORCE CONSTANTS
-    force_constants_txt = '{0}\n'.format(len(force_constants))
-    for i, fc in enumerate(force_constants):
-        for j, atomic_fc in enumerate(fc):
-            force_constants_txt += '{0} {1}\n'.format(i, j)
-            for line in atomic_fc:
-                force_constants_txt += '{0:20.16f} {1:20.16f} {2:20.16f}\n'.format(*line)
+    force_constants = force_constants_object.get_array('force_constants')
+    p2s_map = force_constants_object.get_array('p2s_map')
+    lines = get_FORCE_CONSTANTS_lines(force_constants, p2s_map=p2s_map)
 
-    return force_constants_txt
+    return "\n".join(lines)
 
 
 def get_poscar_txt(structure, use_direct=True):
@@ -254,7 +218,7 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
 
     import StringIO
 
-    dataset = force_sets.get_data_sets3()
+    dataset = force_sets.get_datasets3()
     supercell = get_supercell(phonopy_atoms_from_structure(structure),
                               parameters_data.dict.supercell,
                               symprec=parameters_data.dict.symmetry_tolerance)
@@ -330,7 +294,7 @@ def get_forces_txt(force_sets):
 
     from phono3py.file_IO import write_FORCES_FC3
 
-    write_FORCES_FC3(force_sets.get_data_sets3(),
+    write_FORCES_FC3(force_sets.get_datasets3(),
                      force_sets.get_forces3(),
                      fp=w)
     w.seek(0)

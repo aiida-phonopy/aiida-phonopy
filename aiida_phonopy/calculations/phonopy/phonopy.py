@@ -54,6 +54,8 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
         self._additional_cmdline_params = ['--thm']
 
         force_sets = inputdict.pop(self.get_linkname('force_sets'), None)
+        displacement_dataset = inputdict.pop(
+            self.get_linkname('displacement_dataset'), None)
         force_constants = inputdict.pop(
             self.get_linkname('force_constants'), None)
 
@@ -64,9 +66,9 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
             with open(force_constants_filename, 'w') as infile:
                 infile.write(force_constants_txt)
             self._additional_cmdline_params += ['--readfc']
-
-        elif force_sets is not None:
-            force_sets_txt = get_FORCE_SETS_txt(force_sets)
+        elif force_sets is not None and displacement_dataset is not None:
+            force_sets_txt = get_FORCE_SETS_txt(force_sets,
+                                                displacement_dataset)
             force_sets_filename = tempfolder.get_abs_path(
                 self._INPUT_FORCE_SETS)
             with open(force_sets_filename, 'w') as infile:

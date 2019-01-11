@@ -49,18 +49,25 @@ class BasePhonopyCalculation(object):
                               "parameters for the namelists"),
             },
             "force_sets": {
-                'valid_types': ForceSetsData,
+                'valid_types': ArrayData,
                 'additional_parameter': None,
                 'linkname': 'force_sets',
                 'docstring': ("Use a node that specifies the force_sets "
-                              "for the namelists"),
+                              "array for the namelists"),
+            },
+            "displacement_dataset": {
+                'valid_types': ParameterData,
+                'additional_parameter': None,
+                'linkname': 'displacement_dataset',
+                'docstring': ("Use a node that specifies the dispalcement "
+                              "dataset parameters for the namelists"),
             },
             "force_constants": {
-                'valid_types': ForceConstantsData,
+                'valid_types': ArrayData,
                 'additional_parameter': None,
                 'linkname': 'force_constants',
-                'docstring': ("Use a node that specifies the data_sets "
-                              "for the namelists"),
+                'docstring': ("Use a node that specifies the force constants "
+                              "arraies for the namelists"),
             },
             "structure": {
                 'valid_types': StructureData,
@@ -68,12 +75,12 @@ class BasePhonopyCalculation(object):
                 'linkname': 'structure',
                 'docstring': "Use a node for the structure",
             },
-            "nac_data": {
-                'valid_types': NacData,
+            "nac_params": {
+                'valid_types': ArrayData,
                 'additional_parameter': None,
-                'linkname': 'nac_data',
+                'linkname': 'nac_params',
                 'docstring': ("Use a node for the Non-analitical "
-                              "corrections data"),
+                              "corrections parameters arraies"),
             },
             'bands': {
                 'valid_types': BandStructureData,
@@ -114,7 +121,7 @@ class BasePhonopyCalculation(object):
             msg = "no code is specified for this calculation"
             raise InputValidationError(msg)
 
-        nac_data = inputdict.pop(self.get_linkname('nac_data'), None)
+        nac_params = inputdict.pop(self.get_linkname('nac_params'), None)
         bands = inputdict.pop(self.get_linkname('bands'), None)
 
         ##############################
@@ -136,10 +143,8 @@ class BasePhonopyCalculation(object):
         with open(cell_filename, 'w') as infile:
             infile.write(cell_txt)
 
-        if nac_data is not None:
-            born_txt = get_BORN_txt(nac_data,
-                                    structure=structure,
-                                    parameters=parameters_data)
+        if nac_params is not None:
+            born_txt = get_BORN_txt(nac_params, parameters_data, structure)
             nac_filename = tempfolder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)

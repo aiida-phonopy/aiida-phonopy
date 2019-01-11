@@ -1,5 +1,6 @@
-from aiida.work.workchain import WorkChain, ToContext, append_
+from aiida.work.workchain import WorkChain, ToContext
 
+from aiida.work.workfunctions import workfunction
 from aiida.orm import Code, DataFactory, WorkflowFactory, load_node
 from aiida.orm.data.base import Float, Bool, Int, Str
 from aiida.work.workchain import if_
@@ -8,17 +9,17 @@ from aiida_phonopy.common.generate_inputs import (generate_inputs,
                                                   vasp_immigrant)
 from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
                                         phonopy_atoms_to_structure,
-                                        get_nac_from_data,
-                                        get_path_using_seekpath)
+                                        get_force_sets,
+                                        get_force_sets_data,
+                                        get_force_constants,
+                                        get_nac_params,
+                                        get_path_using_seekpath,
+                                        get_phonon)
 
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
 # from aiida.workflows.wc_optimize import OptimizeStructure
 
-ForceConstantsData = DataFactory('phonopy.force_constants')
-ForceSetsData = DataFactory('phonopy.force_sets')
-BandStructureData = DataFactory('phonopy.band_structure')
-PhononDosData = DataFactory('phonopy.phonon_dos')
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
@@ -109,6 +110,7 @@ class PhononPhonopy(WorkChain):
                          cls.run_force_and_nac_calculations,
                      ),
                      cls.create_force_sets,
+                     cls.create_force_constants,
                      if_(cls.is_nac)(cls.create_nac_params),
                      cls.set_default_outputs,
                      cls.prepare_phonopy_inputs,
@@ -222,31 +224,31 @@ class PhononPhonopy(WorkChain):
 
         phonon_settings_dict = self.ctx.phonon_settings.get_dict()
         if 'primitive_matrix' in phonon_settings_dict:
-            self.ctx.phonon = Phonopy(
+            phonon = Phonopy(
                 phonopy_atoms_from_structure(self.ctx.final_structure),
                 phonon_settings_dict['supercell_matrix'],
                 primitive_matrix=phonon_settings_dict['primitive_matrix'],
                 symprec=phonon_settings_dict['symmetry_tolerance'])
         else:
-            self.ctx.phonon = Phonopy(
+            phonon = Phonopy(
                 phonopy_atoms_from_structure(self.ctx.final_structure),
                 phonon_settings_dict['supercell_matrix'],
                 symprec=phonon_settings_dict['symmetry_tolerance'])
 
-        phonon = self.ctx.phonon
         if 'displacement_dataset' in self.inputs:
             phonon.dataset = self.inputs.displacement_dataset.get_dict()
         else:
             phonon.generate_displacements(
                 distance=phonon_settings_dict['distance'])
 
+        self.ctx.disp_dataset = {
+            'dataset': ParameterData(dict=phonon.dataset),
+            'supercells': []}
+
         self.ctx.primitive_structure = phonopy_atoms_to_structure(
             phonon.primitive)
 
         cells_with_disp = phonon.supercells_with_displacements
-        self.ctx.disp_dataset = {
-            'data_sets': phonon.displacement_dataset,
-            'supercells': []}
         for i, phonopy_supercell in enumerate(cells_with_disp):
             supercell = phonopy_atoms_to_structure(phonopy_supercell)
             self.ctx.disp_dataset['supercells'].append(supercell)
@@ -310,38 +312,58 @@ class PhononPhonopy(WorkChain):
             self.ctx[label] = n
 
     def create_force_sets(self):
-        """Build data_sets from forces of supercells with displacments"""
+        """Build datasets from forces of supercells with displacments"""
 
         self.report('create force sets')
 
-        forces = []
+        # VASP specific
+        forces_dict = {}
         for i in range(len(self.ctx.disp_dataset['supercells'])):
             label = "supercell_%03d" % (i + 1)
             calc = self.ctx[label]
             out_dict = calc.get_outputs_dict()
             if ('output_forces' in out_dict and
                 'final' in out_dict['output_forces'].get_arraynames()):
-                forces.append(out_dict['output_forces'].get_array('final'))
+                forces_dict[label] = out_dict['output_forces']
 
-        if len(forces) != len(self.ctx.disp_dataset['supercells']):
+        if len(forces_dict) != len(self.ctx.disp_dataset['supercells']):
             raise RuntimeError("Forces could not be retrieved.")
 
-        self.ctx.force_sets = ForceSetsData(
-            data_sets=self.ctx.disp_dataset['data_sets'])
-        self.ctx.force_sets.set_forces(forces)
+        # Call workfunction to make links
+        dataset = self.ctx.disp_dataset['dataset']
+        self.ctx.force_sets_data = get_force_sets_data(dataset, **forces_dict)
+        self.ctx.force_sets = get_force_sets(
+            Int(len(self.ctx.disp_dataset['supercells'])), **forces_dict)
 
     def create_nac_params(self):
         self.report('create nac data')
-        self.ctx.nac_data = get_nac_from_data(
+
+        # VASP specific
+        # Call workfunction to make links
+        self.ctx.nac_params = get_nac_params(
             born_charges=self.ctx.born_and_epsilon.out.output_born_charges,
-            epsilon=self.ctx.born_and_epsilon.out.output_dielectrics,
-            structure=self.ctx.born_and_epsilon.inp.structure)
+            epsilon=self.ctx.born_and_epsilon.out.output_dielectrics)
+
+    def create_force_constants(self):
+        self.report('create force constants')
+
+        if 'displacement_dataset' in self.inputs:
+            params = {'displacement_dataset': self.inputs.displacement_dataset}
+        else:
+            params = {}
+        self.ctx.force_constants = get_force_constants(
+            self.ctx.final_structure,
+            self.ctx.phonon_settings,
+            self.ctx.force_sets,
+            **params)
 
     def set_default_outputs(self):
+        self.out('force_constants', self.ctx.force_constants)
         self.out('final_structure', self.ctx.final_structure)
-        self.out('force_sets', self.ctx.force_sets)
-        if 'nac_data' in self.ctx:
-            self.out('nac_data', self.ctx.nac_data)
+        self.out('force_sets', self.ctx.force_sets_data)
+        self.out('displacement_dataset', self.ctx.disp_dataset['dataset'])
+        if 'nac_params' in self.ctx:
+            self.out('nac_params', self.ctx.nac_params)
 
     def prepare_phonopy_inputs(self):
         self.ctx.band_paths = get_path_using_seekpath(
@@ -358,19 +380,15 @@ class PhononPhonopy(WorkChain):
         builder.structure = self.ctx.final_structure
         builder.parameters = self.ctx.phonon_settings
         builder.options = self.inputs.options.get_dict()  # dict
-        if 'force_constants' in self.ctx:
-            builder.force_constants = self.ctx.force_constants
-        elif 'force_sets' in self.ctx:
-            builder.force_sets = self.ctx.force_sets
-        if 'nac_data' in self.ctx:
-            builder.nac_data = self.ctx.nac_data
+        # if 'force_constants' in self.ctx:
+        #     builder.force_constants = self.ctx.force_constants
+        # else:
+        builder.force_sets = self.ctx.force_sets
+        builder.displacement_dataset = self.ctx.disp_dataset['dataset']
+        if 'nac_params' in self.ctx:
+            builder.nac_params = self.ctx.nac_params
         if 'band_paths' in self.ctx:
             builder.bands = self.ctx.band_paths
-
-        if 'force_sets' not in self.ctx and 'force_constants' not in self.ctx:
-            raise RuntimeError(
-                "Force sets and force constants were not found.")
-
         self.ctx.phonopy_builder = builder
 
     def run_phonopy_remote(self):
@@ -379,84 +397,28 @@ class PhononPhonopy(WorkChain):
         self.report('phonopy calculation: {}'.format(future.pk))
         return ToContext(phonon_properties=future)
 
-    def run_phonopy_in_workchain(self):
-        self.report('phonopy calculation in workchain')
-
-        phonon_settings_dict = self.ctx.phonon_settings.get_dict()
-        phonon = self.ctx.phonon
-
-        if 'force_constants' in self.ctx:
-            force_constants = self.ctx.force_constants
-            phonon.set_force_constants(force_constants.get_data())
-        else:
-            phonon.set_displacement_dataset(
-                self.ctx.force_sets.get_force_sets())
-            phonon.produce_force_constants()
-            force_constants = ForceConstantsData(
-                data=phonon.get_force_constants())
-
-        if 'nac_data' in self.ctx:
-            primitive = phonon.get_primitive()
-            nac_parameters = self.ctx.nac_data.get_born_parameters_phonopy(
-                primitive_cell=primitive.get_cell())
-            phonon.set_nac_params(nac_parameters)
-
-        # Normalization factor primitive to unit cell
-        normalization_factor = (phonon.unitcell.get_number_of_atoms()
-                                / phonon.primitive.get_number_of_atoms())
-
-        # DOS
-        phonon.set_mesh(phonon_settings_dict['mesh'],
-                        is_eigenvectors=True,
-                        is_mesh_symmetry=False)
-        phonon.set_total_DOS(tetrahedron_method=True)
-        phonon.set_partial_DOS(tetrahedron_method=True)
-
-        total_dos = phonon.get_total_DOS()
-        partial_dos = phonon.get_partial_DOS()
-        dos = PhononDosData(
-            frequencies=total_dos[0],
-            dos=total_dos[1]*normalization_factor,
-            partial_dos=np.array(partial_dos[1]) * normalization_factor,
-            atom_labels=np.array(phonon.primitive.get_chemical_symbols()))
-
-        # THERMAL PROPERTIES (per primtive cell)
-        phonon.set_thermal_properties()
-        t, free_energy, entropy, cv = phonon.get_thermal_properties()
-
-        # Stores thermal properties (per unit cell) data in DB as a workflow
-        # result
-        thermal_properties = ArrayData()
-        thermal_properties.set_array('temperature', t)
-        thermal_properties.set_array('free_energy',
-                                     free_energy * normalization_factor)
-        thermal_properties.set_array('entropy', entropy * normalization_factor)
-        thermal_properties.set_array('heat_capacity',
-                                     cv * normalization_factor)
-
-        # BAND STRUCTURE
-        bands = self.ctx.band_paths
-        phonon.set_band_structure(bands.get_bands())
-        band_structure = BandStructureData(bands=bands.get_bands(),
-                                           labels=bands.get_labels(),
-                                           unitcell=bands.get_unitcell())
-
-        band_structure.set_band_structure_phonopy(phonon.get_band_structure())
-
-        self.out('force_constants', force_constants)
-        self.out('thermal_properties', thermal_properties)
-        self.out('dos', dos)
-        self.out('band_structure', band_structure)
-
-        self.report('finish phonon')
-
     def collect_data(self):
-        self.out('force_constants',
-                 self.ctx.phonon_properties.out.force_constants)
         self.out('thermal_properties',
                  self.ctx.phonon_properties.out.thermal_properties)
         self.out('dos', self.ctx.phonon_properties.out.dos)
         self.out('band_structure',
                  self.ctx.phonon_properties.out.band_structure)
+
+        self.report('finish phonon')
+
+    def run_phonopy_in_workchain(self):
+        self.report('phonopy calculation in workchain')
+
+        params = {}
+        if 'nac_params' in self.ctx:
+            params['nac_params'] = self.ctx.nac_params
+        result = get_phonon(self.ctx.final_structure,
+                            self.ctx.phonon_settings,
+                            self.ctx.force_constants,
+                            self.ctx.band_paths,
+                            **params)
+        self.out('thermal_properties', result['thermal_properties'])
+        self.out('dos', result['dos'])
+        self.out('band_structure', result['band_structure'])
 
         self.report('finish phonon')

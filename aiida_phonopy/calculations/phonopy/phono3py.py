@@ -73,7 +73,7 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
 
     def _create_additional_files(self, tempfolder, inputdict):
 
-        data_sets = inputdict.pop(self.get_linkname('data_sets'), None)
+        datasets = inputdict.pop(self.get_linkname('datasets'), None)
         fc3 = inputdict.pop(self.get_linkname('force_constants_3'), None)
         fc2 = inputdict.pop(self.get_linkname('force_constants'), None)
 
@@ -92,14 +92,14 @@ class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
 
             self._additional_cmdline_params += ['--fc2', '--fc3']
 
-        elif data_sets is not None:
+        elif datasets is not None:
             disp_fc3_filename = tempfolder.get_abs_path(self._INPUT_DISP_FC3)
             disp_f3c_txt = get_disp_fc3_txt(
-                structure, parameters_data, data_sets)
+                structure, parameters_data, datasets)
             with open(disp_fc3_filename, 'w') as infile:
                 infile.write(disp_f3c_txt)
 
-            forces_txt = get_forces_txt(data_sets)
+            forces_txt = get_forces_txt(datasets)
             forces_filename = tempfolder.get_abs_path(self._INPUT_FORCES_FC3)
             with open(forces_filename, 'w') as infile:
                 infile.write(forces_txt)

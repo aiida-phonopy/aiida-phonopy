@@ -31,7 +31,7 @@ class ForceSetsData(ArrayData):
             ndisplacements += numpy.sum(self.get_attr("ndisplacements_s"))
         return ndisplacements
 
-    def get_data_sets(self):
+    def get_datasets(self):
         """
         Return the force constants stored in the node as a numpy array
         """
@@ -69,14 +69,14 @@ class ForceSetsData(ArrayData):
 
         return {'natom': natom, 'first_atoms': first_atoms}
 
-    def set_data_sets(self, data_sets):
+    def set_datasets(self, datasets):
 
-        self._set_attr('natom', data_sets['natom'])
-        ndisplacements = len(data_sets['first_atoms'])
+        self._set_attr('natom', datasets['natom'])
+        ndisplacements = len(datasets['first_atoms'])
 
         number = []
         displacement = []
-        for first_atoms in data_sets['first_atoms']:
+        for first_atoms in datasets['first_atoms']:
             number.append(first_atoms['number'])
             displacement.append(first_atoms['displacement'])
 
@@ -99,21 +99,21 @@ class ForceSetsData(ArrayData):
 
         from phonopy.file_IO import parse_FORCE_SETS
 
-        data_sets = parse_FORCE_SETS(filename=filename)
+        datasets = parse_FORCE_SETS(filename=filename)
 
-        self.set_data_sets(data_sets)
-        self.set_forces([displacement['forces'] for displacement in data_sets['first_atoms']])
+        self.set_datasets(datasets)
+        self.set_forces([displacement['forces'] for displacement in datasets['first_atoms']])
 
     # phono3py
     def get_forces3(self):
         forces_list = self.get_array('forces')
         return [forces for forces in forces_list]
 
-    def set_data_sets3(self, data_sets):
+    def set_datasets3(self, datasets):
 
-        # print data_sets['first_atoms'][0].keys()
+        # print datasets['first_atoms'][0].keys()
 
-        self._set_attr('natom', data_sets['natom'])
+        self._set_attr('natom', datasets['natom'])
 
         ndisplacements_s = []
 
@@ -125,7 +125,7 @@ class ForceSetsData(ArrayData):
         number_f = []
         displacement_f = []
 
-        for first_atoms in data_sets['first_atoms']:
+        for first_atoms in datasets['first_atoms']:
 
             displacement_f.append(first_atoms['displacement'])
             number_f.append(first_atoms['number'])
@@ -159,10 +159,10 @@ class ForceSetsData(ArrayData):
         self.set_array('number', numpy.array(number_f))
         self.set_array('displacement', numpy.array(displacement_f))
 
-        self._set_attr('ndisplacements', len(data_sets['first_atoms']))
+        self._set_attr('ndisplacements', len(datasets['first_atoms']))
         self._set_attr('ndisplacements_s', ndisplacements_s)
 
-    def get_data_sets3(self):
+    def get_datasets3(self):
 
         if 'ndisplacements_s' not in self.get_attrs():
             return None
