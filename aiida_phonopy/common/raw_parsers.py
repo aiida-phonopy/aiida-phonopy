@@ -14,18 +14,13 @@ BandStructureData = DataFactory('phonopy.band_structure')
 # Parse files to generate AIIDA OBJECTS
 
 def parse_FORCE_CONSTANTS(filename):
-    fcfile = open(filename)
-    num = int((fcfile.readline().strip().split())[0])
-    force_constants = np.zeros((num, num, 3, 3), dtype=float)
-    for i in range(num):
-        for j in range(num):
-            fcfile.readline()
-            tensor = []
-            for k in range(3):
-                tensor.append([float(x)
-                               for x in fcfile.readline().strip().split()])
-            force_constants[i, j] = np.array(tensor)
-    return ForceConstantsData(data=force_constants)
+    from phonopy.file_IO import parse_FORCE_CONSTANTS as parse_FC
+
+    force_constants = parse_FC(filename=filename)
+    fc_array = ArrayData()
+    fc_array.set_array('force_constants', force_constants)
+    fc_array.label = 'force_constants'
+    return fc_array
 
 
 def parse_partial_DOS(filename, structure, parameters):

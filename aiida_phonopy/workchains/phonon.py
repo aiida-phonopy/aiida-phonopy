@@ -5,12 +5,12 @@ from aiida.orm import Code, DataFactory, WorkflowFactory, load_node
 from aiida.orm.data.base import Float, Bool, Int, Str
 from aiida.work.workchain import if_
 import numpy as np
-from aiida_phonopy.common.generate_inputs import (generate_inputs,
-                                                  vasp_immigrant)
+from aiida_phonopy.common.generate_inputs import generate_inputs
 from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
                                         phonopy_atoms_to_structure,
+                                        get_forces_from_uuid,
+                                        get_born_epsilon_from_uuid,
                                         get_force_sets,
-                                        get_force_sets_data,
                                         get_force_constants,
                                         get_nac_params,
                                         get_path_using_seekpath,
@@ -76,8 +76,6 @@ class PhononPhonopy(WorkChain):
                    valid_type=ParameterData, required=False)
         spec.input('calculator_settings',
                    valid_type=ParameterData, required=False)
-        # spec.input('immigrant_settings',
-        #            valid_type=ParameterData, required=False)
         spec.input('displacement_dataset',
                    valid_type=ParameterData, required=False)
         spec.input('code_string', valid_type=Str, required=False)
@@ -104,8 +102,6 @@ class PhononPhonopy(WorkChain):
                      cls.create_displacements,
                      if_(cls.import_nodes)(
                          cls.read_force_and_nac_calculations,
-                     ).elif_(cls.is_immigrant)(
-                         cls.immigrant_force_and_nac_calculations,
                      ).else_(
                          cls.run_force_and_nac_calculations,
                      ),
@@ -137,13 +133,7 @@ class PhononPhonopy(WorkChain):
 
     def import_nodes(self):
         return ('calculation_uuids' in self.inputs and
-                'displacement_dataset' in self.inputs and
-                'immigrant_settings' not in self.inputs)
-
-    def is_immigrant(self):
-        return ('calculation_uuids' not in self.inputs and
-                'displacement_dataset' in self.inputs and
-                'immigrant_settings' in self.inputs)
+                'displacement_dataset' in self.inputs)
 
     def check_settings(self):
         self.report('check phonon_settings')
@@ -185,6 +175,7 @@ class PhononPhonopy(WorkChain):
                     "code_string and options have to be specified.")
 
         self.ctx.phonon_settings = ParameterData(dict=phonon_settings_dict)
+        self.ctx.phonon_settings.label = 'phonon_settings'
 
         self.report("Phonon settings: %s" % phonon_settings_dict)
 
@@ -244,6 +235,7 @@ class PhononPhonopy(WorkChain):
         self.ctx.disp_dataset = {
             'dataset': ParameterData(dict=phonon.dataset),
             'supercells': []}
+        self.ctx.disp_dataset['dataset'].label = 'displacement_dataset'
 
         self.ctx.primitive_structure = phonopy_atoms_to_structure(
             phonon.primitive)
@@ -281,35 +273,25 @@ class PhononPhonopy(WorkChain):
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon': future})
 
-    def immigrant_force_and_nac_calculations(self):
-        """**** Note that this does not work. ****"""
-
-        self.report('immigrant calculation nodes')
-        settings = self.inputs.immigrant_settings.get_dict()['immigrant']
-        builders = vasp_immigrant(settings)
-
-        if self.inputs.is_nac:
-            future = self.submit(builders.pop())
-            self.to_born(**{'context_and_epsilon': future})
-
-        for i, builder in enumerate(builders):
-            label = "supercell_%03d" % (i + 1)
-            future = self.submit(builder)
-            self.to_context(**{label: future})
-
     def read_force_and_nac_calculations(self):
         self.report('read calculation nodes')
 
         uuids = self.inputs.calculation_uuids.get_dict()['uuids']
-        calc_nodes = [load_node(str(uuid)) for uuid in uuids]
-
         if self.inputs.is_nac:
-            self.ctx.born_and_epsilon = calc_nodes.pop()
+            uuid_nac = uuids.pop()
+            label = 'born_and_epsilon'
+            uuid_str = Str(uuid_nac)
+            uuid_str.label = "uuid"
+            self.ctx[label], _ = get_born_epsilon_from_uuid.run_get_node(
+                uuid_str, label=label)
 
-        for i, n in enumerate(calc_nodes):
+        for i, uuid in enumerate(uuids):
             label = "supercell_%03d" % (i + 1)
-            self.report(label)
-            self.ctx[label] = n
+            uuid_str = Str(uuid)
+            uuid_str.label = "uuid"
+            self.ctx[label], _ = get_forces_from_uuid.run_get_node(
+                uuid_str, label=label)
+
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
@@ -321,46 +303,50 @@ class PhononPhonopy(WorkChain):
         for i in range(len(self.ctx.disp_dataset['supercells'])):
             label = "supercell_%03d" % (i + 1)
             calc = self.ctx[label]
-            out_dict = calc.get_outputs_dict()
+            if type(calc) is dict:
+                out_dict = calc
+            else:
+                out_dict = calc.get_outputs_dict()
             if ('output_forces' in out_dict and
                 'final' in out_dict['output_forces'].get_arraynames()):
+                label = "forces_%03d" % (i + 1)
                 forces_dict[label] = out_dict['output_forces']
 
         if len(forces_dict) != len(self.ctx.disp_dataset['supercells']):
             raise RuntimeError("Forces could not be retrieved.")
 
         # Call workfunction to make links
-        dataset = self.ctx.disp_dataset['dataset']
-        self.ctx.force_sets_data = get_force_sets_data(dataset, **forces_dict)
-        self.ctx.force_sets = get_force_sets(
-            Int(len(self.ctx.disp_dataset['supercells'])), **forces_dict)
+        self.ctx.force_sets, _ = get_force_sets.run_get_node(
+            label='create_force_sets', **forces_dict)
 
     def create_nac_params(self):
         self.report('create nac data')
 
         # VASP specific
         # Call workfunction to make links
-        self.ctx.nac_params = get_nac_params(
-            born_charges=self.ctx.born_and_epsilon.out.output_born_charges,
-            epsilon=self.ctx.born_and_epsilon.out.output_dielectrics)
+        if type(self.ctx.born_and_epsilon) is dict:
+            out_dict = self.ctx.born_and_epsilon
+        else:
+            out_dict = self.ctx.born_and_epsilon.get_outputs_dict()
+        self.ctx.nac_params, _ = get_nac_params.run_get_node(
+            born_charges=out_dict['output_born_charges'],
+            epsilon=out_dict['output_dielectrics'],
+            label='create_nac_params')
 
     def create_force_constants(self):
         self.report('create force constants')
 
-        if 'displacement_dataset' in self.inputs:
-            params = {'displacement_dataset': self.inputs.displacement_dataset}
-        else:
-            params = {}
-        self.ctx.force_constants = get_force_constants(
+        self.ctx.force_constants, _ = get_force_constants.run_get_node(
             self.ctx.final_structure,
             self.ctx.phonon_settings,
             self.ctx.force_sets,
-            **params)
+            self.ctx.disp_dataset['dataset'],
+            label='create_force_constants')
 
     def set_default_outputs(self):
         self.out('force_constants', self.ctx.force_constants)
         self.out('final_structure', self.ctx.final_structure)
-        self.out('force_sets', self.ctx.force_sets_data)
+        self.out('force_sets', self.ctx.force_sets)
         self.out('displacement_dataset', self.ctx.disp_dataset['dataset'])
         if 'nac_params' in self.ctx:
             self.out('nac_params', self.ctx.nac_params)
@@ -380,11 +366,11 @@ class PhononPhonopy(WorkChain):
         builder.structure = self.ctx.final_structure
         builder.parameters = self.ctx.phonon_settings
         builder.options = self.inputs.options.get_dict()  # dict
-        # if 'force_constants' in self.ctx:
-        #     builder.force_constants = self.ctx.force_constants
-        # else:
-        builder.force_sets = self.ctx.force_sets
-        builder.displacement_dataset = self.ctx.disp_dataset['dataset']
+        if 'force_constants' in self.ctx:
+            builder.force_constants = self.ctx.force_constants
+        else:
+            builder.force_sets = self.ctx.force_sets
+            builder.displacement_dataset = self.ctx.disp_dataset['dataset']
         if 'nac_params' in self.ctx:
             builder.nac_params = self.ctx.nac_params
         if 'band_paths' in self.ctx:
@@ -412,11 +398,12 @@ class PhononPhonopy(WorkChain):
         params = {}
         if 'nac_params' in self.ctx:
             params['nac_params'] = self.ctx.nac_params
-        result = get_phonon(self.ctx.final_structure,
-                            self.ctx.phonon_settings,
-                            self.ctx.force_constants,
-                            self.ctx.band_paths,
-                            **params)
+        result, _ = get_phonon.run_get_node(self.ctx.final_structure,
+                                            self.ctx.phonon_settings,
+                                            self.ctx.force_constants,
+                                            self.ctx.band_paths,
+                                            label='run_phonopy_in_workchain',
+                                            **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])
         self.out('band_structure', result['band_structure'])

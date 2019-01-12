@@ -6,13 +6,10 @@ from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,
                                               get_poscar_txt)
 
-ForceSetsData = DataFactory('phonopy.force_sets')
-ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 ArrayData = DataFactory('array')
 BandStructureData = DataFactory('phonopy.band_structure')
-NacData = DataFactory('phonopy.nac')
 
 
 class BasePhonopyCalculation(object):

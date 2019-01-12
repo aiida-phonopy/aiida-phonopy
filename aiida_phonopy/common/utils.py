@@ -1,6 +1,6 @@
 import numpy as np
 from aiida.work import workfunction
-from aiida.orm import DataFactory
+from aiida.orm import DataFactory, load_node
 
 
 def get_path_using_seekpath(structure, band_resolution=30):
@@ -37,10 +37,24 @@ def get_path_using_seekpath(structure, band_resolution=30):
 
 
 @workfunction
-def get_force_sets(num_supercells, **forces_dict):
+def get_forces_from_uuid(uuid):
+    n = load_node(str(uuid))
+    return {'output_forces': n.out.output_forces}
+
+
+@workfunction
+def get_born_epsilon_from_uuid(uuid):
+    n = load_node(str(uuid))
+    return {'output_born_charges': n.out.output_born_charges,
+            'output_dielectrics': n.out.output_dielectrics}
+
+
+@workfunction
+def get_force_sets(**forces_dict):
     forces = []
-    for i in range(num_supercells):
-        label = "supercell_%03d" % (i + 1)
+    # for i in range(forces_dict['num_supercells']):
+    for i in range(len(forces_dict)):
+        label = "forces_%03d" % (i + 1)
         forces.append(forces_dict[label].get_array('final'))
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
@@ -87,8 +101,10 @@ def get_nac_data(born_charges, epsilon, structure):
 
 
 @workfunction
-def get_force_constants(structure, phonon_settings, force_sets, **params):
+def get_force_constants(structure, phonon_settings, force_sets, dataset):
+    params = {}
     phonon = get_phonopy_instance(structure, phonon_settings, params)
+    phonon.dataset = dataset.get_dict()
     phonon.forces = force_sets.get_array('force_sets')
     phonon.produce_force_constants()
     force_constants = DataFactory('array')()
@@ -169,11 +185,6 @@ def get_phonopy_instance(structure, phonon_settings, params):
             phonopy_atoms_from_structure(structure),
             phonon_settings_dict['supercell_matrix'],
             symprec=phonon_settings_dict['symmetry_tolerance'])
-    if 'displacement_dataset' in params:
-        phonon.dataset = params['displacement_dataset'].get_dict()
-    else:
-        phonon.generate_displacements(
-            distance=phonon_settings_dict['distance'])
     if 'nac_params' in params:
         from phonopy.interface import get_default_physical_units
         units = get_default_physical_units('vasp')
