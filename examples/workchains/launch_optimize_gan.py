@@ -75,7 +75,6 @@ if code_to_use == 'VASP':
                      'parameters': incar_dict,
                      'kpoints_density': 0.5,  # k-point density,
                      'pseudos_family': 'pbe_test_family',
-                     'family_folder': '/Users/abel/VASP/test_paw/',
                      'machine': machine_dict
                      }
 

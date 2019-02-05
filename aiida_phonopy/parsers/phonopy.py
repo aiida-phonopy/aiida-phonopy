@@ -1,7 +1,7 @@
 from aiida.parsers.parser import Parser
-from aiida.parsers.exceptions import OutputParsingError
-from aiida_phonopy.common.raw_parsers import parse_thermal_properties, \
-    parse_FORCE_CONSTANTS, parse_partial_DOS, parse_band_structure
+from aiida_phonopy.common.raw_parsers import (
+    parse_thermal_properties, parse_FORCE_CONSTANTS, parse_partial_DOS,
+    parse_band_structure)
 
 
 class PhonopyParser(Parser):
@@ -46,22 +46,26 @@ class PhonopyParser(Parser):
         new_nodes_list = []
 
         if self._calc._INOUT_FORCE_CONSTANTS in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._INOUT_FORCE_CONSTANTS)
+            outfile = out_folder.get_abs_path(
+                self._calc._INOUT_FORCE_CONSTANTS)
             object_force_constants = parse_FORCE_CONSTANTS(outfile)
             new_nodes_list.append(('force_constants', object_force_constants))
 
         if self._calc._OUTPUT_DOS in list_of_files:
             outfile = out_folder.get_abs_path(self._calc._OUTPUT_DOS)
-            dos_object = parse_partial_DOS(outfile, self._calc.inp.structure, self._calc.inp.parameters)
+            dos_object = parse_partial_DOS(outfile, self._calc.inp.structure,
+                                           self._calc.inp.parameters)
             new_nodes_list.append(('dos', dos_object))
 
         if self._calc._OUTPUT_THERMAL_PROPERTIES in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_THERMAL_PROPERTIES)
+            outfile = out_folder.get_abs_path(
+                self._calc._OUTPUT_THERMAL_PROPERTIES)
             tp_object = parse_thermal_properties(outfile)
             new_nodes_list.append(('thermal_properties', tp_object))
 
         if self._calc._OUTPUT_BAND_STRUCTURE in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_BAND_STRUCTURE)
+            outfile = out_folder.get_abs_path(
+                self._calc._OUTPUT_BAND_STRUCTURE)
             bs_object = parse_band_structure(outfile, self._calc.inp.bands)
             new_nodes_list.append(('band_structure', bs_object))
 

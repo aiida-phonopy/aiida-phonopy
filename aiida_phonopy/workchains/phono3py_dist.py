@@ -98,13 +98,13 @@ def get_grid_points(structure, parameters):
 
     from phono3py.phonon3 import Phono3py
     from phono3py.cui.triplets_info import get_coarse_ir_grid_points
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=parameters.dict.supercell,
                         primitive_matrix=parameters.dict.primitive,
-                        symprec=parameters.dict.symmetry_precision,
+                        symprec=parameters.dict.symmetry_tolerance,
                         log_level=1)
 
     primitive = phono3py.get_primitive()
@@ -255,7 +255,7 @@ if __name__ == '__main__':
                                                     [0.5, 0.5, 0.0]],
                                       'distance': 0.01,
                                       'mesh': [20, 20, 20],
-                                      'symmetry_precision': 1e-5,
+                                      'symmetry_tolerance': 1e-5,
                                       'code': 'phono3py@stern_in',
                                       'machine': machine_dict})
 

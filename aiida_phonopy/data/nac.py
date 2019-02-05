@@ -137,7 +137,9 @@ class NacData(ArrayData):
 
             reduced_born = [born_charges[map_primitive[i]] for i in s2p]
 
+        # VASP specific
         factor = Hartree * Bohr
+
         non_anal = {'born': reduced_born,
                     'factor': factor,
                     'dielectric': epsilon}

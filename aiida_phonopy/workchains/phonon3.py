@@ -1,9 +1,3 @@
-# Works run by the daemon (using submit)
-
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
-
 from aiida.work.workchain import WorkChain, ToContext
 from aiida.work.workfunction import workfunction
 
@@ -48,13 +42,13 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings, 
     """
     from phono3py.phonon3 import Phono3py
 
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=ph_settings.dict.supercell,
                         primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_precision,
+                        symprec=ph_settings.dict.symmetry_tolerance,
                         log_level=1)
 
     if float(cutoff) == 0:
@@ -111,13 +105,13 @@ def create_forces_set(**kwargs):
 def get_force_constants3(data_sets, structure, ph_settings):
 
     from phono3py.phonon3 import Phono3py
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=ph_settings.dict.supercell,
                         primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_precision,
+                        symprec=ph_settings.dict.symmetry_tolerance,
                         log_level=1)
 
     phono3py.produce_fc3(data_sets.get_forces3(),

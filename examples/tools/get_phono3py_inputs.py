@@ -9,7 +9,7 @@ from aiida import load_dbenv
 load_dbenv()
 
 from aiida.orm import load_node, DataFactory
-from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 from aiida_phonopy.common.raw_parsers import get_poscar_txt, get_BORN_txt
 
 from phono3py.file_IO import write_disp_fc3_yaml, write_FORCES_FC3
@@ -34,7 +34,7 @@ force_sets = wc.out.force_sets
 structure = wc.out.final_structure
 ph_settings = wc.inp.ph_settings
 
-supercell = get_supercell(phonopy_bulk_from_structure(structure),
+supercell = get_supercell(phonopy_atoms_from_structure(structure),
                           ph_settings.dict.supercell,
                           symprec=ph_settings.dict.symmetry_precision)
 

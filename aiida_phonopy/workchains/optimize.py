@@ -1,25 +1,16 @@
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
-
 from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-from aiida.work.run import run, submit
-
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
-
-from aiida.orm import DataFactory, load_node
+from aiida.work import workfunction
+from aiida.orm.data.base import Float, Bool, Int
+from aiida.work.workchain import while_
+from aiida.orm import DataFactory
+from aiida_phonopy.common.generate_inputs import generate_inputs
+from aiida_phonopy.common.parse_interface import parse_optimize_calculation
+import numpy as np
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
 ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
-
-from aiida_phonopy.common.generate_inputs import generate_inputs
-from aiida_phonopy.common.parse_interface import parse_optimize_calculation
-
-import numpy as np
 
 
 @workfunction
@@ -37,10 +28,11 @@ def standardize_cell(structure):
                       bulk.get_atomic_numbers())
 
     #lattice, refined_positions, numbers = spglib.refine_cell(structure_data, symprec=1e-5)
-    lattice, standardized_positions, numbers = spglib.standardize_cell(structure_data,
-                                                                       symprec=1e-5,
-                                                                       to_primitive=False,
-                                                                       no_idealize=False)
+    lattice, standardized_positions, numbers = spglib.standardize_cell(
+        structure_data,
+        symprec=1e-5,
+        to_primitive=False,
+        no_idealize=False)
 
     symbols = [atom_data[i][1] for i in numbers]
 
@@ -52,9 +44,9 @@ def standardize_cell(structure):
 
     # create new aiida structure object
     standarized = StructureData(cell=standardized_bulk.get_cell())
-    for position, symbol in zip(standardized_bulk.get_positions(), standardized_bulk.get_chemical_symbols()):
-        standarized.append_atom(position=position,
-                                      symbols=symbol)
+    for position, symbol in zip(standardized_bulk.get_positions(),
+                                standardized_bulk.get_chemical_symbols()):
+        standarized.append_atom(position=position, symbols=symbol)
 
     return {'standardized_structure': standarized}
 
@@ -70,31 +62,38 @@ class OptimizeStructure(WorkChain):
         spec.input("structure", valid_type=StructureData)
         spec.input("es_settings", valid_type=ParameterData)
         # Optional
-        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("tolerance_forces", valid_type=Float, required=False, default=Float(1e-5))
-        spec.input("tolerance_stress", valid_type=Float, required=False, default=Float(1e-2))
-        spec.input("max_iterations", valid_type=Int, required=False, default=Int(10))
-        spec.input("standarize_cell", valid_type=Bool, required=False, default=Bool(True))
+        spec.input("pressure",
+                   valid_type=Float, required=False, default=Float(0.0))
+        spec.input("tolerance_forces",
+                   valid_type=Float, required=False, default=Float(1e-5))
+        spec.input("tolerance_stress",
+                   valid_type=Float, required=False, default=Float(1e-2))
+        spec.input("max_iterations",
+                   valid_type=Int, required=False, default=Int(10))
+        spec.input("standarize_cell",
+                   valid_type=Bool, required=False, default=Bool(True))
 
-        spec.outline(cls.optimize_cycle, _While(cls.not_converged)(cls.optimize_cycle), cls.get_data)
+        spec.outline(cls.optimize_cycle,
+                     while_(cls.not_converged)(cls.optimize_cycle),
+                     cls.get_data)
 
     def not_converged(self):
-
-        print ('Check convergence')
+        self.report('Check convergence')
 
         parsed_data = parse_optimize_calculation(self.ctx.optimize)['output_data']
         forces = np.array(parsed_data.dict.forces)
         stress = np.array(parsed_data.dict.stress)
 
-        not_converged_forces = len(np.where(abs(forces) > float(self.inputs.tolerance_forces))[0])
-
-        stress_compare_matrix = stress - np.diag([float(self.inputs.pressure)]*3)
-        not_converged_stress = len(np.where(abs(stress_compare_matrix) > float(self.inputs.tolerance_stress))[0])
+        not_converged_forces = len(
+            np.where(abs(forces) > float(self.inputs.tolerance_forces))[0])
+        stress_compare_matrix = stress - np.diag([float(self.inputs.pressure)] * 3)
+        not_converged_stress = len(
+            np.where(abs(stress_compare_matrix)
+                     > float(self.inputs.tolerance_stress))[0])
 
         not_converged = not_converged_forces + not_converged_stress
 
         if not_converged == 0:
-            print ('Converged')
             self.report('converged')
             return False
 
@@ -109,15 +108,15 @@ class OptimizeStructure(WorkChain):
 
     def optimize_cycle(self):
 
-        if not 'counter' in self.ctx:
+        if 'counter' not in self.ctx:
             self.ctx.counter = 0
 
         self.ctx.counter += 1
 
         # self.ctx._get_dict()
-        print ('start optimization')
+        self.report('start optimization')
 
-        if not 'optimize' in self.ctx:
+        if 'optimize' not in self.ctx:
             structure = self.inputs.structure
         else:
             structure = parse_optimize_calculation(self.ctx.optimize)['output_structure']
@@ -125,25 +124,23 @@ class OptimizeStructure(WorkChain):
         if self.inputs.standarize_cell:
             structure = standardize_cell(structure)['standardized_structure']
 
-        JobCalculation, calculation_input = generate_inputs(structure,
-                                                            self.inputs.es_settings,
-                                                            pressure=self.inputs.pressure,
-                                                            type='optimize',
-                                                            )
+        JobCalculation, calculation_input = generate_inputs(
+            structure,
+            self.inputs.es_settings,
+            pressure=self.inputs.pressure,
+            type='optimize')
 
         calculation_input._label = 'optimize'
-        future = submit(JobCalculation, **calculation_input)
+        future = self.submit(JobCalculation, **calculation_input)
         self.report('optimize calculation pk = {}'.format(future.pid))
 
         return ToContext(optimize=future)
         # self.ctx.optimize = load_node(5487)  # for testing purposes
 
     def get_data(self):
-
-        self.out('optimized_structure', parse_optimize_calculation(self.ctx.optimize)['output_structure'])
-        self.out('optimized_structure_data', parse_optimize_calculation(self.ctx.optimize)['output_data'])
-
-
+        self.out('optimized_structure',
+                 parse_optimize_calculation(self.ctx.optimize)['output_structure'])
+        self.out('optimized_structure_data',
+                 parse_optimize_calculation(self.ctx.optimize)['output_data'])
 
         return
-
