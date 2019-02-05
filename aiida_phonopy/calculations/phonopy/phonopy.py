@@ -18,7 +18,7 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
 
     _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
 
-    _OUTPUT_DOS = 'partial_dos.dat'
+    _OUTPUT_DOS = 'projected_dos.dat'
     _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
     _OUTPUT_BAND_STRUCTURE = 'band.yaml'
 
@@ -51,7 +51,7 @@ class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
         return retdict
 
     def _create_additional_files(self, tempfolder, inputdict):
-        self._additional_cmdline_params = ['--thm']
+        self._additional_cmdline_params = []
 
         force_sets = inputdict.pop(self.get_linkname('force_sets'), None)
         displacement_dataset = inputdict.pop(
