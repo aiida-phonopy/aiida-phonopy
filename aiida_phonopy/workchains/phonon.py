@@ -1,9 +1,9 @@
-from aiida.work.workchain import WorkChain, ToContext
+from aiida.engine import WorkChain, ToContext
 
-from aiida.work.workfunctions import workfunction
-from aiida.orm import Code, DataFactory, WorkflowFactory, load_node
-from aiida.orm.data.base import Float, Bool, Int, Str
-from aiida.work.workchain import if_
+from aiida.engine.workfunctions import workfunction
+from aiida.plugins import Code, DataFactory, WorkflowFactory, load_node
+from aiida.orm import Float, Bool, Int, Str
+from aiida.engine import if_
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
 from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
@@ -174,7 +174,7 @@ class PhononPhonopy(WorkChain):
                 raise RuntimeError(
                     "code_string and options have to be specified.")
 
-        self.ctx.phonon_settings = ParameterData(dict=phonon_settings_dict)
+        self.ctx.phonon_settings = Dict(dict=phonon_settings_dict)
         self.ctx.phonon_settings.label = 'phonon_settings'
 
         self.report("Phonon settings: %s" % phonon_settings_dict)
@@ -233,7 +233,7 @@ class PhononPhonopy(WorkChain):
                 distance=phonon_settings_dict['distance'])
 
         self.ctx.disp_dataset = {
-            'dataset': ParameterData(dict=phonon.dataset),
+            'dataset': Dict(dict=phonon.dataset),
             'supercells': []}
         self.ctx.disp_dataset['dataset'].label = 'displacement_dataset'
 

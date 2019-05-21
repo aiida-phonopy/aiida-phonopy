@@ -1,5 +1,5 @@
-from aiida.orm.data.array import ArrayData
-from aiida.orm.data.structure import StructureData
+from aiida.orm.nodes.data.array import ArrayData
+from aiida.orm import StructureData
 
 import numpy
 
@@ -22,9 +22,9 @@ class NacData(ArrayData):
         :return:
         """
 
-        self._set_attr('cell', structure.cell)
-        self._set_attr('positions', [site.position for site in structure.sites])
-        self._set_attr('symbols', [site.kind_name for site in structure.sites])
+        self.set_attribute('cell', structure.cell)
+        self.set_attribute('positions', [site.position for site in structure.sites])
+        self.set_attribute('symbols', [site.kind_name for site in structure.sites])
 
     def get_epsilon(self):
         """

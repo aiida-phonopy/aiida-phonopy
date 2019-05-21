@@ -15,7 +15,7 @@ class PhonopyParser(Parser):
         """
         super(PhonopyParser, self).__init__(calc)
 
-    def parse_with_retrieved(self, retrieved):
+    def parse(self, **kwargs):
         """
         Parses the datafolder, stores results.
         """

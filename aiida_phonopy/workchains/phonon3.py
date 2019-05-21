@@ -1,11 +1,11 @@
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
+from aiida.orm import Str, Float, Bool, Int
+from aiida.engine import _If, _While
 
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs

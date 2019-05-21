@@ -1,6 +1,6 @@
 import numpy as np
-from aiida.work import workfunction
-from aiida.orm import DataFactory, load_node
+from aiida.engine import workfunction
+from aiida.plugins import DataFactory, load_node
 
 
 def get_path_using_seekpath(structure, band_resolution=30):

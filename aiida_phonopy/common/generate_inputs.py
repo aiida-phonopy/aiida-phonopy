@@ -1,6 +1,6 @@
-from aiida.orm import Code, DataFactory, WorkflowFactory, CalculationFactory
-from aiida.common.exceptions import InputValidationError
-from aiida.orm.data.base import Str, Bool
+from aiida.plugins import Code, DataFactory, WorkflowFactory, CalculationFactory
+from aiida.common import InputValidationError
+from aiida.orm import Str, Bool
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -91,7 +91,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
         builder.label = label
     builder.code = Code.get_from_string(code_string)
     builder.structure = structure
-    options = ParameterData(dict=settings_dict['options'])
+    options = Dict(dict=settings_dict['options'])
     builder.options = options
 
     builder.clean_workdir = Bool(False)
@@ -118,9 +118,9 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     if 'ediffg' not in keys_lower:
         incar.update({'EDIFFG': -1.0E-6})
 
-    builder.parameters = ParameterData(dict=incar)
+    builder.parameters = Dict(dict=incar)
     builder.potential_family = Str(settings_dict['potential_family'])
-    builder.potential_mapping = ParameterData(
+    builder.potential_mapping = Dict(
         dict=settings_dict['potential_mapping'])
 
     # KPOINTS

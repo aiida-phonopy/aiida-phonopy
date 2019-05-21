@@ -1,5 +1,5 @@
 from aiida.parsers.parser import Parser
-from aiida.parsers.exceptions import OutputParsingError
+from aiida.common import OutputParsingError
 from aiida_phonopy.common.raw_parsers import parse_kappa
 
 
@@ -14,7 +14,7 @@ class Phono3pyParser(Parser):
         """
         super(Phono3pyParser, self).__init__(calc)
 
-    def parse_with_retrieved(self, retrieved):
+    def parse(self, **kwargs):
         """
         Parses the datafolder, stores results.
         """

@@ -8,10 +8,10 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory, load_node
-from aiida.work.run import run, submit
-from aiida.orm.data.structure import StructureData
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory, load_node
+from aiida.engine import run, submit
+from aiida.orm import StructureData
+from aiida.orm import Str, Float, Bool, Int
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -51,7 +51,7 @@ machine_dict = {'resources': {'num_machines': 1,
 
 
 # PHONOPY settings
-ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+ph_settings = Dict(dict={'supercell': [[2, 0, 0],
                                                 [0, 2, 0],
                                                 [0, 0, 2]],
                                   'primitive': [[0.0, 0.5, 0.5],
@@ -93,7 +93,7 @@ if code_to_use == 'VASP':
                      }
 
     # pseudos = ParameterData(dict=potcar.as_dict())
-    es_settings = ParameterData(dict=settings_dict)
+    es_settings = Dict(dict=settings_dict)
 
 
 # QE SPECIFIC
@@ -112,7 +112,7 @@ if code_to_use == 'QE':
                      'machine': machine_dict
                      }
 
-    es_settings = ParameterData(dict=settings_dict)
+    es_settings = Dict(dict=settings_dict)
 
 
 # LAMMPS SPECIFIC
@@ -138,7 +138,7 @@ if code_to_use == 'LAMMPS':
                      'machine': machine_dict
                      }
 
-    es_settings = ParameterData(dict=settings_dict)
+    es_settings = Dict(dict=settings_dict)
 
 ThermalPhono3py = WorkflowFactory('phonopy.thermal')
 

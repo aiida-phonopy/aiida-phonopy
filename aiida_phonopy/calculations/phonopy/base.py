@@ -1,7 +1,7 @@
-from aiida.common.exceptions import InputValidationError
-from aiida.common.datastructures import CalcInfo, CodeInfo
+from aiida.common import InputValidationError
+from aiida.common import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
-from aiida.orm import DataFactory
+from aiida.plugins import DataFactory
 from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,
                                               get_poscar_txt)
@@ -90,7 +90,7 @@ class BasePhonopyCalculation(object):
     def _create_additional_files(self, tempfolder, inputs_params):
         pass
 
-    def _prepare_for_submission(self, tempfolder, inputdict):
+    def prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.

@@ -9,7 +9,7 @@ from aiida import load_dbenv
 load_dbenv()
 
 from aiida.orm import load_node, load_workflow
-from aiida.orm import Code, DataFactory
+from aiida.plugins import Code, DataFactory
 
 import matplotlib.pyplot as plt
 from matplotlib import gridspec

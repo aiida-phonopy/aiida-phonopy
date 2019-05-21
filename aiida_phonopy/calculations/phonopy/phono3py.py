@@ -1,7 +1,7 @@
-from aiida.common.exceptions import InputValidationError
-from aiida.orm.calculation.job import JobCalculation
+from aiida.common import InputValidationError
+from aiida.engine import CalcJob
 from aiida.common.utils import classproperty
-from aiida.orm import DataFactory
+from aiida.plugins import DataFactory
 from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
 from aiida_phonopy.common.raw_parsers import (get_disp_fc3_txt, get_forces_txt,
                                               write_fc2_to_hdf5_file,
@@ -29,7 +29,7 @@ def get_grid_data_files(grid_data):
     return gp_data
 
 
-class Phono3pyCalculation(BasePhonopyCalculation, JobCalculation):
+class Phono3pyCalculation(BasePhonopyCalculation, CalcJob):
     """
     A basic plugin for calculating phonon properties using Phonopy.
     """

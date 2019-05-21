@@ -1,9 +1,9 @@
 from aiida.common.utils import classproperty
-from aiida.orm import DataFactory
+from aiida.plugins import DataFactory
 from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
-from aiida.orm.calculation.job import JobCalculation
+from aiida.engine import CalcJob
 
-from aiida.common.exceptions import InputValidationError
+from aiida.common import InputValidationError
 from aiida_phonopy.common.raw_parsers import (get_FORCE_CONSTANTS_txt,
                                               get_FORCE_SETS_txt)
 
@@ -11,7 +11,7 @@ from aiida_phonopy.common.raw_parsers import (get_FORCE_CONSTANTS_txt,
 KpointsData = DataFactory('array.kpoints')
 
 
-class PhonopyCalculation(BasePhonopyCalculation, JobCalculation):
+class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     """
     A basic plugin for calculating phonon properties using Phonopy.
     """

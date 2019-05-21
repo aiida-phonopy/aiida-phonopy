@@ -4,13 +4,13 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.orm import Str, Float, Bool, Int
 
 import numpy as np
 
@@ -68,7 +68,7 @@ def generate_phono3py_params(structure,
     if grid_point is not None:
         parameters_dic = parameters.get_dict()
         parameters_dic.update({'grid_point': np.array(grid_point).tolist()})
-        parameters = ParameterData(dict=parameters_dic)
+        parameters = Dict(dict=parameters_dic)
 
     if grid_data is not None:
         inputs.grid_data = grid_data
@@ -244,10 +244,10 @@ if __name__ == '__main__':
                     'max_wallclock_seconds': 3600 * 10,
                     }
 
-    machine = ParameterData(dict=machine_dict)
+    machine = Dict(dict=machine_dict)
 
     # PHONOPY settings
-    ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+    ph_settings = Dict(dict={'supercell': [[2, 0, 0],
                                                     [0, 2, 0],
                                                     [0, 0, 2]],
                                       'primitive': [[0.0, 0.5, 0.5],

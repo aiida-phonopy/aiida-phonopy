@@ -2,12 +2,12 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.run import run, submit
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import run, submit
 
-from aiida.orm import load_node, DataFactory, WorkflowFactory, CalculationFactory, Code
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
+from aiida.plugins import load_node, DataFactory, WorkflowFactory, CalculationFactory, Code
+from aiida.orm import Str, Float, Bool, Int
+from aiida.engine import _If, _While
 
 from aiida_phonopy.workchains.phono3py_dist import generate_phono3py_params
 

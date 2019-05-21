@@ -1,5 +1,5 @@
 import numpy as np
-from aiida.orm import DataFactory
+from aiida.plugins import DataFactory
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
 
@@ -103,7 +103,7 @@ def parse_band_structure(filename, input_bands):
 def parse_kappa(filename):
     import numpy as np
     import h5py
-    from aiida.orm.data.array import ArrayData
+    from aiida.orm.nodes.data.array import ArrayData
 
     kappa = ArrayData()
 

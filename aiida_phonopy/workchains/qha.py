@@ -2,12 +2,12 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-from aiida.work.run import run, submit
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
+from aiida.engine import run, submit
 
-from aiida.orm import load_node, DataFactory, WorkflowFactory
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.plugins import load_node, DataFactory, WorkflowFactory
+from aiida.orm import Str, Float, Bool, Int
 
 import numpy as np
 
@@ -119,8 +119,8 @@ class QHAPhonopy(WorkChain):
                                      stress_range[-1] + stress_delta * 0.5,
                                      self.inputs.num_expansions)
 
-        print prediction.dict.stress_range
-        print prediction.dict.volume_range
+        print(prediction.dict.stress_range)
+        print(prediction.dict.volume_range)
 
         # For testing
         if __testing__:
