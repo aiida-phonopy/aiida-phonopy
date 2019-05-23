@@ -3,10 +3,7 @@ from aiida.plugins import DataFactory
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
 
-ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
-
-ForceConstantsData = DataFactory('phonopy.force_constants')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 BandStructureData = DataFactory('phonopy.band_structure')
 

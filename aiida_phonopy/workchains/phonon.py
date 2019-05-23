@@ -20,7 +20,7 @@ from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
 # For now all workchains should be copied to aiida/workflows
 # from aiida.workflows.wc_optimize import OptimizeStructure
 
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 OptimizeStructure = WorkflowFactory('phonopy.optimize')

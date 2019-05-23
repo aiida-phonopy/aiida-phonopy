@@ -14,7 +14,7 @@ from aiida.orm import Str, Float, Bool
 # For now all workchains should be copied to aiida/workflows
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 

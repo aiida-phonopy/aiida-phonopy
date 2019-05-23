@@ -19,7 +19,7 @@ ForceSetsData = DataFactory('phonopy.force_sets')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 

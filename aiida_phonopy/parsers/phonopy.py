@@ -26,13 +26,12 @@ class PhonopyParser(Parser):
         # select the folder object
         # Check that the retrieved folder is there
         try:
-            out_folder = retrieved[self._calc._get_linkname_retrieved()]
-        except KeyError:
-            self.logger.error("No retrieved folder found")
-            return False, ()
+            output_folder = self.retrieved
+        except NotExistent:
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         # check what is inside the folder
-        list_of_files = out_folder.get_folder_list()
+        list_of_files = output_folder.get_folder_list()
 
         # OUTPUT file should exist
         # if not self._calc._OUTPUT_FILE_NAME in list_of_files:
@@ -46,35 +45,20 @@ class PhonopyParser(Parser):
         new_nodes_list = []
 
         if self._calc._INOUT_FORCE_CONSTANTS in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._INOUT_FORCE_CONSTANTS)
-            object_force_constants = parse_FORCE_CONSTANTS(outfile)
-            new_nodes_list.append(('force_constants', object_force_constants))
+            with output_folder.open(self._calc._INOUT_FORCE_CONSTANTS) as f:
+                self.out('force_constants', parse_FORCE_CONSTANTS(f))
 
         if self._calc._OUTPUT_DOS in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_DOS)
-            dos_object = parse_partial_DOS(outfile, self._calc.inp.structure,
-                                           self._calc.inp.parameters)
-            new_nodes_list.append(('dos', dos_object))
+            with output_folder.open(self._calc._OUTPUT_DOS) as f:
+                dos_object = parse_partial_DOS(
+                    f, self.node.inputs.structure, self.node.inputs.parameters)
+                self.out('dos', dos_object)
 
         if self._calc._OUTPUT_THERMAL_PROPERTIES in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._OUTPUT_THERMAL_PROPERTIES)
-            tp_object = parse_thermal_properties(outfile)
-            new_nodes_list.append(('thermal_properties', tp_object))
+            with output_folder.open(self._calc._OUTPUT_THERMAL_PROPERTIES) as f:
+                self.out('thermal_properties', parse_thermal_properties(f))
 
         if self._calc._OUTPUT_BAND_STRUCTURE in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._OUTPUT_BAND_STRUCTURE)
-            bs_object = parse_band_structure(outfile, self._calc.inp.bands)
-            new_nodes_list.append(('band_structure', bs_object))
-
-        # look at warnings
-        with open(out_folder.get_abs_path(self._calc._SCHED_ERROR_FILE)) as f:
-            errors = f.readlines()
-        if errors:
-            for error in errors:
-                self.logger.warning(error)
-                successful = False
-
-        return successful, new_nodes_list
+            with output_folder.open(self._calc._OUTPUT_BAND_STRUCTURE) as f:
+                bs_object = parse_band_structure(f, self.node.inputs.bands)
+                self.out('band_structure', bs_object)

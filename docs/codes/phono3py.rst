@@ -23,7 +23,7 @@ This plugin is designed to calculate the thermal conductivity using phono3py.
                        'distance': 0.01,
                        'mesh': [40, 40, 40],
                        'symmetry_tolerance': 1e-5}
-    ParameterData = DataFactory('parameter')
+    ParameterData = DataFactory('dict')
     parameters = ParameterData(dict=parameters_dict)
 
 Either data_sets of force_constants/force_constants_3 should be defined. If data_sets is used force constants

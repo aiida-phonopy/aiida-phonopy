@@ -14,7 +14,7 @@ import numpy as np
 __testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 

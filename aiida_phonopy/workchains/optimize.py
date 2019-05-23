@@ -8,7 +8,7 @@ from aiida_phonopy.common.parse_interface import parse_optimize_calculation
 import numpy as np
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 

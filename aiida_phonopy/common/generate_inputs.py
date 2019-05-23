@@ -3,7 +3,7 @@ from aiida.common import InputValidationError
 from aiida.orm import Str, Bool
 
 KpointsData = DataFactory("array.kpoints")
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 StructureData = DataFactory('structure')
 
 
@@ -107,7 +107,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     if 'add_forces' not in parser_settings_dict:
         parser_settings_dict.update(force_setting_dict)
 
-    builder.settings = DataFactory('parameter')(
+    builder.settings = DataFactory('dict')(
         dict={'parser_settings': parser_settings_dict})
 
     # INCAR (parameters)
