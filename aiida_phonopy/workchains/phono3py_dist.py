@@ -19,7 +19,7 @@ ForceSetsData = DataFactory('phonopy.force_sets')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -38,7 +38,7 @@ def generate_phono3py_params(structure,
     Generate inputs parameters needed to do a remote phonopy calculation
 
     :param structure: StructureData Object that constains the crystal structure unit cell
-    :param parameters: ParametersData object containing a dictionary with the phonopy input data
+    :param parameters: Dict object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetsData object containing the atomic forces and displacement information
     :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
     :param fc2: ForceConstantsData object containing the 2nd order force constants
@@ -128,7 +128,7 @@ class Phono3pyDist(WorkChain):
     def define(cls, spec):
         super(Phono3pyDist, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("parameters", valid_type=ParameterData)
+        spec.input("parameters", valid_type=Dict)
         # Optional arguments
         spec.input("force_constants", valid_type=ForceConstantsData, required=False)
         spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)

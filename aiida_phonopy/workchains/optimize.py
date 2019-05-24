@@ -8,7 +8,7 @@ from aiida_phonopy.common.parse_interface import parse_optimize_calculation
 import numpy as np
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -60,7 +60,7 @@ class OptimizeStructure(WorkChain):
     def define(cls, spec):
         super(OptimizeStructure, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("es_settings", valid_type=Dict)
         # Optional
         spec.input("pressure",
                    valid_type=Float, required=False, default=Float(0.0))

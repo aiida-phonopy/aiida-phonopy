@@ -12,8 +12,8 @@ using the phonopy plugin provided in this package.
 .. function:: PhononPhonopy(structure, ph_settings, es_settings [, optimize=True, pressure=0.0, use_nac=False])
 
    :param structure: StructureData object that contains the crystal unit cell structure.
-   :param ph_settings: ParametersData data  object that contains the phonopy input parameters.
-   :param es_settings: ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
+   :param ph_settings: Dict object that contains the phonopy input parameters.
+   :param es_settings: Dict object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
    :param optimize: (optional) BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
    :param pressure: (optional) FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.
    :param use_nac: (optional) BooleanData object. Determines if non-analytical corrections will be included in the phonon calculation. By default this option is False.
@@ -45,7 +45,7 @@ machine_dict dictionary should contain the following entries. resources_dict may
                      ...
                      }
 
-    es_settings = ParameterData(dict=settings_dict)
+    es_settings = Dict(dict=settings_dict)
 
 If the code used in all calculations types (optimize, forces and born) is the same, the dictionary can be written as ::
 

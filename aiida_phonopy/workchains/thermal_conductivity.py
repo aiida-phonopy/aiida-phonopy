@@ -15,7 +15,7 @@ import numpy as np
 __testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -30,8 +30,8 @@ class ThermalPhono3py(WorkChain):
     def define(cls, spec):
         super(ThermalPhono3py, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))

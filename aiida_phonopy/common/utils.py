@@ -1,11 +1,13 @@
 import numpy as np
-from aiida.engine import workfunction
-from aiida.plugins import DataFactory, load_node
+from aiida.engine import workfunction, calcfunction
+from aiida.plugins import DataFactory
+from aiida.orm import load_node, Int
 
-
-def get_path_using_seekpath(structure, band_resolution=30):
+@calcfunction
+def get_path_using_seekpath(structure, band_resolution=Int(30)):
     import seekpath
 
+    num_division = int(band_resolution)
     phonopy_structure = phonopy_atoms_from_structure(structure)
     cell = phonopy_structure.get_cell()
     scaled_positions = phonopy_structure.get_scaled_positions()
@@ -23,16 +25,17 @@ def get_path_using_seekpath(structure, band_resolution=30):
     bands = []
     for q_start, q_end in band_ranges:
         band = []
-        for i in range(band_resolution+1):
+        for i in range(num_division + 1):
             band.append(
                 np.array(q_start) + (np.array(q_end) - np.array(q_start))
-                / band_resolution * i)
+                / num_division * i)
         bands.append(band)
 
-    band_structure = DataFactory('phonopy.band_structure')(
-        bands=bands,
-        labels=path_data['path'],
-        unitcell=phonopy_structure.get_cell())
+    band_structure = DataFactory('phonopy.band_structure')()
+    band_structure.set_bands(bands)
+    band_structure.set_labels(path_data['path'])
+    band_structure.set_unitcell(phonopy_structure.get_cell())
+
     return band_structure
 
 
@@ -49,13 +52,15 @@ def get_born_epsilon_from_uuid(uuid):
             'output_dielectrics': n.out.output_dielectrics}
 
 
-@workfunction
+# @workfunction
+@calcfunction
 def get_force_sets(**forces_dict):
     forces = []
     # for i in range(forces_dict['num_supercells']):
     for i in range(len(forces_dict)):
         label = "forces_%03d" % (i + 1)
-        forces.append(forces_dict[label].get_array('final'))
+        if label in forces_dict:
+            forces.append(forces_dict[label].get_array('final'))
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
     force_sets.label = 'force_sets'
@@ -75,7 +80,7 @@ def get_force_sets_data(datasets, **forces_dict):
     return force_sets
 
 
-@workfunction
+@calcfunction
 def get_nac_params(born_charges, epsilon):
     """Worfunction to extract nac ArrayData object from calc"""
 
@@ -88,7 +93,7 @@ def get_nac_params(born_charges, epsilon):
     return nac_params
 
 
-@workfunction
+@calcfunction
 def get_nac_data(born_charges, epsilon, structure):
     """Worfunction to extract NacData object from calc"""
 
@@ -100,7 +105,7 @@ def get_nac_data(born_charges, epsilon, structure):
     return nac_data
 
 
-@workfunction
+@calcfunction
 def get_force_constants(structure, phonon_settings, force_sets, dataset):
     params = {}
     phonon = get_phonopy_instance(structure, phonon_settings, params)
@@ -115,7 +120,7 @@ def get_force_constants(structure, phonon_settings, force_sets, dataset):
     return force_constants
 
 
-@workfunction
+@calcfunction
 def get_phonon(structure, phonon_settings, force_constants, band_paths,
                **params):
     phonon = get_phonopy_instance(structure, phonon_settings, params)
@@ -135,11 +140,11 @@ def get_phonon(structure, phonon_settings, force_constants, band_paths,
     total_dos = phonon.get_total_DOS()
     partial_dos = phonon.get_partial_DOS()
     PhononDosData = DataFactory('phonopy.phonon_dos')
-    dos = PhononDosData(
-        frequencies=total_dos[0],
-        dos=(total_dos[1] * normalization_factor),
-        partial_dos=(np.array(partial_dos[1]) * normalization_factor),
-        atom_labels=np.array(phonon.primitive.get_chemical_symbols()))
+    dos = PhononDosData()
+    dos.set_frequencies(total_dos[0])
+    dos.set_dos(total_dos[1] * normalization_factor)
+    dos.set_partial_dos(np.array(partial_dos[1]) * normalization_factor)
+    dos.set_atom_labels(np.array(phonon.primitive.get_chemical_symbols()))
 
     # THERMAL PROPERTIES (per primtive cell)
     phonon.set_thermal_properties()
@@ -160,10 +165,10 @@ def get_phonon(structure, phonon_settings, force_constants, band_paths,
     bands = band_paths
     phonon.set_band_structure(bands.get_bands())
     BandStructureData = DataFactory('phonopy.band_structure')
-    band_structure = BandStructureData(bands=bands.get_bands(),
-                                       labels=bands.get_labels(),
-                                       unitcell=bands.get_unitcell())
-
+    band_structure = BandStructureData()
+    band_structure.set_bands(bands.get_bands())
+    band_structure.set_labels(bands.get_labels())
+    band_structure.set_unitcell(bands.get_unitcell())
     band_structure.set_band_structure_phonopy(phonon.get_band_structure())
 
     return {'dos': dos,

@@ -1,3 +1,4 @@
+import six
 from aiida.common.utils import classproperty
 from aiida.plugins import DataFactory
 from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
@@ -25,20 +26,14 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     _OUTPUT_BAND_STRUCTURE = 'band.yaml'
     _default_parser = 'phonopy'
 
-    _internal_retrieve_list += [_OUTPUT_DOS,
-                                _OUTPUT_THERMAL_PROPERTIES,
-                                _OUTPUT_BAND_STRUCTURE]
+    _internal_retrieve_list = [_OUTPUT_DOS,
+                               _OUTPUT_THERMAL_PROPERTIES,
+                               _OUTPUT_BAND_STRUCTURE]
     _calculation_cmd = [['--pdos=0'], ['--readfc', '-t']]
 
     @classmethod
     def define(cls, spec):
         super(PhonopyCalculation, cls).define(spec)
-        spec.input('metadata.options.parser_name',
-                   valid_type=six.string_types, default='phonopy')
-        spec.input('metadata.options.input_filename',
-                   valid_type=six.string_types, default=cls._INPUT_FILE_NAME)
-        spec.input('metadata.options.output_filename',
-                   valid_type=six.string_types, default='phonopy.yaml')
         spec.input('projected_dos_filename',
                    valid_type=six.string_types, default='projected_dos.dat')
         spec.input('thermal_properties_filename',
@@ -69,7 +64,7 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
         spec.exit_code(300, 'ERROR_PARSING_FILE_FAILED',
                        message='Parsing a file has failed.')
 
-    def _create_additional_files(self, tempfolder, inputdict):
+    def _create_additional_files(self, tempfolder):
         self._additional_cmdline_params = []
 
         force_sets = inputdict.pop(self.get_linkname('force_sets'), None)

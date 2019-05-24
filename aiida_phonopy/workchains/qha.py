@@ -14,7 +14,7 @@ import numpy as np
 __testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -81,8 +81,8 @@ class QHAPhonopy(WorkChain):
     def define(cls, spec):
         super(QHAPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("num_expansions", valid_type=Int, required=False, default=Int(10))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))

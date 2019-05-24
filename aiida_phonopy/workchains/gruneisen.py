@@ -14,7 +14,7 @@ from aiida.orm import Str, Float, Bool
 # For now all workchains should be copied to aiida/workflows
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -406,8 +406,8 @@ class GruneisenPhonopy(WorkChain):
     def define(cls, spec):
         super(GruneisenPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))  # in kB
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(2.0))  # in kB

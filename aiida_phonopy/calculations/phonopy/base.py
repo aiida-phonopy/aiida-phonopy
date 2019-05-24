@@ -6,7 +6,7 @@ from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,
                                               get_poscar_txt)
 
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 ArrayData = DataFactory('array')
 BandStructureData = DataFactory('phonopy.band_structure')
@@ -34,35 +34,29 @@ class BasePhonopyCalculation(object):
 
     @classmethod
     def _baseclass_use_methods(cls, spec):
-        spec.input('parameters', valid_type=ParameterData,
+        spec.input('parameters', valid_type=Dict,
                    help=('Use a node that specifies the phonopy '
                          'parameters for the namelists'))
         spec.input('structure', valid_type=StructureData,
                    help=('Use a node for the structure'))
-        spec.input('force_sets', valid_type=ArrayData,
-                   required=False, default=None,
+        spec.input('force_sets', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force_sets '
                          'array for the namelists'))
-        spec.input('displacement_dataset', valid_type=ParameterData,
-                   required=False, default=None,
+        spec.input('displacement_dataset', valid_type=Dict, required=False,
                    help=('Use a node that specifies the dispalcement '
                          'dataset parameters for the namelists'))
-        spec.input('force_constants', valid_type=ArrayData,
-                   required=False, default=None,
+        spec.input('force_constants', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force constants '
                          'arrays for the namelists'))
-        spec.input('nac_params', valid_type=ArrayData,
-                   required=False, default=None,
+        spec.input('nac_params', valid_type=ArrayData, required=False,
                    help=('Use a node for the Non-analitical '
-                         'corrections parameters arraies'))
-        spec.input('bands', valid_type=BandStructureData,
-                   required=False,
-                   default=None,
+                         'corrections parameters arrays'))
+        spec.input('bands', valid_type=BandStructureData, required=False,
                    help='Use the node defining the band structure to use')
 
         # return {
         #     "parameters": {
-        #         'valid_types': ParameterData,
+        #         'valid_types': Dict,
         #         'additional_parameter': None,
         #         'linkname': 'parameters',
         #         'docstring': ("Use a node that specifies the phonopy "
@@ -76,7 +70,7 @@ class BasePhonopyCalculation(object):
         #                       "array for the namelists"),
         #     },
         #     "displacement_dataset": {
-        #         'valid_types': ParameterData,
+        #         'valid_types': Dict,
         #         'additional_parameter': None,
         #         'linkname': 'displacement_dataset',
         #         'docstring': ("Use a node that specifies the dispalcement "
@@ -113,7 +107,7 @@ class BasePhonopyCalculation(object):
     def _create_additional_files(self, tempfolder, inputs_params):
         pass
 
-    def prepare_for_submission(self, folder, inputdict):
+    def prepare_for_submission(self, folder):
         """Create the input files from the input nodes passed to this instance of the `CalcJob`.
 
         :param folder: an `aiida.common.folders.Folder` to temporarily write files on disk
@@ -123,8 +117,10 @@ class BasePhonopyCalculation(object):
         parameters_data = self.inputs.parameters
         structure = self.inputs.structure
         code = self.inputs.code
-        nac_params = self.inputs.nac_params
-        bands = self.inputs.bands
+        if 'bands' in self.inputs:
+            bands = self.inputs.bands
+        else:
+            bands = None
 
         ##############################
         # END OF INITIAL INPUT CHECK #
@@ -132,7 +128,7 @@ class BasePhonopyCalculation(object):
 
         # ================= prepare the python input files =================
 
-        self._create_additional_files(folder, inputdict)
+        self._create_additional_files(folder)
 
         cell_txt = get_poscar_txt(structure)
         input_txt = get_phonopy_conf_file_txt(parameters_data, bands=bands)
@@ -145,7 +141,7 @@ class BasePhonopyCalculation(object):
         with open(cell_filename, 'w') as infile:
             infile.write(cell_txt)
 
-        if nac_params is not None:
+        if 'nac_params' in self.inputs:
             born_txt = get_BORN_txt(nac_params, parameters_data, structure)
             nac_filename = folder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:

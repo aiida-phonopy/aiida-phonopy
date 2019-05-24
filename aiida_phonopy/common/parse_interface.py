@@ -3,7 +3,7 @@ from aiida.engine import workfunction
 from aiida.orm import Int
 
 StructureData = DataFactory('structure')
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 
 
 @workfunction

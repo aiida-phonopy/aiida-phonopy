@@ -1,50 +1,10 @@
-from aiida.plugins import Code, DataFactory, WorkflowFactory, CalculationFactory
+from aiida.plugins import DataFactory, WorkflowFactory, CalculationFactory
 from aiida.common import InputValidationError
-from aiida.orm import Str, Bool
+from aiida.orm import Str, Bool, Code
 
 KpointsData = DataFactory("array.kpoints")
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
-
-
-vasp_configs = {'optimize':
-                {'PREC': 'Accurate',
-                 'ISTART': 0,
-                 'IBRION': 2,
-                 'ISIF': 3,
-                 'LWAVE': '.FALSE.',
-                 'LCHARG': '.FALSE.',
-                 'ADDGRID': '.TRUE.',
-                 'LREAL': '.FALSE.'},
-                'optimize_constant_volume':
-                {'PREC': 'Accurate',
-                 'ISTART': 0,
-                 'IBRION': 2,
-                 'ISIF': 4,
-                 'LWAVE': '.FALSE.',
-                 'LCHARG': '.FALSE.',
-                 'ADDGRID': '.TRUE.',
-                 'LREAL': '.FALSE.'},
-                'forces':
-                {'PREC': 'Accurate',
-                 'ISYM': 0,
-                 'ISTART': 0,
-                 'IBRION': -1,
-                 'NSW': 0,
-                 'LWAVE': '.FALSE.',
-                 'LCHARG': '.FALSE.',
-                 'ADDGRID': '.TRUE.',
-                 'LREAL': '.FALSE.'},
-                'born_charges':
-                {'PREC': 'Accurate',
-                 'LEPSILON': '.TRUE.',
-                 'ISTART': 0,
-                 'IBRION': -1,
-                 'NSW': 0,
-                 'LWAVE': '.FALSE.',
-                 'LCHARG': '.FALSE.',
-                 'ADDGRID': '.TRUE.',
-                 'LREAL': '.FALSE.'}}
 
 
 def vasp_immigrant(settings):
@@ -75,7 +35,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     Generate the input paramemeters needed to run a calculation for VASP
 
     :param structure:  StructureData object containing the crystal structure
-    :param settings:  ParametersData object containing a dictionary with the
+    :param settings:  Dict object containing a dictionary with the
         INCAR parameters
     :return: Calculation process object, input dictionary
     """
@@ -88,7 +48,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
     if label:
-        builder.label = label
+        builder.metadata.label = label
     builder.code = Code.get_from_string(code_string)
     builder.structure = structure
     options = Dict(dict=settings_dict['options'])
@@ -171,7 +131,7 @@ def generate_inputs(structure, calculator_settings, calc_type=None,
         code = Code.get_from_string(
             calculator_settings.get_dict()['code_string'])
 
-    if code.get_attr('input_plugin') in ['vasp.vasp']:
+    if code.attributes['input_plugin'] in ['vasp.vasp']:
         return generate_vasp_params(structure, calculator_settings,
                                     calc_type=calc_type, pressure=pressure,
                                     label=label)

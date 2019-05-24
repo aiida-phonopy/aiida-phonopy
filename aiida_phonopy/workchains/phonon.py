@@ -1,8 +1,8 @@
 from aiida.engine import WorkChain, ToContext
 
-from aiida.engine.workfunctions import workfunction
-from aiida.plugins import Code, DataFactory, WorkflowFactory, load_node
-from aiida.orm import Float, Bool, Int, Str
+from aiida.engine import workfunction
+from aiida.plugins import DataFactory, WorkflowFactory
+from aiida.orm import Float, Bool, Int, Str, load_node, Code
 from aiida.engine import if_
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
@@ -20,10 +20,12 @@ from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
 # For now all workchains should be copied to aiida/workflows
 # from aiida.workflows.wc_optimize import OptimizeStructure
 
-ParameterData = DataFactory('dict')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
+BandStructureData = DataFactory('phonopy.band_structure')
+PhononDosData = DataFactory('phonopy.phonon_dos')
 
 
 class PhononPhonopy(WorkChain):
@@ -39,7 +41,7 @@ class PhononPhonopy(WorkChain):
             'primitive_matrix': [[1.0, 0.0, 0.0],
                                  [0.0, 1.0, 0.0],
                                  [0.0, 0.0, 1.0]]
-    :param calculator_settings: ParametersData object that contains a
+    :param calculator_settings: Dict object that contains a
         dictionary with the setting needed to calculate the electronic
         structure:
             {'forces': force_config,
@@ -47,7 +49,7 @@ class PhononPhonopy(WorkChain):
         where force_config and nac_config are used for the supercell force
         calculation and Born effective charges and dielectric constant
         calculation in primitive cell, respectively.
-    :ph_settings: ParameterData object. Needed to run phonon calculation.
+    :ph_settings: Dict object. Needed to run phonon calculation.
         {'mesh': [20, 20, 20]}. Optional. (default: {mesh: [20, 20, 20]})
     :param optimize: Set true to perform a crystal structure optimization
         before the phonon calculation (default: True)
@@ -60,7 +62,7 @@ class PhononPhonopy(WorkChain):
     :remote_phonopy: Bool object. Whether running phonon calculation or not.
         Optional. (default: False)
     :code_string: Str object. Needed to run phonopy remotely. Optional.
-    :options: ParameterData object. Needed to run phonopy remotely. Optional.
+    :options: Dict object. Needed to run phonopy remotely. Optional.
     :distance: Float object. Displacement distance. Optional. (default: 0.01)
     :symmetry_tolerance: Float object. Symmetry tolerance. Optional.
         (default: 1e-5)
@@ -73,14 +75,14 @@ class PhononPhonopy(WorkChain):
         spec.input('cell_matrices', valid_type=ArrayData, required=True)
         # Optional arguments
         spec.input('calculation_uuids',
-                   valid_type=ParameterData, required=False)
+                   valid_type=Dict, required=False)
         spec.input('calculator_settings',
-                   valid_type=ParameterData, required=False)
+                   valid_type=Dict, required=False)
         spec.input('displacement_dataset',
-                   valid_type=ParameterData, required=False)
+                   valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
-        spec.input('options', valid_type=ParameterData, required=False)
-        spec.input('phonon_settings', valid_type=ParameterData, required=False)
+        spec.input('options', valid_type=Dict, required=False)
+        spec.input('phonon_settings', valid_type=Dict, required=False)
         spec.input('is_nac',
                    valid_type=Bool, required=False, default=Bool(False))
         spec.input('optimize',
@@ -118,6 +120,15 @@ class PhononPhonopy(WorkChain):
                          ).else_(
                              cls.run_phonopy_in_workchain,
                          )))
+
+        spec.output('force_constants', valid_type=ArrayData, required=False)
+        spec.output('final_structure', valid_type=StructureData, required=True)
+        spec.output('force_sets', valid_type=ArrayData, required=False)
+        spec.output('displacement_dataset', valid_type=Dict, required=False)
+        spec.output('nac_params', valid_type=ArrayData, required=False)
+        spec.output('thermal_properties', valid_type=ArrayData, required=False)
+        spec.output('band_structure', valid_type=BandStructureData, required=False)
+        spec.output('dos', valid_type=PhononDosData, required=False)
 
     def use_optimize(self):
         return self.inputs.optimize
@@ -306,7 +317,7 @@ class PhononPhonopy(WorkChain):
             if type(calc) is dict:
                 out_dict = calc
             else:
-                out_dict = calc.get_outputs_dict()
+                out_dict = calc.outputs
             if ('output_forces' in out_dict and
                 'final' in out_dict['output_forces'].get_arraynames()):
                 label = "forces_%03d" % (i + 1)
@@ -315,9 +326,8 @@ class PhononPhonopy(WorkChain):
         if len(forces_dict) != len(self.ctx.disp_dataset['supercells']):
             raise RuntimeError("Forces could not be retrieved.")
 
-        # Call workfunction to make links
-        self.ctx.force_sets, _ = get_force_sets.run_get_node(
-            label='create_force_sets', **forces_dict)
+        self.ctx.force_sets = get_force_sets(**forces_dict)
+
 
     def create_nac_params(self):
         self.report('create nac data')
@@ -327,21 +337,19 @@ class PhononPhonopy(WorkChain):
         if type(self.ctx.born_and_epsilon) is dict:
             out_dict = self.ctx.born_and_epsilon
         else:
-            out_dict = self.ctx.born_and_epsilon.get_outputs_dict()
-        self.ctx.nac_params, _ = get_nac_params.run_get_node(
+            out_dict = self.ctx.born_and_epsilon.outputs
+        self.ctx.nac_params = get_nac_params(
             born_charges=out_dict['output_born_charges'],
-            epsilon=out_dict['output_dielectrics'],
-            label='create_nac_params')
+            epsilon=out_dict['output_dielectrics'])
 
     def create_force_constants(self):
         self.report('create force constants')
 
-        self.ctx.force_constants, _ = get_force_constants.run_get_node(
+        self.ctx.force_constants = get_force_constants(
             self.ctx.final_structure,
             self.ctx.phonon_settings,
             self.ctx.force_sets,
-            self.ctx.disp_dataset['dataset'],
-            label='create_force_constants')
+            self.ctx.disp_dataset['dataset'])
 
     def set_default_outputs(self):
         self.out('force_constants', self.ctx.force_constants)
@@ -354,18 +362,25 @@ class PhononPhonopy(WorkChain):
     def prepare_phonopy_inputs(self):
         self.ctx.band_paths = get_path_using_seekpath(
             self.ctx.primitive_structure,
-            band_resolution=30)
+            band_resolution=Int(30))
 
     def create_phonopy_builder(self):
         """Generate input parameters for a remote phonopy calculation"""
 
         self.report("create phonopy process builder")
 
-        code_string = str(self.inputs.code_string)
+        code_string = self.inputs.code_string.value
         builder = Code.get_from_string(code_string).get_builder()
         builder.structure = self.ctx.final_structure
         builder.parameters = self.ctx.phonon_settings
-        builder.options = self.inputs.options.get_dict()  # dict
+        options = {}
+        options.update(self.inputs.options)
+        builder.metadata = {}
+        builder.metadata['options'] = options
+        builder.metadata['options']['parser_name'] = 'phonopy'
+        builder.metadata['options']['input_filename'] = 'phonopy.conf'
+        builder.metadata['options']['output_filename'] = 'phonopy.yaml'
+
         if 'force_constants' in self.ctx:
             builder.force_constants = self.ctx.force_constants
         else:
@@ -398,12 +413,11 @@ class PhononPhonopy(WorkChain):
         params = {}
         if 'nac_params' in self.ctx:
             params['nac_params'] = self.ctx.nac_params
-        result, _ = get_phonon.run_get_node(self.ctx.final_structure,
-                                            self.ctx.phonon_settings,
-                                            self.ctx.force_constants,
-                                            self.ctx.band_paths,
-                                            label='run_phonopy_in_workchain',
-                                            **params)
+        result = get_phonon(self.ctx.final_structure,
+                            self.ctx.phonon_settings,
+                            self.ctx.force_constants,
+                            self.ctx.band_paths,
+                            **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])
         self.out('band_structure', result['band_structure'])
