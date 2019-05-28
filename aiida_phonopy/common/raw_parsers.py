@@ -42,11 +42,11 @@ def parse_partial_DOS(filename, structure, parameters):
             supercell_matrix=params_dict['supercell_matrix'],
             symprec=params_dict['symmetry_tolerance'])
 
-    dos = PhononDosData(
-        frequencies=partial_dos.T[0],
-        dos=np.sum(partial_dos[:, 1:], axis=1),
-        partial_dos=partial_dos[:, 1:].T,
-        atom_labels=phonon.get_primitive().get_chemical_symbols())
+    dos = PhononDosData()
+    dos.set_frequencies(partial_dos[:, 0])
+    dos.set_dos(partial_dos[:, 1:].sum(axis=1))
+    dos.set_partial_dos(partial_dos[:, 1:].T)
+    dos.set_atom_labels(phonon.primitive.get_chemical_symbols())
 
     return dos
 
@@ -89,10 +89,11 @@ def parse_band_structure(filename, input_bands):
     nb = input_bands.get_number_of_bands()
     frequencies = frequencies.reshape((nb, -1, frequencies.shape[1]))
 
-    band_structure = BandStructureData(frequencies=frequencies,
-                                       bands=input_bands.get_bands(),
-                                       labels=input_bands.get_labels(),
-                                       unitcell=input_bands.get_unitcell())
+    band_structure = BandStructureData()
+    band_structure.set_frequencies(frequencies)
+    band_structure.set_bands(input_bands.get_bands())
+    band_structure.set_labels(input_bands.get_labels())
+    band_structure.set_unitcell(input_bands.get_unitcell())
 
     return band_structure
 

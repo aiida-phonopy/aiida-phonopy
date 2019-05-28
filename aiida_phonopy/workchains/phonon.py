@@ -1,5 +1,6 @@
 from aiida.engine import WorkChain, ToContext
 
+from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import workfunction
 from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Float, Bool, Int, Str, load_node, Code
@@ -114,7 +115,6 @@ class PhononPhonopy(WorkChain):
                      cls.prepare_phonopy_inputs,
                      if_(cls.run_phonopy)(
                          if_(cls.remote_phonopy)(
-                             cls.create_phonopy_builder,
                              cls.run_phonopy_remote,
                              cls.collect_data,
                          ).else_(
@@ -303,7 +303,6 @@ class PhononPhonopy(WorkChain):
             self.ctx[label], _ = get_forces_from_uuid.run_get_node(
                 uuid_str, label=label)
 
-
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
 
@@ -327,7 +326,6 @@ class PhononPhonopy(WorkChain):
             raise RuntimeError("Forces could not be retrieved.")
 
         self.ctx.force_sets = get_force_sets(**forces_dict)
-
 
     def create_nac_params(self):
         self.report('create nac data')
@@ -364,22 +362,19 @@ class PhononPhonopy(WorkChain):
             self.ctx.primitive_structure,
             band_resolution=Int(30))
 
-    def create_phonopy_builder(self):
-        """Generate input parameters for a remote phonopy calculation"""
+    def run_phonopy_remote(self):
+        """Run phonopy at remote computer"""
 
-        self.report("create phonopy process builder")
+        self.report('remote phonopy calculation')
 
         code_string = self.inputs.code_string.value
         builder = Code.get_from_string(code_string).get_builder()
         builder.structure = self.ctx.final_structure
         builder.parameters = self.ctx.phonon_settings
-        options = {}
-        options.update(self.inputs.options)
-        builder.metadata = {}
-        builder.metadata['options'] = options
-        builder.metadata['options']['parser_name'] = 'phonopy'
-        builder.metadata['options']['input_filename'] = 'phonopy.conf'
-        builder.metadata['options']['output_filename'] = 'phonopy.yaml'
+        builder.metadata.options.update(self.inputs.options)
+        builder.metadata.options.parser_name = 'phonopy'
+        builder.metadata.options.input_filename = 'phonopy.conf'
+        builder.metadata.options.output_filename = 'phonopy.stdout'
 
         if 'force_constants' in self.ctx:
             builder.force_constants = self.ctx.force_constants
@@ -390,20 +385,20 @@ class PhononPhonopy(WorkChain):
             builder.nac_params = self.ctx.nac_params
         if 'band_paths' in self.ctx:
             builder.bands = self.ctx.band_paths
-        self.ctx.phonopy_builder = builder
 
-    def run_phonopy_remote(self):
-        self.report('remote phonopy calculation')
-        future = self.submit(self.ctx.phonopy_builder)
+        future = self.submit(builder)
+
         self.report('phonopy calculation: {}'.format(future.pk))
-        return ToContext(phonon_properties=future)
+        self.to_context(**{'phonon_properties': future})
+        # return ToContext(phonon_properties=future)
 
     def collect_data(self):
+        self.report('collect data')
         self.out('thermal_properties',
-                 self.ctx.phonon_properties.out.thermal_properties)
-        self.out('dos', self.ctx.phonon_properties.out.dos)
+                 self.ctx.phonon_properties.outputs.thermal_properties)
+        self.out('dos', self.ctx.phonon_properties.outputs.dos)
         self.out('band_structure',
-                 self.ctx.phonon_properties.out.band_structure)
+                 self.ctx.phonon_properties.outputs.band_structure)
 
         self.report('finish phonon')
 

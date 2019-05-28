@@ -13,15 +13,15 @@ class BandStructureData(ArrayData):
 
     def get_number_of_bands(self):
 
-        if 'nbands' in self.get_attrs():
-            return self.get_attr('nbands')
+        if 'nbands' in self.attributes:
+            return self.attributes['nbands']
         else:
             return None
 
     def get_number_of_points(self):
 
-        if 'npoints' in self.get_attrs():
-            return self.get_attr('npoints')
+        if 'npoints' in self.attributes:
+            return self.attributes['npoints']
         else:
             return None
 

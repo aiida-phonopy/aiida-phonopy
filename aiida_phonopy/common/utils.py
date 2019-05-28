@@ -67,19 +67,6 @@ def get_force_sets(**forces_dict):
     return force_sets
 
 
-@workfunction
-def get_force_sets_data(datasets, **forces_dict):
-    dataset_dict = datasets.get_dict()
-    forces = []
-    for i in range(len(dataset_dict['first_atoms'])):
-        label = "supercell_%03d" % (i + 1)
-        forces.append(forces_dict[label].get_array('final'))
-    ForceSetsData = DataFactory('phonopy.force_sets')
-    force_sets = ForceSetsData(datasets=dataset_dict)
-    force_sets.set_forces(forces)
-    return force_sets
-
-
 @calcfunction
 def get_nac_params(born_charges, epsilon):
     """Worfunction to extract nac ArrayData object from calc"""

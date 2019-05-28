@@ -54,57 +54,7 @@ class BasePhonopyCalculation(object):
         spec.input('bands', valid_type=BandStructureData, required=False,
                    help='Use the node defining the band structure to use')
 
-        # return {
-        #     "parameters": {
-        #         'valid_types': Dict,
-        #         'additional_parameter': None,
-        #         'linkname': 'parameters',
-        #         'docstring': ("Use a node that specifies the phonopy "
-        #                       "parameters for the namelists"),
-        #     },
-        #     "force_sets": {
-        #         'valid_types': ArrayData,
-        #         'additional_parameter': None,
-        #         'linkname': 'force_sets',
-        #         'docstring': ("Use a node that specifies the force_sets "
-        #                       "array for the namelists"),
-        #     },
-        #     "displacement_dataset": {
-        #         'valid_types': Dict,
-        #         'additional_parameter': None,
-        #         'linkname': 'displacement_dataset',
-        #         'docstring': ("Use a node that specifies the dispalcement "
-        #                       "dataset parameters for the namelists"),
-        #     },
-        #     "force_constants": {
-        #         'valid_types': ArrayData,
-        #         'additional_parameter': None,
-        #         'linkname': 'force_constants',
-        #         'docstring': ("Use a node that specifies the force constants "
-        #                       "arraies for the namelists"),
-        #     },
-        #     "structure": {
-        #         'valid_types': StructureData,
-        #         'additional_parameter': None,
-        #         'linkname': 'structure',
-        #         'docstring': "Use a node for the structure",
-        #     },
-        #     "nac_params": {
-        #         'valid_types': ArrayData,
-        #         'additional_parameter': None,
-        #         'linkname': 'nac_params',
-        #         'docstring': ("Use a node for the Non-analitical "
-        #                       "corrections parameters arraies"),
-        #     },
-        #     'bands': {
-        #         'valid_types': BandStructureData,
-        #         'additional_parameter': None,
-        #         'linkname': 'bands',
-        #         'docstring': "Use the node defining the band structure to use",
-        #     }
-        # }
-
-    def _create_additional_files(self, tempfolder, inputs_params):
+    def _create_additional_files(self, folder):
         pass
 
     def prepare_for_submission(self, folder):
@@ -113,6 +63,8 @@ class BasePhonopyCalculation(object):
         :param folder: an `aiida.common.folders.Folder` to temporarily write files on disk
         :return: `aiida.common.datastructures.CalcInfo` instance
         """
+
+        self.logger.info("prepare_for_submission")
 
         parameters_data = self.inputs.parameters
         structure = self.inputs.structure
@@ -142,6 +94,7 @@ class BasePhonopyCalculation(object):
             infile.write(cell_txt)
 
         if 'nac_params' in self.inputs:
+            nac_params = self.inputs.nac_params
             born_txt = get_BORN_txt(nac_params, parameters_data, structure)
             nac_filename = folder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
@@ -172,7 +125,8 @@ class BasePhonopyCalculation(object):
                                        + self._additional_cmdline_params
                                        + property_cmd)
             codeinfo.code_uuid = code.uuid
+            codeinfo.stdout_name = self.metadata.options.output_filename
             codeinfo.withmpi = False
-            calcinfo.codes_info += [codeinfo]
+            calcinfo.codes_info.append(codeinfo)
 
         return calcinfo
