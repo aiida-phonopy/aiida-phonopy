@@ -18,13 +18,15 @@ def vasp_immigrant(settings):
 
         calc_cls = CalculationFactory('vasp.vasp')
         label = conf['label']
-        process, inputs = calc_cls.immigrant(code,
-                                             calculation_folder,
-                                             potcar_spec=potcar_spec,
-                                             resources=resources,
-                                             settings=settings_dict,
-                                             label=label)
-        builders.append(inputs)
+        process, builder = calc_cls.immigrant(code,
+                                              calculation_folder,
+                                              potcar_spec=potcar_spec,
+                                              resources=resources,
+                                              settings=settings_dict,
+                                              label=label)
+        builder.metadata.options.parser_name = 'vasp.vasp'
+
+        builders.append(builder)
 
     return builders
 

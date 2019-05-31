@@ -289,19 +289,15 @@ class PhononPhonopy(WorkChain):
 
         uuids = self.inputs.calculation_uuids.get_dict()['uuids']
         if self.inputs.is_nac:
-            uuid_nac = uuids.pop()
+            uuid = uuids.pop()
             label = 'born_and_epsilon'
-            uuid_str = Str(uuid_nac)
-            uuid_str.label = "uuid"
-            self.ctx[label], _ = get_born_epsilon_from_uuid.run_get_node(
-                uuid_str, label=label)
-
+            n = load_node(uuid)
+            self.ctx[label] = {'output_born_charges': n.outputs.output_born_charges,
+                               'output_dielectrics': n.outputs.output_dielectrics}
         for i, uuid in enumerate(uuids):
             label = "supercell_%03d" % (i + 1)
-            uuid_str = Str(uuid)
-            uuid_str.label = "uuid"
-            self.ctx[label], _ = get_forces_from_uuid.run_get_node(
-                uuid_str, label=label)
+            n = load_node(uuid)
+            self.ctx[label] = {'output_forces': n.outputs.output_forces}
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
@@ -375,6 +371,7 @@ class PhononPhonopy(WorkChain):
         builder.metadata.options.parser_name = 'phonopy'
         builder.metadata.options.input_filename = 'phonopy.conf'
         builder.metadata.options.output_filename = 'phonopy.stdout'
+        builder.metadata.label = self.inputs.metadata.label
 
         if 'force_constants' in self.ctx:
             builder.force_constants = self.ctx.force_constants

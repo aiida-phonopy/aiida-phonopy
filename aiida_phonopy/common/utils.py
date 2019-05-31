@@ -1,5 +1,5 @@
 import numpy as np
-from aiida.engine import workfunction, calcfunction
+from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
 from aiida.orm import load_node, Int
 
@@ -39,20 +39,19 @@ def get_path_using_seekpath(structure, band_resolution=Int(30)):
     return band_structure
 
 
-@workfunction
+@calcfunction
 def get_forces_from_uuid(uuid):
-    n = load_node(str(uuid))
-    return {'output_forces': n.out.output_forces}
+    n = load_node(uuid.value)
+    return {'output_forces': n.outputs.output_forces}
 
 
-@workfunction
+@calcfunction
 def get_born_epsilon_from_uuid(uuid):
-    n = load_node(str(uuid))
-    return {'output_born_charges': n.out.output_born_charges,
-            'output_dielectrics': n.out.output_dielectrics}
+    n = load_node(uuid.value)
+    return {'output_born_charges': n.outputs.output_born_charges,
+            'output_dielectrics': n.outputs.output_dielectrics}
 
 
-# @workfunction
 @calcfunction
 def get_force_sets(**forces_dict):
     forces = []
