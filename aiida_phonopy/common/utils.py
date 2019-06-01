@@ -7,7 +7,7 @@ from aiida.orm import load_node, Int
 def get_path_using_seekpath(structure, band_resolution=Int(30)):
     import seekpath
 
-    num_division = int(band_resolution)
+    num_division = band_resolution.value
     phonopy_structure = phonopy_atoms_from_structure(structure)
     cell = phonopy_structure.get_cell()
     scaled_positions = phonopy_structure.get_scaled_positions()
@@ -19,8 +19,8 @@ def get_path_using_seekpath(structure, band_resolution=Int(30)):
     labels = path_data['point_coords']
 
     band_ranges = []
-    for set in path_data['path']:
-        band_ranges.append([labels[set[0]], labels[set[1]]])
+    for pair in path_data['path']:
+        band_ranges.append([labels[pair[0]], labels[pair[1]]])
 
     bands = []
     for q_start, q_end in band_ranges:

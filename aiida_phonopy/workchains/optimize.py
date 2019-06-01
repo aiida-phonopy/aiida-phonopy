@@ -3,7 +3,7 @@ from aiida.engine import workfunction
 from aiida.orm import Float, Bool, Int
 from aiida.engine import while_
 from aiida.plugins import DataFactory
-from aiida_phonopy.common.generate_inputs import generate_inputs
+from aiida_phonopy.common.generate_inputs import get_calcjob_builder
 from aiida_phonopy.common.parse_interface import parse_optimize_calculation
 import numpy as np
 

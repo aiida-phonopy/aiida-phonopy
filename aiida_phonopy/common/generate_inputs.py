@@ -7,17 +7,45 @@ Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 
 
-def vasp_immigrant(settings):
-    builders = []
-    for i, conf in enumerate(settings):
-        code = Code.get_from_string(conf['code_string'])
-        resources = conf['resources']
-        potcar_spec = conf['potcar_spec']
-        settings_dict = conf['settings']
-        calculation_folder = conf['calculation_folder']
+def get_calcjob_builder(structure, calculator_settings, calc_type=None,
+                        pressure=0.0, label=None):
+    if calc_type:
+        code = Code.get_from_string(
+            calculator_settings[calc_type]['code_string'])
+    else:
+        code = Code.get_from_string(
+            calculator_settings['code_string'])
 
+    if code.attributes['input_plugin'] in ['vasp.vasp']:
+        return _get_vasp_builder(structure, calculator_settings,
+                                 calc_type=calc_type, pressure=pressure,
+                                 label=label)
+    else:
+        raise RuntimeError("Code could not be found.")
+
+
+def get_immigrant_builder(calculation_folder,
+                          calculator_settings,
+                          calc_type=None,
+                          label=None):
+    if calc_type:
+        code = Code.get_from_string(
+            calculator_settings[calc_type]['code_string'])
+    else:
+        code = Code.get_from_string(
+            calculator_settings['code_string'])
+
+    if code.attributes['input_plugin'] in ['vasp.vasp']:
+        if calc_type is None:
+            settings_dict = calculator_settings.get_dict()
+        else:
+            settings_dict = calculator_settings[calc_type]
+
+        code_string = settings_dict['code_string']
+        resources = settings_dict['options']['resources']
+        potcar_spec = {'family': settings_dict['potential_family'],
+                       'map': settings_dict['potential_mapping']}
         calc_cls = CalculationFactory('vasp.vasp')
-        label = conf['label']
         process, builder = calc_cls.immigrant(code,
                                               calculation_folder,
                                               potcar_spec=potcar_spec,
@@ -25,14 +53,14 @@ def vasp_immigrant(settings):
                                               settings=settings_dict,
                                               label=label)
         builder.metadata.options.parser_name = 'vasp.vasp'
+    else:
+        raise RuntimeError("Code could not be found.")
 
-        builders.append(builder)
-
-    return builders
+    return builder
 
 
-def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
-                         label=None):
+def _get_vasp_builder(structure, settings, calc_type=None, pressure=0.0,
+                      label=None):
     """
     Generate the input paramemeters needed to run a calculation for VASP
 
@@ -45,7 +73,7 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     if calc_type is None:
         settings_dict = settings.get_dict()
     else:
-        settings_dict = settings.get_dict()[calc_type]
+        settings_dict = settings[calc_type]
     code_string = settings_dict['code_string']
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
@@ -58,10 +86,6 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
 
     builder.clean_workdir = Bool(False)
 
-    # Force setting
-    force_setting_dict = {'add_forces': {'link_name': 'output_forces',
-                                         'type': 'array',
-                                         'quantities': ['forces']}}
     if 'parser_settings' in settings_dict:
         parser_settings_dict = settings_dict['parser_settings']
     else:
@@ -122,20 +146,3 @@ def generate_vasp_params(structure, settings, calc_type=None, pressure=0.0,
     builder.kpoints = kpoints
 
     return builder
-
-
-def generate_inputs(structure, calculator_settings, calc_type=None,
-                    pressure=0.0, label=None):
-    if calc_type:
-        code = Code.get_from_string(
-            calculator_settings.get_dict()[calc_type]['code_string'])
-    else:
-        code = Code.get_from_string(
-            calculator_settings.get_dict()['code_string'])
-
-    if code.attributes['input_plugin'] in ['vasp.vasp']:
-        return generate_vasp_params(structure, calculator_settings,
-                                    calc_type=calc_type, pressure=pressure,
-                                    label=label)
-    else:
-        raise RuntimeError("Code could not be found.")

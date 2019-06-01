@@ -6,11 +6,10 @@ from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Float, Bool, Int, Str, load_node, Code
 from aiida.engine import if_
 import numpy as np
-from aiida_phonopy.common.generate_inputs import generate_inputs
+from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
+                                                  get_immigrant_builder)
 from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
                                         phonopy_atoms_to_structure,
-                                        get_forces_from_uuid,
-                                        get_born_epsilon_from_uuid,
                                         get_force_sets,
                                         get_force_constants,
                                         get_nac_params,
@@ -75,7 +74,7 @@ class PhononPhonopy(WorkChain):
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('cell_matrices', valid_type=ArrayData, required=True)
         # Optional arguments
-        spec.input('calculation_uuids',
+        spec.input('immigrant_calculation_folders',
                    valid_type=Dict, required=False)
         spec.input('calculator_settings',
                    valid_type=Dict, required=False)
@@ -103,7 +102,7 @@ class PhononPhonopy(WorkChain):
                      if_(cls.use_optimize)(cls.optimize),
                      cls.set_unitcell,
                      cls.create_displacements,
-                     if_(cls.import_nodes)(
+                     if_(cls.import_calculations)(
                          cls.read_force_and_nac_calculations,
                      ).else_(
                          cls.run_force_and_nac_calculations,
@@ -142,8 +141,8 @@ class PhononPhonopy(WorkChain):
     def is_nac(self):
         return self.inputs.is_nac
 
-    def import_nodes(self):
-        return ('calculation_uuids' in self.inputs and
+    def import_calculations(self):
+        return ('immigrant_calculation_folders' in self.inputs and
                 'displacement_dataset' in self.inputs)
 
     def check_settings(self):
@@ -262,10 +261,10 @@ class PhononPhonopy(WorkChain):
         # Forces
         for i, supercell in enumerate(self.ctx.disp_dataset['supercells']):
             label = "supercell_%03d" % (i + 1)
-            builder = generate_inputs(supercell,
-                                      self.inputs.calculator_settings,
-                                      calc_type='forces',
-                                      label=label)
+            builder = get_calcjob_builder(supercell,
+                                          self.inputs.calculator_settings,
+                                          calc_type='forces',
+                                          label=label)
             future = self.submit(builder)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
@@ -276,10 +275,10 @@ class PhononPhonopy(WorkChain):
         # Born charges and dielectric constant
         if self.inputs.is_nac:
             self.report('calculate born charges and dielectric constant')
-            builder = generate_inputs(self.ctx.primitive_structure,
-                                      self.inputs.calculator_settings,
-                                      calc_type='nac',
-                                      label='born_and_epsilon')
+            builder = get_calcjob_builder(self.ctx.primitive_structure,
+                                          self.inputs.calculator_settings,
+                                          calc_type='nac',
+                                          label='born_and_epsilon')
             future = self.submit(builder)
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon': future})
@@ -287,17 +286,28 @@ class PhononPhonopy(WorkChain):
     def read_force_and_nac_calculations(self):
         self.report('read calculation nodes')
 
-        uuids = self.inputs.calculation_uuids.get_dict()['uuids']
-        if self.inputs.is_nac:
-            uuid = uuids.pop()
-            label = 'born_and_epsilon'
-            n = load_node(uuid)
-            self.ctx[label] = {'output_born_charges': n.outputs.output_born_charges,
-                               'output_dielectrics': n.outputs.output_dielectrics}
-        for i, uuid in enumerate(uuids):
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        calc_folders = calc_folders_Dict['calculation_folders']
+        for i, calc_folder in enumerate(calc_folders[:-1]):
             label = "supercell_%03d" % (i + 1)
-            n = load_node(uuid)
-            self.ctx[label] = {'output_forces': n.outputs.output_forces}
+            builder = get_immigrant_builder(calc_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='forces',
+                                            label=label)
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
+
+        if self.inputs.is_nac:  # The last one by definition
+            calc_folder = calc_folders[-1]
+            label = 'born_and_epsilon'
+            builder = get_immigrant_builder(calc_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='nac',
+                                            label=label)
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
