@@ -1,4 +1,3 @@
-from aiida.common.utils import classproperty
 from aiida.plugins import DataFactory
 from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
 from aiida.engine import CalcJob

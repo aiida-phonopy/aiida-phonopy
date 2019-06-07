@@ -1,6 +1,4 @@
-from aiida.common import InputValidationError
 from aiida.common import CalcInfo, CodeInfo
-from aiida.common.utils import classproperty
 from aiida.plugins import DataFactory
 from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,

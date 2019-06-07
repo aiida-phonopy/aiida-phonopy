@@ -23,9 +23,6 @@ class PhonopyParser(Parser):
         """
         self.logger.info("Parsing start.")
 
-        # suppose at the start that the job is successful
-        successful = True
-
         # select the folder object
         # Check that the retrieved folder is there
         try:
@@ -43,9 +40,6 @@ class PhonopyParser(Parser):
         #    return successful, ()
 
         # Get files and do the parsing
-
-        # save the outputs
-        new_nodes_list = []
 
         fc_filename = self.node.inputs.force_constants_filename.value
         if fc_filename in list_of_files:

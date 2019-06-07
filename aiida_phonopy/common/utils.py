@@ -1,55 +1,6 @@
 import numpy as np
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
-from aiida.orm import load_node, Int
-
-@calcfunction
-def get_path_using_seekpath(structure, band_resolution=Int(30)):
-    import seekpath
-
-    num_division = band_resolution.value
-    phonopy_structure = phonopy_atoms_from_structure(structure)
-    cell = phonopy_structure.get_cell()
-    scaled_positions = phonopy_structure.get_scaled_positions()
-    numbers = phonopy_structure.get_atomic_numbers()
-
-    structure = (cell, scaled_positions, numbers)
-    path_data = seekpath.get_path(structure)
-
-    labels = path_data['point_coords']
-
-    band_ranges = []
-    for pair in path_data['path']:
-        band_ranges.append([labels[pair[0]], labels[pair[1]]])
-
-    bands = []
-    for q_start, q_end in band_ranges:
-        band = []
-        for i in range(num_division + 1):
-            band.append(
-                np.array(q_start) + (np.array(q_end) - np.array(q_start))
-                / num_division * i)
-        bands.append(band)
-
-    band_structure = DataFactory('phonopy.band_structure')()
-    band_structure.set_bands(bands)
-    band_structure.set_labels(path_data['path'])
-    band_structure.set_unitcell(phonopy_structure.get_cell())
-
-    return band_structure
-
-
-@calcfunction
-def get_forces_from_uuid(uuid):
-    n = load_node(uuid.value)
-    return {'output_forces': n.outputs.output_forces}
-
-
-@calcfunction
-def get_born_epsilon_from_uuid(uuid):
-    n = load_node(uuid.value)
-    return {'output_born_charges': n.outputs.output_born_charges,
-            'output_dielectrics': n.outputs.output_dielectrics}
 
 
 @calcfunction
@@ -80,18 +31,6 @@ def get_nac_params(born_charges, epsilon):
 
 
 @calcfunction
-def get_nac_data(born_charges, epsilon, structure):
-    """Worfunction to extract NacData object from calc"""
-
-    nac_data = DataFactory('phonopy.nac')(
-        structure=structure,
-        born_charges=born_charges.get_array('born_charges'),
-        epsilon=epsilon.get_array('epsilon'))
-
-    return nac_data
-
-
-@calcfunction
 def get_force_constants(structure, phonon_settings, force_sets, dataset):
     params = {}
     phonon = get_phonopy_instance(structure, phonon_settings, params)
@@ -107,75 +46,101 @@ def get_force_constants(structure, phonon_settings, force_sets, dataset):
 
 
 @calcfunction
-def get_phonon(structure, phonon_settings, force_constants, band_paths,
-               **params):
-    phonon = get_phonopy_instance(structure, phonon_settings, params)
-    phonon.force_constants = force_constants.get_array('force_constants')
+def get_phonon(structure, phonon_settings, force_constants, **params):
     phonon_settings_dict = phonon_settings.get_dict()
-
-    # Normalization factor primitive to unit cell
-    normalization_factor = (phonon.unitcell.get_number_of_atoms()
-                            / phonon.primitive.get_number_of_atoms())
+    ph = get_phonopy_instance(structure, phonon_settings_dict, params)
+    ph.force_constants = force_constants.get_array('force_constants')
 
     # DOS
-    phonon.set_mesh(phonon_settings_dict['mesh'],
-                    is_eigenvectors=True,
-                    is_mesh_symmetry=False)
-    phonon.set_total_DOS(tetrahedron_method=True)
-    phonon.set_partial_DOS(tetrahedron_method=True)
-    total_dos = phonon.get_total_DOS()
-    partial_dos = phonon.get_partial_DOS()
-    PhononDosData = DataFactory('phonopy.phonon_dos')
-    dos = PhononDosData()
-    dos.set_frequencies(total_dos[0])
-    dos.set_dos(total_dos[1] * normalization_factor)
-    dos.set_partial_dos(np.array(partial_dos[1]) * normalization_factor)
-    dos.set_atom_labels(np.array(phonon.primitive.get_chemical_symbols()))
+    ph.set_mesh(phonon_settings_dict['mesh'],
+                is_eigenvectors=True,
+                is_mesh_symmetry=False)
+    ph.run_total_dos()
+    ph.run_projected_dos()
 
-    # THERMAL PROPERTIES (per primtive cell)
-    phonon.set_thermal_properties()
-    t, free_energy, entropy, cv = phonon.get_thermal_properties()
+    total_dos = ph.get_total_dos_dict()
+    dos = DataFactory('array.xy')()
+    dos.set_x(total_dos['frequency_points'], 'Frequency', 'THz')
+    dos.set_y(total_dos['total_dos'], 'Total DOS', '1/THz')
 
-    # Stores thermal properties (per unit cell) data in DB as a workflow
-    # result
+    projected_dos = ph.get_projected_dos_dict()
+    pdos = DataFactory('array.xy')()
+    pdos_list = [pd for pd in projected_dos['projected_dos']]
+    pdos.set_x(projected_dos['frequency_points'], 'Frequency', 'THz')
+    pdos.set_y(pdos_list,
+               ['Projected DOS', ] * len(pdos_list),
+               ['1/THz', ] * len(pdos_list))
+
+    # Thermal properties
+    ph.set_thermal_properties()
+    t, free_energy, entropy, cv = ph.get_thermal_properties()
     thermal_properties = DataFactory('array')()
     thermal_properties.set_array('temperature', t)
-    thermal_properties.set_array('free_energy',
-                                 free_energy * normalization_factor)
-    thermal_properties.set_array('entropy', entropy * normalization_factor)
-    thermal_properties.set_array('heat_capacity',
-                                 cv * normalization_factor)
+    thermal_properties.set_array('free_energy', free_energy)
+    thermal_properties.set_array('entropy', entropy)
+    thermal_properties.set_array('heat_capacity', cv)
     thermal_properties.label = 'Thermal properties'
 
-    # BAND STRUCTURE
-    bands = band_paths
-    phonon.set_band_structure(bands.get_bands())
-    BandStructureData = DataFactory('phonopy.band_structure')
-    band_structure = BandStructureData()
-    band_structure.set_bands(bands.get_bands())
-    band_structure.set_labels(bands.get_labels())
-    band_structure.set_unitcell(bands.get_unitcell())
-    band_structure.set_band_structure_phonopy(phonon.get_band_structure())
+    # Band structure
+    qpoints_list, frequencies_list, labels_list = get_bands_data(ph)
+    bs = DataFactory('array.bands')()
+    bs.set_kpoints(np.array(qpoints_list))
+    bs.set_bands(np.array(frequencies_list), units='THz')
+    if 'primitive_matrix' not in phonon_settings_dict:
+        bs.labels = labels_list
 
     return {'dos': dos,
+            'pdos': pdos,
             'thermal_properties': thermal_properties,
-            'band_structure': band_structure}
+            'band_structure': bs}
 
 
-def get_phonopy_instance(structure, phonon_settings, params):
+def get_bands_data(ph):
+    ph.auto_band_structure()
+    labels = [x.replace('$', '').replace('\\', '').replace('mathrm{', '').replace('}', '').upper()
+              for x in ph.band_structure.labels]
+    frequencies = ph.band_structure.frequencies
+    qpoints = ph.band_structure.qpoints
+    path_connections = ph.band_structure.path_connections
+
+    qpoints_list = list(qpoints[0])
+    frequencies_list = list(frequencies[0])
+    labels_list = [(0, labels[0]), ]
+    label_index = 1
+
+    for pc, qs, fs in zip(path_connections[:-1], qpoints[1:], frequencies[1:]):
+        if labels[label_index] == 'Gamma':
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            if label_index < len(labels):
+                labels_list.append((len(qpoints_list), labels[label_index]))
+            label_index += 1
+            qpoints_list += list(qs)
+            frequencies_list += list(fs)
+        elif pc:
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            label_index += 1
+            qpoints_list += list(qs[1:])
+            frequencies_list += list(fs[1:])
+        else:
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            label_index += 1
+            if label_index < len(labels):
+                labels_list.append((len(qpoints_list), labels[label_index]))
+                label_index += 1
+            qpoints_list += list(qs)
+            frequencies_list += list(fs)
+    labels_list.append((len(qpoints_list) - 1, labels[-1]))
+
+    return qpoints_list, frequencies_list, labels_list
+
+
+def get_phonopy_instance(structure, phonon_settings_dict, params):
     from phonopy import Phonopy
-    phonon_settings_dict = phonon_settings.get_dict()
-    if 'primitive_matrix' in phonon_settings_dict:
-        phonon = Phonopy(
-            phonopy_atoms_from_structure(structure),
-            phonon_settings_dict['supercell_matrix'],
-            primitive_matrix=phonon_settings_dict['primitive_matrix'],
-            symprec=phonon_settings_dict['symmetry_tolerance'])
-    else:
-        phonon = Phonopy(
-            phonopy_atoms_from_structure(structure),
-            phonon_settings_dict['supercell_matrix'],
-            symprec=phonon_settings_dict['symmetry_tolerance'])
+    phonon = Phonopy(
+        phonopy_atoms_from_structure(structure),
+        phonon_settings_dict['supercell_matrix'],
+        primitive_matrix='auto',
+        symprec=phonon_settings_dict['symmetry_tolerance'])
     if 'nac_params' in params:
         from phonopy.interface import get_default_physical_units
         units = get_default_physical_units('vasp')

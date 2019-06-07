@@ -1,9 +1,7 @@
 from aiida.engine import WorkChain, ToContext
 
-from aiida.common.extendeddicts import AttributeDict
-from aiida.engine import workfunction
 from aiida.plugins import DataFactory, WorkflowFactory
-from aiida.orm import Float, Bool, Int, Str, load_node, Code
+from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
 import numpy as np
 from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
@@ -13,7 +11,6 @@ from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
                                         get_force_sets,
                                         get_force_constants,
                                         get_nac_params,
-                                        get_path_using_seekpath,
                                         get_phonon)
 
 # Should be improved by some kind of WorkChainFactory
@@ -22,10 +19,10 @@ from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
 
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
+XyData = DataFactory('array.xy')
 StructureData = DataFactory('structure')
 OptimizeStructure = WorkflowFactory('phonopy.optimize')
-BandStructureData = DataFactory('phonopy.band_structure')
-PhononDosData = DataFactory('phonopy.phonon_dos')
+BandsData = DataFactory('array.bands')
 
 
 class PhononPhonopy(WorkChain):
@@ -111,7 +108,6 @@ class PhononPhonopy(WorkChain):
                      cls.create_force_constants,
                      if_(cls.is_nac)(cls.create_nac_params),
                      cls.set_default_outputs,
-                     cls.prepare_phonopy_inputs,
                      if_(cls.run_phonopy)(
                          if_(cls.remote_phonopy)(
                              cls.run_phonopy_remote,
@@ -126,8 +122,9 @@ class PhononPhonopy(WorkChain):
         spec.output('displacement_dataset', valid_type=Dict, required=False)
         spec.output('nac_params', valid_type=ArrayData, required=False)
         spec.output('thermal_properties', valid_type=ArrayData, required=False)
-        spec.output('band_structure', valid_type=BandStructureData, required=False)
-        spec.output('dos', valid_type=PhononDosData, required=False)
+        spec.output('band_structure', valid_type=BandsData, required=False)
+        spec.output('dos', valid_type=XyData, required=False)
+        spec.output('pdos', valid_type=XyData, required=False)
 
     def use_optimize(self):
         return self.inputs.optimize
@@ -323,10 +320,14 @@ class PhononPhonopy(WorkChain):
                 out_dict = calc
             else:
                 out_dict = calc.outputs
-            if ('output_forces' in out_dict and
-                'final' in out_dict['output_forces'].get_arraynames()):
+            if ('forces' in out_dict and
+                'final' in out_dict['forces'].get_arraynames()):
                 label = "forces_%03d" % (i + 1)
-                forces_dict[label] = out_dict['output_forces']
+                forces_dict[label] = out_dict['forces']
+            else:
+                msg = ("Forces could not be found in calculation %03d."
+                       % (i + 1))
+                self.report(msg)
 
         if len(forces_dict) != len(self.ctx.disp_dataset['supercells']):
             raise RuntimeError("Forces could not be retrieved.")
@@ -338,13 +339,20 @@ class PhononPhonopy(WorkChain):
 
         # VASP specific
         # Call workfunction to make links
-        if type(self.ctx.born_and_epsilon) is dict:
-            out_dict = self.ctx.born_and_epsilon
-        else:
-            out_dict = self.ctx.born_and_epsilon.outputs
+        out_dict = self.ctx.born_and_epsilon.outputs
+
+        if 'born_charges' not in out_dict:
+            raise RuntimeError(
+                "Born effective charges could not be found "
+                "in the calculation. Please check the calculation setting.")
+        if 'dielectrics' not in out_dict:
+            raise RuntimeError(
+                "Dielectric constant could not be found "
+                "in the calculation. Please check the calculation setting.")
+
         self.ctx.nac_params = get_nac_params(
-            born_charges=out_dict['output_born_charges'],
-            epsilon=out_dict['output_dielectrics'])
+            born_charges=out_dict['born_charges'],
+            epsilon=out_dict['dielectrics'])
 
     def create_force_constants(self):
         self.report('create force constants')
@@ -362,11 +370,6 @@ class PhononPhonopy(WorkChain):
         self.out('displacement_dataset', self.ctx.disp_dataset['dataset'])
         if 'nac_params' in self.ctx:
             self.out('nac_params', self.ctx.nac_params)
-
-    def prepare_phonopy_inputs(self):
-        self.ctx.band_paths = get_path_using_seekpath(
-            self.ctx.primitive_structure,
-            band_resolution=Int(30))
 
     def run_phonopy_remote(self):
         """Run phonopy at remote computer"""
@@ -404,6 +407,7 @@ class PhononPhonopy(WorkChain):
         self.out('thermal_properties',
                  self.ctx.phonon_properties.outputs.thermal_properties)
         self.out('dos', self.ctx.phonon_properties.outputs.dos)
+        self.out('pdos', self.ctx.phonon_properties.outputs.pdos)
         self.out('band_structure',
                  self.ctx.phonon_properties.outputs.band_structure)
 
@@ -418,7 +422,6 @@ class PhononPhonopy(WorkChain):
         result = get_phonon(self.ctx.final_structure,
                             self.ctx.phonon_settings,
                             self.ctx.force_constants,
-                            self.ctx.band_paths,
                             **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])

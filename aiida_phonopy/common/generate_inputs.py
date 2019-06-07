@@ -17,8 +17,14 @@ def get_calcjob_builder(structure, calculator_settings, calc_type=None,
             calculator_settings['code_string'])
 
     if code.attributes['input_plugin'] in ['vasp.vasp']:
-        return _get_vasp_builder(structure, calculator_settings,
-                                 calc_type=calc_type, pressure=pressure,
+        if calc_type is None:
+            settings_dict = calculator_settings.get_dict()
+        else:
+            settings_dict = calculator_settings[calc_type]
+
+        return _get_vasp_builder(structure,
+                                 settings_dict,
+                                 pressure=pressure,
                                  label=label)
     else:
         raise RuntimeError("Code could not be found.")
@@ -41,7 +47,6 @@ def get_immigrant_builder(calculation_folder,
         else:
             settings_dict = calculator_settings[calc_type]
 
-        code_string = settings_dict['code_string']
         calc_cls = CalculationFactory('vasp.vasp')
         metadata = {'options': settings_dict['options']}
         process, builder = calc_cls.immigrant(code,
@@ -56,21 +61,16 @@ def get_immigrant_builder(calculation_folder,
     return builder
 
 
-def _get_vasp_builder(structure, settings, calc_type=None, pressure=0.0,
-                      label=None):
+def _get_vasp_builder(structure, settings_dict, pressure=0.0, label=None):
     """
     Generate the input paramemeters needed to run a calculation for VASP
 
     :param structure:  StructureData object containing the crystal structure
-    :param settings:  Dict object containing a dictionary with the
+    :param settings:  dict object containing a dictionary with the
         INCAR parameters
     :return: Calculation process object, input dictionary
     """
 
-    if calc_type is None:
-        settings_dict = settings.get_dict()
-    else:
-        settings_dict = settings[calc_type]
     code_string = settings_dict['code_string']
     VaspWorkflow = WorkflowFactory('vasp.vasp')
     builder = VaspWorkflow.get_builder()
@@ -80,7 +80,6 @@ def _get_vasp_builder(structure, settings, calc_type=None, pressure=0.0,
     builder.structure = structure
     options = Dict(dict=settings_dict['options'])
     builder.options = options
-
     builder.clean_workdir = Bool(False)
 
     if 'parser_settings' in settings_dict:
@@ -88,45 +87,24 @@ def _get_vasp_builder(structure, settings, calc_type=None, pressure=0.0,
     else:
         parser_settings_dict = {}
     if 'add_forces' not in parser_settings_dict:
-        parser_settings_dict.update(force_setting_dict)
+        parser_settings_dict.update({'add_forces': True})
 
     builder.settings = DataFactory('dict')(
         dict={'parser_settings': parser_settings_dict})
 
-    # INCAR (parameters)
     incar = dict(settings_dict['parameters'])
     keys_lower = [key.lower() for key in incar]
     if 'ediff' not in keys_lower:
         incar.update({'EDIFF': 1.0E-8})
-    if 'ediffg' not in keys_lower:
-        incar.update({'EDIFFG': -1.0E-6})
-
     builder.parameters = Dict(dict=incar)
     builder.potential_family = Str(settings_dict['potential_family'])
     builder.potential_mapping = Dict(
         dict=settings_dict['potential_mapping'])
 
-    # KPOINTS
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
-
-    if 'kpoints_density_{}'.format(calc_type) in settings_dict:
-        kpoints.set_kpoints_mesh_from_density(
-            settings_dict['kpoints_density_{}'.format(calc_type)])
-
-    elif 'kpoints_density' in settings_dict:
+    if 'kpoints_density' in settings_dict:
         kpoints.set_kpoints_mesh_from_density(settings_dict['kpoints_density'])
-
-    elif 'kpoints_mesh_{}'.format(calc_type) in settings_dict:
-        if 'kpoints_offset' in settings_dict:
-            kpoints_offset = settings_dict['kpoints_offset']
-        else:
-            kpoints_offset = [0.0, 0.0, 0.0]
-
-        kpoints.set_kpoints_mesh(
-            settings_dict['kpoints_mesh_{}'.format(calc_type)],
-            offset=kpoints_offset)
-
     elif 'kpoints_mesh' in settings_dict:
         if 'kpoints_offset' in settings_dict:
             kpoints_offset = settings_dict['kpoints_offset']
