@@ -32,8 +32,7 @@ def get_calcjob_builder(structure, calculator_settings, calc_type=None,
 
 def get_immigrant_builder(calculation_folder,
                           calculator_settings,
-                          calc_type=None,
-                          label=None):
+                          calc_type=None):
     if calc_type:
         code = Code.get_from_string(
             calculator_settings[calc_type]['code_string'])
@@ -52,8 +51,7 @@ def get_immigrant_builder(calculation_folder,
         process, builder = calc_cls.immigrant(code,
                                               calculation_folder,
                                               metadata=metadata,
-                                              settings=settings_dict,
-                                              label=label)
+                                              settings=settings_dict)
         builder.metadata['options']['parser_name'] = 'vasp.vasp'
     else:
         raise RuntimeError("Code could not be found.")

@@ -2,8 +2,8 @@ from aiida.engine import ExitCode
 from aiida.common.exceptions import NotExistent
 from aiida.parsers.parser import Parser
 from aiida_phonopy.common.raw_parsers import (
-    parse_thermal_properties, parse_FORCE_CONSTANTS, parse_partial_DOS,
-    parse_band_structure)
+    parse_thermal_properties, parse_FORCE_CONSTANTS, parse_projected_dos,
+    parse_total_dos, parse_band_structure)
 
 
 class PhonopyParser(Parser):
@@ -47,12 +47,18 @@ class PhonopyParser(Parser):
                 fname = f.name
             self.out('force_constants', parse_FORCE_CONSTANTS(fname))
 
-        pdos_filename = self.node.inputs.projected_dos_filename.value
-        if pdos_filename in list_of_files:
-            with output_folder.open(pdos_filename) as f:
+        projected_dos_filename = self.node.inputs.projected_dos_filename.value
+        if projected_dos_filename in list_of_files:
+            with output_folder.open(projected_dos_filename) as f:
                 fname = f.name
-            pdos_object = parse_partial_DOS(
-                fname, self.node.inputs.structure, self.node.inputs.parameters)
+            pdos_object = parse_projected_dos(fname)
+            self.out('pdos', pdos_object)
+
+        total_dos_filename = self.node.inputs.projected_dos_filename.value
+        if total_dos_filename in list_of_files:
+            with output_folder.open(total_dos_filename) as f:
+                fname = f.name
+            pdos_object = parse_total_dos(fname)
             self.out('dos', pdos_object)
 
         tp_filename = self.node.inputs.thermal_properties_filename.value
@@ -61,12 +67,15 @@ class PhonopyParser(Parser):
                 fname = f.name
             self.out('thermal_properties', parse_thermal_properties(fname))
 
+        sym_dataset = self.node.inputs.settings['symmetry']
+        label = "%s (%d)" % (sym_dataset['international'],
+                             sym_dataset['number'])
         band_filename = self.node.inputs.band_structure_filename.value
         if band_filename in list_of_files:
             with output_folder.open(band_filename) as f:
                 fname = f.name
-            bs_object = parse_band_structure(fname, self.node.inputs.bands)
-            self.out('band_structure', bs_object)
+            self.out('band_structure',
+                     parse_band_structure(fname, label=label))
 
         self.logger.info("Parsing done.")
         return ExitCode(0)

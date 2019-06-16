@@ -4,6 +4,13 @@ from aiida.plugins import DataFactory
 
 
 @calcfunction
+def get_phonon_setting_info(phonon_setting_info):
+    settings = DataFactory('dict')(dict=phonon_setting_info.get_dict())
+    settings.label = 'phonon_setting_info'
+    return settings
+
+
+@calcfunction
 def get_force_sets(**forces_dict):
     forces = []
     # for i in range(forces_dict['num_supercells']):
@@ -50,49 +57,65 @@ def get_phonon(structure, phonon_settings, force_constants, **params):
     phonon_settings_dict = phonon_settings.get_dict()
     ph = get_phonopy_instance(structure, phonon_settings_dict, params)
     ph.force_constants = force_constants.get_array('force_constants')
+    mesh = phonon_settings_dict['mesh']
 
-    # DOS
-    ph.set_mesh(phonon_settings_dict['mesh'],
-                is_eigenvectors=True,
-                is_mesh_symmetry=False)
+    # Mesh
+    total_dos, pdos, thermal_properties = get_mesh_property_data(ph, mesh)
+
+    # Band structure
+    bs = get_bands_data(ph)
+
+    return {'dos': total_dos,
+            'pdos': pdos,
+            'thermal_properties': thermal_properties,
+            'band_structure': bs}
+
+
+def get_mesh_property_data(ph, mesh):
+    ph.set_mesh(mesh)
     ph.run_total_dos()
-    ph.run_projected_dos()
 
-    total_dos = ph.get_total_dos_dict()
+    dos = get_total_dos(ph.get_total_dos_dict())
+
+    ph.run_thermal_properties()
+    tprops = get_thermal_properties(ph.get_thermal_properties_dict())
+
+    ph.set_mesh(mesh, is_eigenvectors=True, is_mesh_symmetry=False)
+    ph.run_projected_dos()
+    pdos = get_projected_dos(ph.get_projected_dos_dict())
+
+    return dos, pdos, tprops
+
+
+def get_total_dos(total_dos):
     dos = DataFactory('array.xy')()
     dos.set_x(total_dos['frequency_points'], 'Frequency', 'THz')
     dos.set_y(total_dos['total_dos'], 'Total DOS', '1/THz')
+    dos.label = 'Total DOS'
+    return dos
 
-    projected_dos = ph.get_projected_dos_dict()
+
+def get_projected_dos(projected_dos):
     pdos = DataFactory('array.xy')()
     pdos_list = [pd for pd in projected_dos['projected_dos']]
     pdos.set_x(projected_dos['frequency_points'], 'Frequency', 'THz')
     pdos.set_y(pdos_list,
                ['Projected DOS', ] * len(pdos_list),
                ['1/THz', ] * len(pdos_list))
+    pdos.label = 'Projected DOS'
+    return pdos
 
-    # Thermal properties
-    ph.set_thermal_properties()
-    t, free_energy, entropy, cv = ph.get_thermal_properties()
-    thermal_properties = DataFactory('array')()
-    thermal_properties.set_array('temperature', t)
-    thermal_properties.set_array('free_energy', free_energy)
-    thermal_properties.set_array('entropy', entropy)
-    thermal_properties.set_array('heat_capacity', cv)
-    thermal_properties.label = 'Thermal properties'
 
-    # Band structure
-    qpoints_list, frequencies_list, labels_list = get_bands_data(ph)
-    bs = DataFactory('array.bands')()
-    bs.set_kpoints(np.array(qpoints_list))
-    bs.set_bands(np.array(frequencies_list), units='THz')
-    if 'primitive_matrix' not in phonon_settings_dict:
-        bs.labels = labels_list
-
-    return {'dos': dos,
-            'pdos': pdos,
-            'thermal_properties': thermal_properties,
-            'band_structure': bs}
+def get_thermal_properties(thermal_properties):
+    tprops = DataFactory('array.xy')()
+    tprops.set_x(thermal_properties['temperatures'], 'Temperature', 'K')
+    tprops.set_y([thermal_properties['free_energy'],
+                  thermal_properties['entropy'],
+                  thermal_properties['heat_capacity']],
+                 ['Helmholtz free energy', 'Entropy', 'Cv'],
+                 ['kJ/mol', 'J/K/mol', 'J/K/mol'])
+    tprops.label = 'Thermal properties'
+    return tprops
 
 
 def get_bands_data(ph):
@@ -102,14 +125,21 @@ def get_bands_data(ph):
     frequencies = ph.band_structure.frequencies
     qpoints = ph.band_structure.qpoints
     path_connections = ph.band_structure.path_connections
+    label = "%s (%d)" % (ph.symmetry.dataset['international'],
+                         ph.symmetry.dataset['number'])
 
+    return get_bands(qpoints, frequencies, labels, path_connections,
+                     label=label)
+
+
+def get_bands(qpoints, frequencies, labels, path_connections, label=None):
     qpoints_list = list(qpoints[0])
     frequencies_list = list(frequencies[0])
     labels_list = [(0, labels[0]), ]
     label_index = 1
 
     for pc, qs, fs in zip(path_connections[:-1], qpoints[1:], frequencies[1:]):
-        if labels[label_index] == 'Gamma':
+        if labels[label_index] == 'GAMMA':
             labels_list.append((len(qpoints_list) - 1, labels[label_index]))
             if label_index < len(labels):
                 labels_list.append((len(qpoints_list), labels[label_index]))
@@ -131,7 +161,14 @@ def get_bands_data(ph):
             frequencies_list += list(fs)
     labels_list.append((len(qpoints_list) - 1, labels[-1]))
 
-    return qpoints_list, frequencies_list, labels_list
+    bs = DataFactory('array.bands')()
+    bs.set_kpoints(np.array(qpoints_list))
+    bs.set_bands(np.array(frequencies_list), units='THz')
+    bs.labels = labels_list
+    if label is not None:
+        bs.label = label
+
+    return bs
 
 
 def get_phonopy_instance(structure, phonon_settings_dict, params):

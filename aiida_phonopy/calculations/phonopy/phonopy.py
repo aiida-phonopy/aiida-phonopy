@@ -6,11 +6,12 @@ from aiida.orm import Str
 from aiida.common import InputValidationError
 from aiida_phonopy.common.raw_parsers import (get_FORCE_CONSTANTS_txt,
                                               get_FORCE_SETS_txt)
+import six
 
 
-PhononDosData = DataFactory('phonopy.phonon_dos')
-BandStructureData = DataFactory('phonopy.band_structure')
+BandsData = DataFactory('array.bands')
 ArrayData = DataFactory('array')
+XyData = DataFactory('array.xy')
 Dict = DataFactory('dict')
 
 
@@ -19,44 +20,60 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     A basic plugin for calculating phonon properties using Phonopy.
     """
 
-    _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
-
-    _OUTPUT_DOS = 'projected_dos.dat'
+    _OUTPUT_PROJECTED_DOS = 'projected_dos.dat'
+    _OUTPUT_TOTAL_DOS = 'total_dos.dat'
     _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
     _OUTPUT_BAND_STRUCTURE = 'band.yaml'
-    _default_parser = 'phonopy'
+    _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
 
-    _internal_retrieve_list = [_OUTPUT_DOS,
+    _internal_retrieve_list = [_OUTPUT_TOTAL_DOS,
+                               _OUTPUT_PROJECTED_DOS,
                                _OUTPUT_THERMAL_PROPERTIES,
                                _OUTPUT_BAND_STRUCTURE]
-    _calculation_cmd = [['--pdos=auto'], ['--readfc', '-t']]
+
+    _calculation_cmd = [
+        ['--pdos=auto'],
+        ['-t', '--dos'],
+        ['--band=auto', '--band-points=101', '--band-const-interval']
+    ]
 
     @classmethod
     def define(cls, spec):
         super(PhonopyCalculation, cls).define(spec)
         spec.input('projected_dos_filename',
-                   valid_type=Str, default=Str('projected_dos.dat'))
+                   valid_type=Str, default=Str(cls._OUTPUT_PROJECTED_DOS))
+        spec.input('total_dos_filename',
+                   valid_type=Str, default=Str(cls._OUTPUT_TOTAL_DOS))
         spec.input('thermal_properties_filename',
-                   valid_type=Str, default=Str('thermal_properties.yaml'))
+                   valid_type=Str, default=Str(cls._OUTPUT_THERMAL_PROPERTIES))
         spec.input('band_structure_filename',
-                   valid_type=Str, default=Str('band.yaml'))
+                   valid_type=Str, default=Str(cls._OUTPUT_BAND_STRUCTURE))
         spec.input('force_constants_filename',
                    valid_type=Str, default=Str(cls._INOUT_FORCE_CONSTANTS))
+        spec.input('metadata.options.parser_name',
+                   valid_type=six.string_types, default='phonopy')
+        spec.input('metadata.options.input_filename',
+                   valid_type=six.string_types, default='phonopy.conf')
+        spec.input('metadata.options.output_filename',
+                   valid_type=six.string_types, default='phonopy.stdout')
 
         super(PhonopyCalculation, cls)._baseclass_use_methods(spec)
 
         spec.output('force_constants', valid_type=ArrayData,
                     required=False,
                     help='Calculated force constants')
-        spec.output('dos', valid_type=PhononDosData,
+        spec.output('dos', valid_type=XyData,
                     required=False,
-                    help='Calculated force constants')
-        spec.output('thermal_properties', valid_type=ArrayData,
+                    help='Calculated total DOS')
+        spec.output('pdos', valid_type=XyData,
                     required=False,
-                    help='Calculated force constants')
-        spec.output('band_structure', valid_type=BandStructureData,
+                    help='Calculated projected DOS')
+        spec.output('thermal_properties', valid_type=XyData,
                     required=False,
-                    help='Calculated force constants')
+                    help='Calculated thermal properties')
+        spec.output('band_structure', valid_type=BandsData,
+                    required=False,
+                    help='Calculated phonon band structure')
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
                        message=('The retrieved folder data node could not '
                                 'be accessed.'))
@@ -68,14 +85,13 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     def _create_additional_files(self, folder):
         self.logger.info("create_additional_files")
 
-        self._additional_cmdline_params = []
-
         if 'force_sets' in self.inputs:
             force_sets = self.inputs.force_sets
         else:
             force_sets = None
-        if 'displacement_dataset' in self.inputs:
-            displacement_dataset = self.inputs.displacement_dataset
+        if 'displacement_dataset' in self.inputs.settings.attributes:
+            displacement_dataset = self.inputs.settings[
+                'displacement_dataset']
         else:
             displacement_dataset = None
         if 'force_constants' in self.inputs:
@@ -89,16 +105,23 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
                 self._INOUT_FORCE_CONSTANTS)
             with open(force_constants_filename, 'w') as infile:
                 infile.write(force_constants_txt)
-            self._additional_cmdline_params += ['--readfc']
+
+            self._additional_cmd_params = [
+                ['--readfc'] for i in range(len(self._calculation_cmd))]
+
         elif force_sets is not None and displacement_dataset is not None:
-            force_sets_txt = get_FORCE_SETS_txt(force_sets,
-                                                displacement_dataset)
-            force_sets_filename = folder.get_abs_path(
-                self._INPUT_FORCE_SETS)
+            force_sets_txt = get_FORCE_SETS_txt(
+                force_sets, displacement_dataset)
+            force_sets_filename = folder.get_abs_path(self._INPUT_FORCE_SETS)
             with open(force_sets_filename, 'w') as infile:
                 infile.write(force_sets_txt)
-            self._additional_cmdline_params += ['--writefc']
-            self._internal_retrieve_list += ['FORCE_CONSTANTS']
+            self._internal_retrieve_list.append(self._INOUT_FORCE_CONSTANTS)
+
+            # First run with --writefc, and with --readfc for remaining runs
+            self._additional_cmd_params = [
+                ['--readfc'] for i in range(len(self._calculation_cmd) - 1)]
+            self._additional_cmd_params.insert(0, ['--writefc'])
+
         else:
             msg = ("no force_sets nor force_constants are specified for "
                    "this calculation")

@@ -16,7 +16,6 @@ class BasePhonopyCalculation(object):
     Requirement: the node should be able to import phonopy if NAC is used
     """
 
-    _INPUT_FILE_NAME = 'phonopy.conf'
     _INPUT_CELL = 'POSCAR'
     _INPUT_FORCE_SETS = 'FORCE_SETS'
     _INPUT_NAC = 'BORN'
@@ -27,12 +26,12 @@ class BasePhonopyCalculation(object):
 
     # Initialize list of commands to be specified for each specific
     # plugin (lists should be empty)
-    _additional_cmdline_params = []
+    _additional_cmd_params = []
     _calculation_cmd = []
 
     @classmethod
     def _baseclass_use_methods(cls, spec):
-        spec.input('parameters', valid_type=Dict,
+        spec.input('settings', valid_type=Dict, required=True,
                    help=('Use a node that specifies the phonopy '
                          'parameters for the namelists'))
         spec.input('structure', valid_type=StructureData,
@@ -40,9 +39,6 @@ class BasePhonopyCalculation(object):
         spec.input('force_sets', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force_sets '
                          'array for the namelists'))
-        spec.input('displacement_dataset', valid_type=Dict, required=False,
-                   help=('Use a node that specifies the dispalcement '
-                         'dataset parameters for the namelists'))
         spec.input('force_constants', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force constants '
                          'arrays for the namelists'))
@@ -51,6 +47,7 @@ class BasePhonopyCalculation(object):
                          'corrections parameters arrays'))
         spec.input('bands', valid_type=BandStructureData, required=False,
                    help='Use the node defining the band structure to use')
+        spec.input('metadata.options.withmpi', valid_type=bool, default=False)
 
     def _create_additional_files(self, folder):
         pass
@@ -64,7 +61,7 @@ class BasePhonopyCalculation(object):
 
         self.logger.info("prepare_for_submission")
 
-        parameters_data = self.inputs.parameters
+        settings = self.inputs.settings
         structure = self.inputs.structure
         code = self.inputs.code
         if 'bands' in self.inputs:
@@ -81,9 +78,10 @@ class BasePhonopyCalculation(object):
         self._create_additional_files(folder)
 
         cell_txt = get_poscar_txt(structure)
-        input_txt = get_phonopy_conf_file_txt(parameters_data, bands=bands)
+        input_txt = get_phonopy_conf_file_txt(settings, bands=bands)
 
-        input_filename = folder.get_abs_path(self._INPUT_FILE_NAME)
+        input_filename = folder.get_abs_path(
+            self.inputs.metadata.options.input_filename)
         with open(input_filename, 'w') as infile:
             infile.write(input_txt)
 
@@ -93,17 +91,17 @@ class BasePhonopyCalculation(object):
 
         if 'nac_params' in self.inputs:
             nac_params = self.inputs.nac_params
-            born_txt = get_BORN_txt(nac_params, parameters_data, structure)
+            born_txt = get_BORN_txt(nac_params, settings, structure)
             nac_filename = folder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)
-            self._additional_cmdline_params += ['--nac']
+            for params in self._additional_cmd_params:
+                params.append('--nac')
 
         # ============================ calcinfo ===============================
 
         local_copy_list = []
         remote_copy_list = []
-        # additional_retrieve_list = settings_dict.pop("ADDITIONAL_RETRIEVE_LIST",[])
 
         calcinfo = CalcInfo()
 
@@ -117,13 +115,14 @@ class BasePhonopyCalculation(object):
         calcinfo.retrieve_list = self._internal_retrieve_list
 
         calcinfo.codes_info = []
-        for property_cmd in self._calculation_cmd:
+        for default_params, additional_params in zip(
+                self._calculation_cmd, self._additional_cmd_params):
             codeinfo = CodeInfo()
-            codeinfo.cmdline_params = ([self._INPUT_FILE_NAME]
-                                       + self._additional_cmdline_params
-                                       + property_cmd)
+            codeinfo.cmdline_params = (
+                [self.inputs.metadata.options.input_filename, ]
+                + default_params + additional_params)
             codeinfo.code_uuid = code.uuid
-            codeinfo.stdout_name = self.metadata.options.output_filename
+            codeinfo.stdout_name = self.inputs.metadata.options.output_filename
             codeinfo.withmpi = False
             calcinfo.codes_info.append(codeinfo)
 
