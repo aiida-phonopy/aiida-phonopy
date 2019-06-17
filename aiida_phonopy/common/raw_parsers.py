@@ -124,18 +124,24 @@ def parse_kappa(filename):
 
 
 # Generate text strings for files from AIIDA OBJECTS
-def get_BORN_txt(nac_data, settings, structure):
+def get_BORN_txt(nac_data, structure, symmetry_tolerance):
+    """Returns a string of BORN file.
+
+    nac_data : ArrayData
+        Born effective charges and dielectric constants
+    structure : StructureData
+        This is assumed to be the primitive cell in workchain.
+    symmetry_tolerance : float
+        Symmetry tolerance.
+    """
+
     from phonopy.file_IO import get_BORN_lines
 
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
-    unitcell = phonopy_atoms_from_structure(structure)
-    params = {'supercell_matrix': settings['supercell_matrix']}
-    if 'symmetry_tolerance' in settings.attributes:
-        params['symprec'] = settings['symmetry_tolerance']
-    if 'primitive_matrix' in settings.attributes:
-        params['primitive_matrix'] = settings['primitive_matrix']
-    lines = get_BORN_lines(unitcell, born_charges, epsilon, **params)
+    pcell = phonopy_atoms_from_structure(structure)
+    lines = get_BORN_lines(pcell, born_charges, epsilon,
+                           symprec=symmetry_tolerance)
 
     return "\n".join(lines)
 

@@ -1,6 +1,40 @@
 import numpy as np
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
+from phonopy.structure.atoms import PhonopyAtoms
+
+
+@calcfunction
+def get_phonon_cells(supercell_array, primitive_array):
+    positions = supercell_array.get_array('positions')
+    numbers = supercell_array.get_array('numbers')
+    lattice = supercell_array.get_array('cell')
+    cells = {}
+    for i, scaled_positions in enumerate(positions):
+        cell = PhonopyAtoms(numbers=numbers,
+                            scaled_positions=scaled_positions,
+                            cell=lattice)
+        print(cell)
+        structure = phonopy_atoms_to_structure(cell)
+        if i == 0:
+            label = "supercell"
+        else:
+            label = "supercell_%03d" % i
+        structure.label = "%s %s" % (
+            structure.get_formula(mode='hill_compact'), label)
+        cells[label] = structure
+
+    prim_scaled_positions = primitive_array.get_array('positions')
+    prim_numbers = primitive_array.get_array('numbers')
+    prim_lattice = primitive_array.get_array('cell')
+    cell = PhonopyAtoms(numbers=prim_numbers,
+                        scaled_positions=prim_scaled_positions,
+                        cell=prim_lattice)
+    structure = phonopy_atoms_to_structure(cell)
+    structure.label = "%s %s" % (
+        structure.get_formula(mode='hill_compact'), 'primitive cell')
+    cells['primitive'] = structure
+    return cells
 
 
 @calcfunction
@@ -13,11 +47,13 @@ def get_phonon_setting_info(phonon_setting_info):
 @calcfunction
 def get_force_sets(**forces_dict):
     forces = []
-    # for i in range(forces_dict['num_supercells']):
     for i in range(len(forces_dict)):
         label = "forces_%03d" % (i + 1)
         if label in forces_dict:
             forces.append(forces_dict[label].get_array('final'))
+
+    assert len(forces) == len(forces_dict)
+
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
     force_sets.label = 'force_sets'
@@ -25,24 +61,51 @@ def get_force_sets(**forces_dict):
 
 
 @calcfunction
-def get_nac_params(born_charges, epsilon):
-    """Worfunction to extract nac ArrayData object from calc"""
+def get_nac_params(born_charges, epsilon, nac_structure, **params):
+    """Obtain Born effective charges and dielectric constants in primitive cell
+
+    When Born effective charges and dielectric constants are calculated within
+    phonopy workchain, those values are calculated in the primitive cell.
+    However using immigrant, the cell may not be primitive cell and can be
+    unit cell. In this case, conversion of data is necessary. This conversion
+    needs information of the structure where those values were calcualted and
+    the target primitive cell structure.
+
+    Two kargs parameters
+    primitive : StructureData
+    symmetry_tolerance : Float
+
+    """
+    from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
+
+    borns = born_charges.get_array('born_charges')
+    eps = epsilon.get_array('epsilon')
+
+    nac_cell = phonopy_atoms_from_structure(nac_structure)
+    kargs = {}
+    if 'symmetry_tolerance' in params:
+        kargs['symprec'] = params['symmetry_tolerance'].value
+    if 'primitive' in params:
+        pcell = phonopy_atoms_from_structure(params['primitive'])
+        kargs['primitive'] = pcell
+    borns_, epsilon_ = symmetrize_borns_and_epsilon(
+        borns, eps, nac_cell, **kargs)
 
     nac_params = DataFactory('array')()
-    nac_params.set_array('born_charges',
-                         born_charges.get_array('born_charges'))
-    nac_params.set_array('epsilon', epsilon.get_array('epsilon'))
+    nac_params.set_array('born_charges', borns_)
+    nac_params.set_array('epsilon', epsilon_)
     nac_params.label = 'born_charges & epsilon'
 
     return nac_params
 
 
 @calcfunction
-def get_force_constants(structure, phonon_settings, force_sets, dataset):
+def get_force_constants(structure, phonon_settings, force_sets):
     params = {}
     phonon = get_phonopy_instance(structure, phonon_settings, params)
-    phonon.dataset = dataset.get_dict()
+    phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
+    print(phonon.dataset)
     phonon.produce_force_constants()
     force_constants = DataFactory('array')()
     force_constants.set_array('force_constants', phonon.force_constants)
@@ -221,7 +284,6 @@ def phonopy_atoms_to_structure(cell):
 
 
 def phonopy_atoms_from_structure(structure):
-    from phonopy.structure.atoms import PhonopyAtoms
     cell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)

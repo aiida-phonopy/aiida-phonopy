@@ -3,11 +3,11 @@ from aiida.plugins import DataFactory
 from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,
                                               get_poscar_txt)
+import numpy as np
 
 Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 ArrayData = DataFactory('array')
-BandStructureData = DataFactory('phonopy.band_structure')
 
 
 class BasePhonopyCalculation(object):
@@ -34,7 +34,7 @@ class BasePhonopyCalculation(object):
         spec.input('settings', valid_type=Dict, required=True,
                    help=('Use a node that specifies the phonopy '
                          'parameters for the namelists'))
-        spec.input('structure', valid_type=StructureData,
+        spec.input('structure', valid_type=StructureData, required=True,
                    help=('Use a node for the structure'))
         spec.input('force_sets', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force_sets '
@@ -45,8 +45,8 @@ class BasePhonopyCalculation(object):
         spec.input('nac_params', valid_type=ArrayData, required=False,
                    help=('Use a node for the Non-analitical '
                          'corrections parameters arrays'))
-        spec.input('bands', valid_type=BandStructureData, required=False,
-                   help='Use the node defining the band structure to use')
+        spec.input('primitive', valid_type=StructureData,
+                   required=False, help=('Use a node for the structure'))
         spec.input('metadata.options.withmpi', valid_type=bool, default=False)
 
     def _create_additional_files(self, folder):
@@ -64,10 +64,6 @@ class BasePhonopyCalculation(object):
         settings = self.inputs.settings
         structure = self.inputs.structure
         code = self.inputs.code
-        if 'bands' in self.inputs:
-            bands = self.inputs.bands
-        else:
-            bands = None
 
         ##############################
         # END OF INITIAL INPUT CHECK #
@@ -78,7 +74,7 @@ class BasePhonopyCalculation(object):
         self._create_additional_files(folder)
 
         cell_txt = get_poscar_txt(structure)
-        input_txt = get_phonopy_conf_file_txt(settings, bands=bands)
+        input_txt = get_phonopy_conf_file_txt(settings)
 
         input_filename = folder.get_abs_path(
             self.inputs.metadata.options.input_filename)
@@ -89,9 +85,13 @@ class BasePhonopyCalculation(object):
         with open(cell_filename, 'w') as infile:
             infile.write(cell_txt)
 
-        if 'nac_params' in self.inputs:
-            nac_params = self.inputs.nac_params
-            born_txt = get_BORN_txt(nac_params, settings, structure)
+        if ('nac_params' in self.inputs and
+            'primitive' in self.inputs):
+            born_txt = get_BORN_txt(
+                self.inputs.nac_params,
+                self.inputs.primitive,
+                settings['symmetry_tolerance'])
+
             nac_filename = folder.get_abs_path(self._INPUT_NAC)
             with open(nac_filename, 'w') as infile:
                 infile.write(born_txt)
