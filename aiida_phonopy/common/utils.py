@@ -74,7 +74,9 @@ def check_imported_supercell_structure(supercell_ref,
     symprec = symmetry_tolerance.value
     cell_diff = np.subtract(supercell_ref.cell, supercell_calc.cell)
     if (np.abs(cell_diff) > symprec).any():
-        return Bool(False)
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
 
     positions_ref = [site.position for site in supercell_ref.sites]
     positions_calc = [site.position for site in supercell_calc.sites]
@@ -82,9 +84,13 @@ def check_imported_supercell_structure(supercell_ref,
     diff -= np.rint(diff)
     dist = np.sqrt(np.sum(np.dot(diff, supercell_ref.cell) ** 2, axis=1))
     if (dist > symprec).any():
-        raise Bool(False)
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
 
-    return Bool(True)
+    succeeded = Bool(True)
+    succeeded.label = "True"
+    return succeeded
 
 @calcfunction
 def get_force_sets(**forces_dict):
@@ -147,7 +153,6 @@ def get_force_constants(structure, phonon_settings, force_sets):
     phonon = get_phonopy_instance(structure, phonon_settings, params)
     phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
-    print(phonon.dataset)
     phonon.produce_force_constants()
     force_constants = DataFactory('array')()
     force_constants.set_array('force_constants', phonon.force_constants)
@@ -244,7 +249,7 @@ def get_bands(qpoints, frequencies, labels, path_connections, label=None):
     label_index = 1
 
     for pc, qs, fs in zip(path_connections[:-1], qpoints[1:], frequencies[1:]):
-        if labels[label_index] == 'GAMMA':
+        if labels[label_index] == 'GAMMA' and pc:
             labels_list.append((len(qpoints_list) - 1, labels[label_index]))
             if label_index < len(labels):
                 labels_list.append((len(qpoints_list), labels[label_index]))
