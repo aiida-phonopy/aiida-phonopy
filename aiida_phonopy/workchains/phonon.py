@@ -1,20 +1,16 @@
+import numpy as np
 from aiida.engine import WorkChain, ToContext
-
-from aiida.plugins import DataFactory, WorkflowFactory
+from aiida.plugins import DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
-import numpy as np
 from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
                                                   get_immigrant_builder)
-from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
-                                        phonopy_atoms_to_structure,
-                                        get_force_sets,
+from aiida_phonopy.common.utils import (get_force_sets,
                                         get_force_constants,
                                         get_nac_params,
                                         get_phonon,
                                         get_phonon_setting_info,
-                                        get_phonopy_instance,
-                                        get_phonon_cells)
+                                        check_imported_supercell_structure)
 
 
 # Should be improved by some kind of WorkChainFactory
@@ -68,32 +64,39 @@ class PhononPhonopy(WorkChain):
         spec.input('options', valid_type=Dict, required=False)
         spec.input('symmetry_tolerance',
                    valid_type=Float, required=False, default=Float(1e-5))
+        spec.input('dry_run',
+                   valid_type=Bool, required=False, default=Bool(False))
         spec.input('run_phonopy',
                    valid_type=Bool, required=False, default=Bool(False))
         spec.input('remote_phonopy',
                    valid_type=Bool, required=False, default=Bool(False))
 
         spec.outline(cls.initialize_supercell_phonon_calculation,
-                     if_(cls.import_calculations)(
-                         cls.read_force_and_nac_calculations,
-                         cls.check_supercell_structures,
+                     if_(cls.dry_run)(
+                         if_(cls.import_calculations)(
+                             cls.read_force_and_nac_calculations,
+                             cls.check_imported_supercell_structures,
+                         )
                      ).else_(
-                         cls.run_force_and_nac_calculations,
-                     ),
-                     cls.create_force_sets,
-                     if_(cls.is_nac)(cls.create_nac_params),
-                     if_(cls.run_phonopy)(
-                         if_(cls.remote_phonopy)(
-                             cls.run_phonopy_remote,
-                             cls.collect_data,
+                         if_(cls.import_calculations)(
+                             cls.read_force_and_nac_calculations,
+                             cls.check_imported_supercell_structures,
                          ).else_(
-                             cls.create_force_constants,
-                             cls.run_phonopy_in_workchain,
-                         )))
+                             cls.run_force_and_nac_calculations,
+                         ),
+                         cls.create_force_sets,
+                         if_(cls.is_nac)(cls.create_nac_params),
+                         if_(cls.run_phonopy)(
+                             if_(cls.remote_phonopy)(
+                                 cls.run_phonopy_remote,
+                                 cls.collect_data,
+                             ).else_(
+                                 cls.create_force_constants,
+                                 cls.run_phonopy_in_workchain,
+                             ))))
 
         spec.output('force_constants', valid_type=ArrayData, required=False)
-        spec.output('primitive', valid_type=StructureData,
-                    required=False)
+        spec.output('primitive', valid_type=StructureData, required=False)
         spec.output('supercell', valid_type=StructureData, required=False)
         spec.output('force_sets', valid_type=ArrayData, required=False)
         spec.output('nac_params', valid_type=ArrayData, required=False)
@@ -102,6 +105,9 @@ class PhononPhonopy(WorkChain):
         spec.output('dos', valid_type=XyData, required=False)
         spec.output('pdos', valid_type=XyData, required=False)
         spec.output('phonon_setting_info', valid_type=Dict, required=True)
+
+    def dry_run(self):
+        return self.inputs.dry_run
 
     def remote_phonopy(self):
         return self.inputs.remote_phonopy
@@ -123,78 +129,29 @@ class PhononPhonopy(WorkChain):
 
         self.report('initialize_supercell_phonon_calculation')
 
-        #
-        # Create phonon setting information
-        #
-        ph_settings = {}
-        ph_settings.update(self.inputs.phonon_settings.get_dict())
-        if 'supercell_matrix' not in ph_settings:
-            raise RuntimeError(
-                "supercell_matrix is not found in cell_matrices.")
-        else:
-            dim = ph_settings['supercell_matrix']
-            if len(np.ravel(dim)) == 3:
-                smat = np.diag(dim)
-            else:
-                smat = np.array(dim)
-            if not np.issubdtype(smat.dtype, np.integer):
-                raise TypeError("supercell_matrix is not integer matrix.")
-            else:
-                ph_settings['supercell_matrix'] = smat.tolist()
-
-        if 'mesh' not in ph_settings:
-            ph_settings['mesh'] = 100.0
-        if 'distance' not in ph_settings:
-            ph_settings['distance'] = 0.01
-        tolerance = float(self.inputs.symmetry_tolerance)
-        ph_settings['symmetry_tolerance'] = tolerance
-
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
             if ('code_string' not in self.inputs or
                 'options' not in self.inputs):
                 raise RuntimeError(
                     "code_string and options have to be specified.")
 
-        ph = get_phonopy_instance(self.inputs.structure, ph_settings, {})
-        ph_settings['primitive_matrix'] = ph.primitive_matrix
-        ph_settings['symmetry'] = {
-            'number': ph.symmetry.dataset['number'],
-            'international': ph.symmetry.dataset['international']}
+        if 'supercell_matrix' not in self.inputs.phonon_settings.attributes:
+            raise RuntimeError(
+                "supercell_matrix was not found in phonon_settings.")
 
-        if 'displacement_dataset' in ph_settings:
-            ph.dataset = ph_settings['displacement_dataset']
-        else:
-            ph.generate_displacements(distance=ph_settings['distance'])
-            ph_settings['displacement_dataset'] = ph.dataset
-
-        self.ctx.phonon_setting_info = get_phonon_setting_info(
-            Dict(dict=ph_settings))
+        return_vals = get_phonon_setting_info(
+            self.inputs.phonon_settings,
+            self.inputs.structure,
+            self.inputs.symmetry_tolerance)
+        self.ctx.phonon_setting_info = return_vals['phonon_setting_info']
         self.out('phonon_setting_info', self.ctx.phonon_setting_info)
 
-        #
-        # Create supercells and primitive cell
-        #
         self.ctx.supercells = {}
-        positions = [cell.scaled_positions
-                     for cell in ph.supercells_with_displacements]
-        positions.insert(0, ph.supercell.scaled_positions)
-        supercell_array = ArrayData()
-        supercell_array.set_array('positions', np.array(positions))
-        supercell_array.set_array('cell', ph.supercell.cell)
-        supercell_array.set_array('numbers', ph.supercell.numbers)
-        primitive_array = ArrayData()
-        primitive_array.set_array('positions', ph.primitive.scaled_positions)
-        primitive_array.set_array('cell', ph.primitive.cell)
-        primitive_array.set_array('numbers', ph.primitive.numbers)
-
-        cells = get_phonon_cells(supercell_array, primitive_array)
-
-        for i in range(len(cells) - 2):
+        for i in range(len(return_vals) - 3):
             label = "supercell_%03d" % (i + 1)
-            self.ctx.supercells[label] = cells[label]
-
-        self.ctx.primitive = cells['primitive']
-        self.ctx.supercell = cells['supercell']
+            self.ctx.supercells[label] = return_vals[label]
+        self.ctx.primitive = return_vals['primitive']
+        self.ctx.supercell = return_vals['supercell']
         self.out('primitive', self.ctx.primitive)
         self.out('supercell', self.ctx.supercell)
 
@@ -224,7 +181,7 @@ class PhononPhonopy(WorkChain):
             self.to_context(**{'born_and_epsilon': future})
 
     def read_force_and_nac_calculations(self):
-        self.report('read calculation nodes')
+        self.report('import calculation data in files')
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
         calc_folders = calc_folders_Dict['calculation_folders']
@@ -249,20 +206,21 @@ class PhononPhonopy(WorkChain):
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
-    def check_supercell_structures(self):
-        # symprec = self.ctx.phonon_setting_info['symmetry_tolerance']
-        # for i in range(len(self.ctx.supercells)):
-        #     label = "supercell_%03d" % (i + 1)
-        #     calc = self.ctx[label]
-        #     supercell_ref = self.ctx.supercells[label]
-        #     positions_ref = [site.position for site in supercell_ref.sites]
-        #     supercell_calc = calc.inputs.structure
-        #     positions_calc = [site.position for site in supercell_calc.sites]
-        #     cell_diff = supercell_ref.cell - supercell_calc.cell
-        #     if np.abs(cell_diff) > symprec:
-        #     diff = np.subtract(positions_ref - positions_calc)
-        #     diff -= np.rint(diff)
-        pass
+    def check_imported_supercell_structures(self):
+        self.report('check imported supercell structures')
+
+        msg = ("Immigrant failed because of inconsistency of supercell"
+               "structure")
+
+        for i in range(len(self.ctx.supercells)):
+            label = "supercell_%03d" % (i + 1)
+            supercell_ref = self.ctx.supercells[label]
+            supercell_calc = self.ctx[label].inputs.structure
+            if not check_imported_supercell_structure(
+                    supercell_ref,
+                    supercell_calc,
+                    self.inputs.symmetry_tolerance):
+                raise RuntimeError(msg)
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""

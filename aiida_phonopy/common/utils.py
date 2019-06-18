@@ -2,47 +2,89 @@ import numpy as np
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
 from phonopy.structure.atoms import PhonopyAtoms
+from aiida.orm import Bool
 
 
 @calcfunction
-def get_phonon_cells(supercell_array, primitive_array):
-    positions = supercell_array.get_array('positions')
-    numbers = supercell_array.get_array('numbers')
-    lattice = supercell_array.get_array('cell')
-    cells = {}
-    for i, scaled_positions in enumerate(positions):
-        cell = PhonopyAtoms(numbers=numbers,
-                            scaled_positions=scaled_positions,
-                            cell=lattice)
-        print(cell)
-        structure = phonopy_atoms_to_structure(cell)
-        if i == 0:
-            label = "supercell"
-        else:
-            label = "supercell_%03d" % i
+def get_phonon_setting_info(phonon_settings,
+                            structure,
+                            symmetry_tolerance):
+    return_vals = {}
+
+    ph_settings = {}
+    ph_settings.update(phonon_settings.get_dict())
+    dim = ph_settings['supercell_matrix']
+    if len(np.ravel(dim)) == 3:
+        smat = np.diag(dim)
+    else:
+        smat = np.array(dim)
+    if not np.issubdtype(smat.dtype, np.integer):
+        raise TypeError("supercell_matrix is not integer matrix.")
+    else:
+        ph_settings['supercell_matrix'] = smat.tolist()
+
+    if 'mesh' not in ph_settings:
+        ph_settings['mesh'] = 100.0
+    if 'distance' not in ph_settings:
+        ph_settings['distance'] = 0.01
+    tolerance = symmetry_tolerance.value
+    ph_settings['symmetry_tolerance'] = tolerance
+
+    ph = get_phonopy_instance(structure, ph_settings, {})
+    ph_settings['primitive_matrix'] = ph.primitive_matrix
+    ph_settings['symmetry'] = {
+        'number': ph.symmetry.dataset['number'],
+        'international': ph.symmetry.dataset['international']}
+
+    if 'displacement_dataset' in ph_settings:
+        ph.dataset = ph_settings['displacement_dataset']
+    else:
+        ph.generate_displacements(distance=ph_settings['distance'])
+        ph_settings['displacement_dataset'] = ph.dataset
+
+    settings = DataFactory('dict')(dict=ph_settings)
+    settings.label = 'phonon_setting_info'
+    return_vals['phonon_setting_info'] = settings
+
+    # Supercells and primitive cell
+    for i, scell in enumerate(ph.supercells_with_displacements):
+        structure = phonopy_atoms_to_structure(scell)
+        label = "supercell_%03d" % (i + 1)
         structure.label = "%s %s" % (
             structure.get_formula(mode='hill_compact'), label)
-        cells[label] = structure
+        return_vals[label] = structure
 
-    prim_scaled_positions = primitive_array.get_array('positions')
-    prim_numbers = primitive_array.get_array('numbers')
-    prim_lattice = primitive_array.get_array('cell')
-    cell = PhonopyAtoms(numbers=prim_numbers,
-                        scaled_positions=prim_scaled_positions,
-                        cell=prim_lattice)
-    structure = phonopy_atoms_to_structure(cell)
-    structure.label = "%s %s" % (
-        structure.get_formula(mode='hill_compact'), 'primitive cell')
-    cells['primitive'] = structure
-    return cells
+    supercell_structure = phonopy_atoms_to_structure(ph.supercell)
+    supercell_structure.label = "%s %s" % (
+        supercell_structure.get_formula(mode='hill_compact'), 'supercell')
+    return_vals['supercell'] = supercell_structure
+
+    primitive_structure = phonopy_atoms_to_structure(ph.primitive)
+    primitive_structure.label = "%s %s" % (
+        primitive_structure.get_formula(mode='hill_compact'), 'primitive cell')
+    return_vals['primitive'] = primitive_structure
+
+    return return_vals
 
 
 @calcfunction
-def get_phonon_setting_info(phonon_setting_info):
-    settings = DataFactory('dict')(dict=phonon_setting_info.get_dict())
-    settings.label = 'phonon_setting_info'
-    return settings
+def check_imported_supercell_structure(supercell_ref,
+                                       supercell_calc,
+                                       symmetry_tolerance):
+    symprec = symmetry_tolerance.value
+    cell_diff = np.subtract(supercell_ref.cell, supercell_calc.cell)
+    if (np.abs(cell_diff) > symprec).any():
+        return Bool(False)
 
+    positions_ref = [site.position for site in supercell_ref.sites]
+    positions_calc = [site.position for site in supercell_calc.sites]
+    diff = np.subtract(positions_ref, positions_calc)
+    diff -= np.rint(diff)
+    dist = np.sqrt(np.sum(np.dot(diff, supercell_ref.cell) ** 2, axis=1))
+    if (dist > symprec).any():
+        raise Bool(False)
+
+    return Bool(True)
 
 @calcfunction
 def get_force_sets(**forces_dict):
