@@ -47,11 +47,14 @@ def get_immigrant_builder(calculation_folder,
             settings_dict = calculator_settings[calc_type]
 
         calc_cls = CalculationFactory('vasp.vasp')
-        metadata = {'options': settings_dict['options']}
-        process, builder = calc_cls.immigrant(code,
-                                              calculation_folder,
-                                              metadata=metadata,
-                                              settings=settings_dict)
+        params = {'metadata': {'options': settings_dict['options']},
+                  'settings': settings_dict}
+        if 'potential_family' in settings_dict:
+            params['potential_family'] = settings_dict['potential_family']
+        if 'potential_mapping' in settings_dict:
+            params['potential_mapping'] = settings_dict['potential_mapping']
+
+        _, builder = calc_cls.immigrant(code, calculation_folder, **params)
         builder.metadata['options']['parser_name'] = 'vasp.vasp'
     else:
         raise RuntimeError("Code could not be found.")

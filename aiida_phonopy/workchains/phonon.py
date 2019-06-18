@@ -58,8 +58,7 @@ class PhononPhonopy(WorkChain):
         spec.input('phonon_settings', valid_type=Dict, required=True)
         spec.input('immigrant_calculation_folders',
                    valid_type=Dict, required=False)
-        spec.input('calculator_settings',
-                   valid_type=Dict, required=False)
+        spec.input('calculator_settings', valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
         spec.input('options', valid_type=Dict, required=False)
         spec.input('symmetry_tolerance',
