@@ -3,7 +3,6 @@ from aiida.plugins import DataFactory
 from aiida_phonopy.common.raw_parsers import (get_BORN_txt,
                                               get_phonopy_conf_file_txt,
                                               get_poscar_txt)
-import numpy as np
 
 Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
@@ -20,15 +19,6 @@ class BasePhonopyCalculation(object):
     _INPUT_FORCE_SETS = 'FORCE_SETS'
     _INPUT_NAC = 'BORN'
 
-    # initialize with default files that should always be retrieved,
-    # additional files are added in the specific plugin
-    _internal_retrieve_list = []
-
-    # Initialize list of commands to be specified for each specific
-    # plugin (lists should be empty)
-    _additional_cmd_params = []
-    _calculation_cmd = []
-
     @classmethod
     def _baseclass_use_methods(cls, spec):
         spec.input('settings', valid_type=Dict, required=True,
@@ -39,9 +29,6 @@ class BasePhonopyCalculation(object):
         spec.input('force_sets', valid_type=ArrayData, required=False,
                    help=('Use a node that specifies the force_sets '
                          'array for the namelists'))
-        spec.input('force_constants', valid_type=ArrayData, required=False,
-                   help=('Use a node that specifies the force constants '
-                         'arrays for the namelists'))
         spec.input('nac_params', valid_type=ArrayData, required=False,
                    help=('Use a node for the Non-analitical '
                          'corrections parameters arrays'))
@@ -60,6 +47,10 @@ class BasePhonopyCalculation(object):
         """
 
         self.logger.info("prepare_for_submission")
+
+        self._internal_retrieve_list = []
+        self._additional_cmd_params = []
+        self._calculation_cmd = []
 
         settings = self.inputs.settings
         structure = self.inputs.structure

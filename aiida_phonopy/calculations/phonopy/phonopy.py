@@ -26,17 +26,6 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     _OUTPUT_BAND_STRUCTURE = 'band.yaml'
     _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
 
-    _internal_retrieve_list = [_OUTPUT_TOTAL_DOS,
-                               _OUTPUT_PROJECTED_DOS,
-                               _OUTPUT_THERMAL_PROPERTIES,
-                               _OUTPUT_BAND_STRUCTURE]
-
-    _calculation_cmd = [
-        ['--pdos=auto'],
-        ['-t', '--dos'],
-        ['--band=auto', '--band-points=101', '--band-const-interval']
-    ]
-
     @classmethod
     def define(cls, spec):
         super(PhonopyCalculation, cls).define(spec)
@@ -85,6 +74,16 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
     def _create_additional_files(self, folder):
         self.logger.info("create_additional_files")
 
+        self._internal_retrieve_list = [self._OUTPUT_TOTAL_DOS,
+                                        self._OUTPUT_PROJECTED_DOS,
+                                        self._OUTPUT_THERMAL_PROPERTIES,
+                                        self._OUTPUT_BAND_STRUCTURE]
+        self._calculation_cmd = [
+            ['--pdos=auto'],
+            ['-t', '--dos'],
+            ['--band=auto', '--band-points=101', '--band-const-interval']
+        ]
+
         if 'force_sets' in self.inputs:
             force_sets = self.inputs.force_sets
         else:
@@ -94,34 +93,18 @@ class PhonopyCalculation(BasePhonopyCalculation, CalcJob):
                 'displacement_dataset']
         else:
             displacement_dataset = None
-        if 'force_constants' in self.inputs:
-            force_constants = self.inputs.force_constants
-        else:
-            force_constants = None
 
-        if force_constants is not None:
-            force_constants_txt = get_FORCE_CONSTANTS_txt(force_constants)
-            force_constants_filename = folder.get_abs_path(
-                self._INOUT_FORCE_CONSTANTS)
-            with open(force_constants_filename, 'w') as infile:
-                infile.write(force_constants_txt)
-
-            self._additional_cmd_params = [
-                ['--readfc'] for i in range(len(self._calculation_cmd))]
-
-        elif force_sets is not None and displacement_dataset is not None:
+        if force_sets is not None and displacement_dataset is not None:
             force_sets_txt = get_FORCE_SETS_txt(
                 force_sets, displacement_dataset)
             force_sets_filename = folder.get_abs_path(self._INPUT_FORCE_SETS)
             with open(force_sets_filename, 'w') as infile:
                 infile.write(force_sets_txt)
-            self._internal_retrieve_list.append(self._INOUT_FORCE_CONSTANTS)
-
             # First run with --writefc, and with --readfc for remaining runs
             self._additional_cmd_params = [
                 ['--readfc'] for i in range(len(self._calculation_cmd) - 1)]
             self._additional_cmd_params.insert(0, ['--writefc'])
-
+            self._internal_retrieve_list.append(self._INOUT_FORCE_CONSTANTS)
         else:
             msg = ("no force_sets nor force_constants are specified for "
                    "this calculation")
