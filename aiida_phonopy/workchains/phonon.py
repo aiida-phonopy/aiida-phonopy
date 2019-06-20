@@ -307,6 +307,8 @@ class PhononPhonopy(WorkChain):
         self.out('pdos', self.ctx.phonon_properties.outputs.pdos)
         self.out('band_structure',
                  self.ctx.phonon_properties.outputs.band_structure)
+        self.out('force_constants',
+                 self.ctx.phonon_properties.outputs.force_constants)
 
         self.report('finish phonon')
 
