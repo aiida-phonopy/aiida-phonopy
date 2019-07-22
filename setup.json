@@ -5,7 +5,7 @@
   "author": "Abel Carreras",
   "author_email": "abelcarreras83@gmail.com",
   "license": "MIT license",
-  "requires": [
+  "install_requires": [
     "phonopy",
     "numpy",
     "seekpath"
