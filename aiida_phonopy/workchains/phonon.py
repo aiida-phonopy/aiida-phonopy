@@ -1,29 +1,26 @@
-from aiida.work.workchain import WorkChain, ToContext
-
-from aiida.work.workfunctions import workfunction
-from aiida.orm import Code, DataFactory, WorkflowFactory, load_node
-from aiida.orm.data.base import Float, Bool, Int, Str
-from aiida.work.workchain import if_
 import numpy as np
-from aiida_phonopy.common.generate_inputs import generate_inputs
-from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
-                                        phonopy_atoms_to_structure,
-                                        get_forces_from_uuid,
-                                        get_born_epsilon_from_uuid,
-                                        get_force_sets,
+from aiida.engine import WorkChain, ToContext
+from aiida.plugins import DataFactory
+from aiida.orm import Float, Bool, Str, Code
+from aiida.engine import if_
+from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
+                                                  get_immigrant_builder)
+from aiida_phonopy.common.utils import (get_force_sets,
                                         get_force_constants,
                                         get_nac_params,
-                                        get_path_using_seekpath,
-                                        get_phonon)
+                                        get_phonon,
+                                        get_phonon_setting_info,
+                                        check_imported_supercell_structure)
+
 
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
-# from aiida.workflows.wc_optimize import OptimizeStructure
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
+XyData = DataFactory('array.xy')
 StructureData = DataFactory('structure')
-OptimizeStructure = WorkflowFactory('phonopy.optimize')
+BandsData = DataFactory('array.bands')
 
 
 class PhononPhonopy(WorkChain):
@@ -31,15 +28,7 @@ class PhononPhonopy(WorkChain):
 
     :param structure: StructureData object that contains the crystal structure
         unit cell
-    :param cell_matrices: ArrayData object having supercell matrix and
-        optionally primitive matrix. (default: primitive_matrix = unit matrix)
-            'supercell_matrix': [[2, 0, 0],
-                                 [0, 2, 0],
-                                 [0, 0, 2]],
-            'primitive_matrix': [[1.0, 0.0, 0.0],
-                                 [0.0, 1.0, 0.0],
-                                 [0.0, 0.0, 1.0]]
-    :param calculator_settings: ParametersData object that contains a
+    :param calculator_settings: Dict object that contains a
         dictionary with the setting needed to calculate the electronic
         structure:
             {'forces': force_config,
@@ -47,12 +36,8 @@ class PhononPhonopy(WorkChain):
         where force_config and nac_config are used for the supercell force
         calculation and Born effective charges and dielectric constant
         calculation in primitive cell, respectively.
-    :ph_settings: ParameterData object. Needed to run phonon calculation.
+    :phonon_settings: Dict object. Needed to run phonon calculation.
         {'mesh': [20, 20, 20]}. Optional. (default: {mesh: [20, 20, 20]})
-    :param optimize: Set true to perform a crystal structure optimization
-        before the phonon calculation (default: True)
-    :param pressure: Set the external pressure (stress tensor) at which the
-        optimization is performed in KBar (default: 0)
     :is_nac: Bool object. Whether running non-analytical term correction.
         Optional. (default: False)
     :run_phonopy: Bool object. Whether running phonon calculation or not.
@@ -60,7 +45,7 @@ class PhononPhonopy(WorkChain):
     :remote_phonopy: Bool object. Whether running phonon calculation or not.
         Optional. (default: False)
     :code_string: Str object. Needed to run phonopy remotely. Optional.
-    :options: ParameterData object. Needed to run phonopy remotely. Optional.
+    :options: Dict object. Needed to run phonopy remotely. Optional.
     :distance: Float object. Displacement distance. Optional. (default: 0.01)
     :symmetry_tolerance: Float object. Symmetry tolerance. Optional.
         (default: 1e-5)
@@ -70,57 +55,58 @@ class PhononPhonopy(WorkChain):
     def define(cls, spec):
         super(PhononPhonopy, cls).define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
-        spec.input('cell_matrices', valid_type=ArrayData, required=True)
-        # Optional arguments
-        spec.input('calculation_uuids',
-                   valid_type=ParameterData, required=False)
-        spec.input('calculator_settings',
-                   valid_type=ParameterData, required=False)
-        spec.input('displacement_dataset',
-                   valid_type=ParameterData, required=False)
+        spec.input('phonon_settings', valid_type=Dict, required=True)
+        spec.input('immigrant_calculation_folders',
+                   valid_type=Dict, required=False)
+        spec.input('calculator_settings', valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
-        spec.input('options', valid_type=ParameterData, required=False)
-        spec.input('phonon_settings', valid_type=ParameterData, required=False)
-        spec.input('is_nac',
-                   valid_type=Bool, required=False, default=Bool(False))
-        spec.input('optimize',
-                   valid_type=Bool, required=False, default=Bool(True))
-        spec.input('pressure',
-                   valid_type=Float, required=False, default=Float(0.0))
-        spec.input('distance',
-                   valid_type=Float, required=False, default=Float(0.01))
+        spec.input('options', valid_type=Dict, required=False)
         spec.input('symmetry_tolerance',
                    valid_type=Float, required=False, default=Float(1e-5))
+        spec.input('dry_run',
+                   valid_type=Bool, required=False, default=Bool(False))
         spec.input('run_phonopy',
                    valid_type=Bool, required=False, default=Bool(False))
         spec.input('remote_phonopy',
                    valid_type=Bool, required=False, default=Bool(False))
 
-        spec.outline(cls.check_settings,
-                     if_(cls.use_optimize)(cls.optimize),
-                     cls.set_unitcell,
-                     cls.create_displacements,
-                     if_(cls.import_nodes)(
-                         cls.read_force_and_nac_calculations,
+        spec.outline(cls.initialize_supercell_phonon_calculation,
+                     if_(cls.dry_run)(
+                         if_(cls.import_calculations)(
+                             cls.read_force_and_nac_calculations,
+                             cls.check_imported_supercell_structures,
+                         )
                      ).else_(
-                         cls.run_force_and_nac_calculations,
-                     ),
-                     cls.create_force_sets,
-                     cls.create_force_constants,
-                     if_(cls.is_nac)(cls.create_nac_params),
-                     cls.set_default_outputs,
-                     cls.prepare_phonopy_inputs,
-                     if_(cls.run_phonopy)(
-                         if_(cls.remote_phonopy)(
-                             cls.create_phonopy_builder,
-                             cls.run_phonopy_remote,
-                             cls.collect_data,
+                         if_(cls.import_calculations)(
+                             cls.read_force_and_nac_calculations,
+                             cls.check_imported_supercell_structures,
                          ).else_(
-                             cls.run_phonopy_in_workchain,
-                         )))
+                             cls.run_force_and_nac_calculations,
+                         ),
+                         cls.create_force_sets,
+                         if_(cls.is_nac)(cls.create_nac_params),
+                         if_(cls.run_phonopy)(
+                             if_(cls.remote_phonopy)(
+                                 cls.run_phonopy_remote,
+                                 cls.collect_data,
+                             ).else_(
+                                 cls.create_force_constants,
+                                 cls.run_phonopy_in_workchain,
+                             ))))
 
-    def use_optimize(self):
-        return self.inputs.optimize
+        spec.output('force_constants', valid_type=ArrayData, required=False)
+        spec.output('primitive', valid_type=StructureData, required=False)
+        spec.output('supercell', valid_type=StructureData, required=False)
+        spec.output('force_sets', valid_type=ArrayData, required=False)
+        spec.output('nac_params', valid_type=ArrayData, required=False)
+        spec.output('thermal_properties', valid_type=XyData, required=False)
+        spec.output('band_structure', valid_type=BandsData, required=False)
+        spec.output('dos', valid_type=XyData, required=False)
+        spec.output('pdos', valid_type=XyData, required=False)
+        spec.output('phonon_setting_info', valid_type=Dict, required=True)
+
+    def dry_run(self):
+        return self.inputs.dry_run
 
     def remote_phonopy(self):
         return self.inputs.remote_phonopy
@@ -129,44 +115,18 @@ class PhononPhonopy(WorkChain):
         return self.inputs.run_phonopy
 
     def is_nac(self):
-        return self.inputs.is_nac
-
-    def import_nodes(self):
-        return ('calculation_uuids' in self.inputs and
-                'displacement_dataset' in self.inputs)
-
-    def check_settings(self):
-        self.report('check phonon_settings')
-
-        if 'phonon_settings' in self.inputs:
-            phonon_settings_dict = self.inputs.phonon_settings.get_dict()
+        if 'is_nac' in self.inputs.phonon_settings.attributes:
+            return self.inputs.phonon_settings['is_nac']
         else:
-            phonon_settings_dict = {}
+            False
 
-        cell_keys = self.inputs.cell_matrices.get_arraynames()
-        if 'supercell_matrix' not in cell_keys:
-            raise RuntimeError(
-                "supercell_matrix is not found in cell_matrices.")
-        else:
-            dim = self.inputs.cell_matrices.get_array('supercell_matrix')
-            if len(dim.ravel()) == 3:
-                smat = np.diag(dim)
-            else:
-                smat = np.array(dim)
-            if not np.issubdtype(smat.dtype, np.integer):
-                raise TypeError("supercell_matrix is not integer matrix.")
-            else:
-                phonon_settings_dict['supercell_matrix'] = smat.tolist()
-        if 'primitive_matrix' in cell_keys:
-            pmat = self.inputs.cell_matrices.get_array('primitive_matrix')
-            pmat = pmat.astype(float).tolist()
-            phonon_settings_dict['primitive_matrix'] = pmat
+    def import_calculations(self):
+        return 'immigrant_calculation_folders' in self.inputs
 
-        if 'mesh' not in phonon_settings_dict:
-            phonon_settings_dict['mesh'] = [20, 20, 20]
-        phonon_settings_dict['distance'] = float(self.inputs.distance)
-        tolerance = float(self.inputs.symmetry_tolerance)
-        phonon_settings_dict['symmetry_tolerance'] = tolerance
+    def initialize_supercell_phonon_calculation(self):
+        """Set default settings and create supercells and primitive cell"""
+
+        self.report('initialize_supercell_phonon_calculation')
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
             if ('code_string' not in self.inputs or
@@ -174,124 +134,92 @@ class PhononPhonopy(WorkChain):
                 raise RuntimeError(
                     "code_string and options have to be specified.")
 
-        self.ctx.phonon_settings = ParameterData(dict=phonon_settings_dict)
-        self.ctx.phonon_settings.label = 'phonon_settings'
+        if 'supercell_matrix' not in self.inputs.phonon_settings.attributes:
+            raise RuntimeError(
+                "supercell_matrix was not found in phonon_settings.")
 
-        self.report("Phonon settings: %s" % phonon_settings_dict)
+        return_vals = get_phonon_setting_info(
+            self.inputs.phonon_settings,
+            self.inputs.structure,
+            self.inputs.symmetry_tolerance)
+        self.ctx.phonon_setting_info = return_vals['phonon_setting_info']
+        self.out('phonon_setting_info', self.ctx.phonon_setting_info)
 
-    def optimize(self):
-        self.report('start optimize')
-        future = self.submit(
-            OptimizeStructure,
-            structure=self.inputs.structure,
-            calculator_settings=self.inputs.calculator_settings,
-            pressure=self.inputs.pressure)
-        self.report('optimize workchain: {}'.format(future.pk))
-
-        return ToContext(optimized=future)
-
-    def set_unitcell(self):
-        self.report('set unit cell')
-
-        if 'optimized' in self.ctx:
-            self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
-            self.out('optimized_data',
-                     self.ctx.optimized.out.optimized_structure_data)
-        else:
-            self.ctx.final_structure = self.inputs.structure
-
-    def create_displacements(self):
-        """Create supercells with displacements and primitive cell
-
-        Use phonopy to create the supercells with displacements to
-        calculate the force constants by using finite displacements
-        methodology
-
-        """
-
-        self.report('create cells for phonon calculation')
-
-        from phonopy import Phonopy
-
-        phonon_settings_dict = self.ctx.phonon_settings.get_dict()
-        if 'primitive_matrix' in phonon_settings_dict:
-            phonon = Phonopy(
-                phonopy_atoms_from_structure(self.ctx.final_structure),
-                phonon_settings_dict['supercell_matrix'],
-                primitive_matrix=phonon_settings_dict['primitive_matrix'],
-                symprec=phonon_settings_dict['symmetry_tolerance'])
-        else:
-            phonon = Phonopy(
-                phonopy_atoms_from_structure(self.ctx.final_structure),
-                phonon_settings_dict['supercell_matrix'],
-                symprec=phonon_settings_dict['symmetry_tolerance'])
-
-        if 'displacement_dataset' in self.inputs:
-            phonon.dataset = self.inputs.displacement_dataset.get_dict()
-        else:
-            phonon.generate_displacements(
-                distance=phonon_settings_dict['distance'])
-
-        self.ctx.disp_dataset = {
-            'dataset': ParameterData(dict=phonon.dataset),
-            'supercells': []}
-        self.ctx.disp_dataset['dataset'].label = 'displacement_dataset'
-
-        self.ctx.primitive_structure = phonopy_atoms_to_structure(
-            phonon.primitive)
-
-        cells_with_disp = phonon.supercells_with_displacements
-        for i, phonopy_supercell in enumerate(cells_with_disp):
-            supercell = phonopy_atoms_to_structure(phonopy_supercell)
-            self.ctx.disp_dataset['supercells'].append(supercell)
+        self.ctx.supercells = {}
+        for i in range(len(return_vals) - 3):
+            label = "supercell_%03d" % (i + 1)
+            self.ctx.supercells[label] = return_vals[label]
+        self.ctx.primitive = return_vals['primitive']
+        self.ctx.supercell = return_vals['supercell']
+        self.out('primitive', self.ctx.primitive)
+        self.out('supercell', self.ctx.supercell)
 
     def run_force_and_nac_calculations(self):
         self.report('run force calculations')
 
         # Forces
-        for i, supercell in enumerate(self.ctx.disp_dataset['supercells']):
+        for i in range(len(self.ctx.supercells)):
             label = "supercell_%03d" % (i + 1)
-            builder = generate_inputs(supercell,
-                                      self.inputs.calculator_settings,
-                                      calc_type='forces',
-                                      label=label)
+            builder = get_calcjob_builder(self.ctx.supercells[label],
+                                          self.inputs.calculator_settings,
+                                          calc_type='forces',
+                                          label=label)
             future = self.submit(builder)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
-            # append_ can't be used because the order can change.
-            # self.to_context(supercell_calcs=append_(future))
-
         # Born charges and dielectric constant
-        if self.inputs.is_nac:
+        if self.ctx.phonon_setting_info['is_nac']:
             self.report('calculate born charges and dielectric constant')
-            builder = generate_inputs(self.ctx.primitive_structure,
-                                      self.inputs.calculator_settings,
-                                      calc_type='nac',
-                                      label='born_and_epsilon')
+            builder = get_calcjob_builder(self.ctx.primitive,
+                                          self.inputs.calculator_settings,
+                                          calc_type='nac',
+                                          label='born_and_epsilon')
             future = self.submit(builder)
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon': future})
 
     def read_force_and_nac_calculations(self):
-        self.report('read calculation nodes')
+        self.report('import calculation data in files')
 
-        uuids = self.inputs.calculation_uuids.get_dict()['uuids']
-        if self.inputs.is_nac:
-            uuid_nac = uuids.pop()
-            label = 'born_and_epsilon'
-            uuid_str = Str(uuid_nac)
-            uuid_str.label = "uuid"
-            self.ctx[label], _ = get_born_epsilon_from_uuid.run_get_node(
-                uuid_str, label=label)
-
-        for i, uuid in enumerate(uuids):
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        calc_folders = calc_folders_Dict['calculation_folders']
+        for i, calc_folder in enumerate(calc_folders[:-1]):
             label = "supercell_%03d" % (i + 1)
-            uuid_str = Str(uuid)
-            uuid_str.label = "uuid"
-            self.ctx[label], _ = get_forces_from_uuid.run_get_node(
-                uuid_str, label=label)
+            builder = get_immigrant_builder(calc_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='forces')
+            builder.metadata.label = label
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
 
+        if self.ctx.phonon_setting_info['is_nac']:  # NAC the last one
+            calc_folder = calc_folders[-1]
+            label = 'born_and_epsilon'
+            builder = get_immigrant_builder(calc_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='nac')
+            builder.metadata.label = label
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
+
+    def check_imported_supercell_structures(self):
+        self.report('check imported supercell structures')
+
+        msg = ("Immigrant failed because of inconsistency of supercell"
+               "structure")
+
+        for i in range(len(self.ctx.supercells)):
+            label = "supercell_%03d" % (i + 1)
+            supercell_ref = self.ctx.supercells[label]
+            supercell_calc = self.ctx[label].inputs.structure
+            if not check_imported_supercell_structure(
+                    supercell_ref,
+                    supercell_calc,
+                    self.inputs.symmetry_tolerance):
+                raise RuntimeError(msg)
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
@@ -300,97 +228,98 @@ class PhononPhonopy(WorkChain):
 
         # VASP specific
         forces_dict = {}
-        for i in range(len(self.ctx.disp_dataset['supercells'])):
+
+        for i in range(len(self.ctx.supercells)):
             label = "supercell_%03d" % (i + 1)
             calc = self.ctx[label]
             if type(calc) is dict:
                 out_dict = calc
             else:
-                out_dict = calc.get_outputs_dict()
-            if ('output_forces' in out_dict and
-                'final' in out_dict['output_forces'].get_arraynames()):
+                out_dict = calc.outputs
+            if ('forces' in out_dict and
+                'final' in out_dict['forces'].get_arraynames()):
                 label = "forces_%03d" % (i + 1)
-                forces_dict[label] = out_dict['output_forces']
+                forces_dict[label] = out_dict['forces']
+            else:
+                msg = ("Forces could not be found in calculation %03d."
+                       % (i + 1))
+                self.report(msg)
 
-        if len(forces_dict) != len(self.ctx.disp_dataset['supercells']):
+        if len(forces_dict) != len(self.ctx.supercells):
             raise RuntimeError("Forces could not be retrieved.")
 
-        # Call workfunction to make links
-        self.ctx.force_sets, _ = get_force_sets.run_get_node(
-            label='create_force_sets', **forces_dict)
+        self.ctx.force_sets = get_force_sets(**forces_dict)
+        self.out('force_sets', self.ctx.force_sets)
 
     def create_nac_params(self):
         self.report('create nac data')
 
         # VASP specific
         # Call workfunction to make links
-        if type(self.ctx.born_and_epsilon) is dict:
-            out_dict = self.ctx.born_and_epsilon
-        else:
-            out_dict = self.ctx.born_and_epsilon.get_outputs_dict()
-        self.ctx.nac_params, _ = get_nac_params.run_get_node(
-            born_charges=out_dict['output_born_charges'],
-            epsilon=out_dict['output_dielectrics'],
-            label='create_nac_params')
+        out_dict = self.ctx.born_and_epsilon.outputs
+
+        if 'born_charges' not in out_dict:
+            raise RuntimeError(
+                "Born effective charges could not be found "
+                "in the calculation. Please check the calculation setting.")
+        if 'dielectrics' not in out_dict:
+            raise RuntimeError(
+                "Dielectric constant could not be found "
+                "in the calculation. Please check the calculation setting.")
+
+        params = {'symmetry_tolerance':
+                  Float(self.ctx.phonon_setting_info['symmetry_tolerance'])}
+        if self.import_calculations():
+            params['primitive'] = self.ctx.primitive
+        self.ctx.nac_params = get_nac_params(
+            out_dict['born_charges'],
+            out_dict['dielectrics'],
+            self.ctx.born_and_epsilon.inputs.structure,
+            **params)
+        self.out('nac_params', self.ctx.nac_params)
+
+    def run_phonopy_remote(self):
+        """Run phonopy at remote computer"""
+
+        self.report('remote phonopy calculation')
+
+        code_string = self.inputs.code_string.value
+        builder = Code.get_from_string(code_string).get_builder()
+        builder.structure = self.inputs.structure
+        builder.settings = self.ctx.phonon_setting_info
+        builder.metadata.options.update(self.inputs.options)
+        builder.metadata.label = self.inputs.metadata.label
+        builder.force_sets = self.ctx.force_sets
+        if 'nac_params' in self.ctx:
+            builder.nac_params = self.ctx.nac_params
+            builder.primitive = self.ctx.primitive
+        future = self.submit(builder)
+
+        self.report('phonopy calculation: {}'.format(future.pk))
+        self.to_context(**{'phonon_properties': future})
+        # return ToContext(phonon_properties=future)
+
+    def collect_data(self):
+        self.report('collect data')
+        self.out('thermal_properties',
+                 self.ctx.phonon_properties.outputs.thermal_properties)
+        self.out('dos', self.ctx.phonon_properties.outputs.dos)
+        self.out('pdos', self.ctx.phonon_properties.outputs.pdos)
+        self.out('band_structure',
+                 self.ctx.phonon_properties.outputs.band_structure)
+        self.out('force_constants',
+                 self.ctx.phonon_properties.outputs.force_constants)
+
+        self.report('finish phonon')
 
     def create_force_constants(self):
         self.report('create force constants')
 
-        self.ctx.force_constants, _ = get_force_constants.run_get_node(
-            self.ctx.final_structure,
-            self.ctx.phonon_settings,
-            self.ctx.force_sets,
-            self.ctx.disp_dataset['dataset'],
-            label='create_force_constants')
-
-    def set_default_outputs(self):
+        self.ctx.force_constants = get_force_constants(
+            self.inputs.structure,
+            self.ctx.phonon_setting_info,
+            self.ctx.force_sets)
         self.out('force_constants', self.ctx.force_constants)
-        self.out('final_structure', self.ctx.final_structure)
-        self.out('force_sets', self.ctx.force_sets)
-        self.out('displacement_dataset', self.ctx.disp_dataset['dataset'])
-        if 'nac_params' in self.ctx:
-            self.out('nac_params', self.ctx.nac_params)
-
-    def prepare_phonopy_inputs(self):
-        self.ctx.band_paths = get_path_using_seekpath(
-            self.ctx.primitive_structure,
-            band_resolution=30)
-
-    def create_phonopy_builder(self):
-        """Generate input parameters for a remote phonopy calculation"""
-
-        self.report("create phonopy process builder")
-
-        code_string = str(self.inputs.code_string)
-        builder = Code.get_from_string(code_string).get_builder()
-        builder.structure = self.ctx.final_structure
-        builder.parameters = self.ctx.phonon_settings
-        builder.options = self.inputs.options.get_dict()  # dict
-        if 'force_constants' in self.ctx:
-            builder.force_constants = self.ctx.force_constants
-        else:
-            builder.force_sets = self.ctx.force_sets
-            builder.displacement_dataset = self.ctx.disp_dataset['dataset']
-        if 'nac_params' in self.ctx:
-            builder.nac_params = self.ctx.nac_params
-        if 'band_paths' in self.ctx:
-            builder.bands = self.ctx.band_paths
-        self.ctx.phonopy_builder = builder
-
-    def run_phonopy_remote(self):
-        self.report('remote phonopy calculation')
-        future = self.submit(self.ctx.phonopy_builder)
-        self.report('phonopy calculation: {}'.format(future.pk))
-        return ToContext(phonon_properties=future)
-
-    def collect_data(self):
-        self.out('thermal_properties',
-                 self.ctx.phonon_properties.out.thermal_properties)
-        self.out('dos', self.ctx.phonon_properties.out.dos)
-        self.out('band_structure',
-                 self.ctx.phonon_properties.out.band_structure)
-
-        self.report('finish phonon')
 
     def run_phonopy_in_workchain(self):
         self.report('phonopy calculation in workchain')
@@ -398,12 +327,10 @@ class PhononPhonopy(WorkChain):
         params = {}
         if 'nac_params' in self.ctx:
             params['nac_params'] = self.ctx.nac_params
-        result, _ = get_phonon.run_get_node(self.ctx.final_structure,
-                                            self.ctx.phonon_settings,
-                                            self.ctx.force_constants,
-                                            self.ctx.band_paths,
-                                            label='run_phonopy_in_workchain',
-                                            **params)
+        result = get_phonon(self.inputs.structure,
+                            self.ctx.phonon_setting_info,
+                            self.ctx.force_constants,
+                            **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])
         self.out('band_structure', result['band_structure'])

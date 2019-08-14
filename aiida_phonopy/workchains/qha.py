@@ -2,19 +2,19 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-from aiida.work.run import run, submit
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
+from aiida.engine import run, submit
 
-from aiida.orm import load_node, DataFactory, WorkflowFactory
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.plugins import load_node, DataFactory, WorkflowFactory
+from aiida.orm import Str, Float, Bool, Int
 
 import numpy as np
 
 __testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -81,8 +81,8 @@ class QHAPhonopy(WorkChain):
     def define(cls, spec):
         super(QHAPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("num_expansions", valid_type=Int, required=False, default=Int(10))
         spec.input("use_nac", valid_type=Bool, required=False, default=Bool(True))
@@ -119,8 +119,8 @@ class QHAPhonopy(WorkChain):
                                      stress_range[-1] + stress_delta * 0.5,
                                      self.inputs.num_expansions)
 
-        print prediction.dict.stress_range
-        print prediction.dict.volume_range
+        print(prediction.dict.stress_range)
+        print(prediction.dict.volume_range)
 
         # For testing
         if __testing__:

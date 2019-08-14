@@ -1,4 +1,4 @@
-from aiida.orm.data.array import ArrayData
+from aiida.orm.nodes.data.array import ArrayData
 import numpy
 
 
@@ -71,7 +71,7 @@ class ForceSetsData(ArrayData):
 
     def set_datasets(self, datasets):
 
-        self._set_attr('natom', datasets['natom'])
+        self.set_attribute('natom', datasets['natom'])
         ndisplacements = len(datasets['first_atoms'])
 
         number = []
@@ -83,7 +83,7 @@ class ForceSetsData(ArrayData):
         self.set_array('number', numpy.array(number))
         self.set_array('displacement', numpy.array(displacement))
 
-        self._set_attr('ndisplacements', ndisplacements)
+        self.set_attribute('ndisplacements', ndisplacements)
 
     def set_forces(self, forces):
 
@@ -113,7 +113,7 @@ class ForceSetsData(ArrayData):
 
         # print datasets['first_atoms'][0].keys()
 
-        self._set_attr('natom', datasets['natom'])
+        self.set_attribute('natom', datasets['natom'])
 
         ndisplacements_s = []
 
@@ -159,8 +159,8 @@ class ForceSetsData(ArrayData):
         self.set_array('number', numpy.array(number_f))
         self.set_array('displacement', numpy.array(displacement_f))
 
-        self._set_attr('ndisplacements', len(datasets['first_atoms']))
-        self._set_attr('ndisplacements_s', ndisplacements_s)
+        self.set_attribute('ndisplacements', len(datasets['first_atoms']))
+        self.set_attribute('ndisplacements_s', ndisplacements_s)
 
     def get_datasets3(self):
 

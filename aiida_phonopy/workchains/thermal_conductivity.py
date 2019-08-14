@@ -2,12 +2,12 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.run import run, submit
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import run, submit
 
-from aiida.orm import load_node, DataFactory, WorkflowFactory, CalculationFactory, Code
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
+from aiida.plugins import load_node, DataFactory, WorkflowFactory, CalculationFactory, Code
+from aiida.orm import Str, Float, Bool, Int
+from aiida.engine import _If, _While
 
 from aiida_phonopy.workchains.phono3py_dist import generate_phono3py_params
 
@@ -15,7 +15,7 @@ import numpy as np
 __testing__ = False
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -30,8 +30,8 @@ class ThermalPhono3py(WorkChain):
     def define(cls, spec):
         super(ThermalPhono3py, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))

@@ -1,11 +1,11 @@
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
+from aiida.orm import Str, Float, Bool, Int
+from aiida.engine import _If, _While
 
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
@@ -20,7 +20,7 @@ BandStructureData = DataFactory('phonopy.band_structure')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -36,7 +36,7 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings, 
     finite displacements methodology
 
     :param structure: StructureData object
-    :param phonopy_input: ParametersData object containing a dictionary with the data needed for phonopy
+    :param phonopy_input: Dict object containing a dictionary with the data needed for phonopy
     :param cutoff: FloatData object containing the value of the cutoff for 3rd order FC in Angstroms (if 0 no cutoff is applied)
     :return: A set of StructureData Objects containing the supercells with displacements
     """
@@ -216,7 +216,7 @@ class PhononPhono3py(WorkChain):
     Workchain to do a phonon calculation using phonopy
 
     :param structure: StructureData object that contains the crystal structure unit cell
-    :param ph_settings: ParametersData object that contains a dictionary with the data needed to run phonopy:
+    :param ph_settings: Dict object that contains a dictionary with the data needed to run phonopy:
                                   'supercell': [[2,0,0],
                                                 [0,2,0],
                                                 [0,0,2]],
@@ -227,7 +227,7 @@ class PhononPhono3py(WorkChain):
                                   'mesh': [40, 40, 40],
                                   # 'code': 'phonopy@boston'  # include this to run phonopy remotely otherwise run phonopy localy
 
-    :param es_settings: ParametersData object that contains a dictionary with the setting needed to calculate the electronic structure.
+    :param es_settings: Dict object that contains a dictionary with the setting needed to calculate the electronic structure.
                         The structure of this dictionary strongly depends on the software (VASP, QE, LAMMPS, ...)
     :param optimize: (optional) Set true to perform a crystal structure optimization before the phonon calculation (default: True)
     :param pressure: (optional) Set the external pressure (stress tensor) at which the optimization is performed in KBar (default: 0)
@@ -242,8 +242,8 @@ class PhononPhono3py(WorkChain):
     def define(cls, spec):
         super(PhononPhono3py, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))

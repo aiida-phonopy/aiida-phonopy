@@ -1,4 +1,4 @@
-from aiida.orm.data.array import ArrayData
+from aiida.orm.nodes.data.array import ArrayData
 # from aiida.orm import DataFactory
 # ArrayData = DataFactory('array')
 
@@ -13,15 +13,15 @@ class BandStructureData(ArrayData):
 
     def get_number_of_bands(self):
 
-        if 'nbands' in self.get_attrs():
-            return self.get_attr('nbands')
+        if 'nbands' in self.attributes:
+            return self.attributes['nbands']
         else:
             return None
 
     def get_number_of_points(self):
 
-        if 'npoints' in self.get_attrs():
-            return self.get_attr('npoints')
+        if 'npoints' in self.attributes:
+            return self.attributes['npoints']
         else:
             return None
 
@@ -33,8 +33,8 @@ class BandStructureData(ArrayData):
 
         self.set_array('bands', bands)
 
-        self._set_attr('nbands', len(bands))
-        self._set_attr('npoints', len(bands[0]))
+        self.set_attribute('nbands', len(bands))
+        self.set_attribute('npoints', len(bands[0]))
 
     def set_labels(self, band_labels):
 

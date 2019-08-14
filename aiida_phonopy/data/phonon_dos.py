@@ -1,4 +1,4 @@
-from aiida.orm.data.array import ArrayData
+from aiida.orm.nodes.data.array import ArrayData
 
 
 class PhononDosData(ArrayData):
@@ -101,7 +101,7 @@ class PhononDosData(ArrayData):
 
         :param array: The numpy array to store
         """
-        self._set_attr("atom_labels", labels)
+        self.set_attribute("atom_labels", labels)
 
     def set_dos(self, array):
         """
@@ -127,7 +127,7 @@ class PhononDosData(ArrayData):
         """
 
         self.set_array('partial_dos', array)
-        self._set_attr("n_partial_dos", len(array))
+        self.set_attribute("n_partial_dos", len(array))
 
     def is_stable(self, tol=1e-6):
         """

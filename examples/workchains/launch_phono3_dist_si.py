@@ -10,10 +10,10 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory, load_node
-from aiida.work.run import run, submit
-from aiida.orm.data.structure import StructureData
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory, load_node
+from aiida.engine import run, submit
+from aiida.orm import StructureData
+from aiida.orm import Str, Float, Bool, Int
 
 KpointsData = DataFactory("array.kpoints")
 ParameterData = DataFactory('parameter')
@@ -50,10 +50,10 @@ machine_dict = {'resources': {'num_machines': 1,
                 'max_wallclock_seconds': 3600 * 10,
                 }
 
-machine = ParameterData(dict=machine_dict)
+machine = Dict(dict=machine_dict)
 
 # PHONOPY settings
-ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+ph_settings = Dict(dict={'supercell': [[2, 0, 0],
                                                 [0, 2, 0],
                                                 [0, 0, 2]],
                                   'primitive': [[0.0, 0.5, 0.5],

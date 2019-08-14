@@ -1,14 +1,13 @@
 import numpy as np
-from aiida.orm import DataFactory
-from aiida_phonopy.common.utils import phonopy_atoms_from_structure
+from aiida.plugins import DataFactory
+from aiida_phonopy.common.utils import (phonopy_atoms_from_structure,
+                                        get_total_dos, get_projected_dos,
+                                        get_thermal_properties, get_bands)
 
 
-ParameterData = DataFactory('parameter')
 ArrayData = DataFactory('array')
-
-ForceConstantsData = DataFactory('phonopy.force_constants')
-PhononDosData = DataFactory('phonopy.phonon_dos')
-BandStructureData = DataFactory('phonopy.band_structure')
+XyData = DataFactory('array.xy')
+BandsData = DataFactory('array.bands')
 
 
 # Parse files to generate AIIDA OBJECTS
@@ -23,87 +22,95 @@ def parse_FORCE_CONSTANTS(filename):
     return fc_array
 
 
-def parse_partial_DOS(filename, structure, parameters):
-    partial_dos = np.loadtxt(filename)
-
-    from phonopy.structure.atoms import PhonopyAtoms
-    from phonopy import Phonopy
-
-    bulk = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
-                        positions=[site.position for site in structure.sites],
-                        cell=structure.cell)
-    params_dict = parameters.get_dict()
-    if 'primitive_matrix' in params_dict:
-        phonon = Phonopy(
-            bulk,
-            supercell_matrix=params_dict['supercell_matrix'],
-            primitive_matrix=params_dict['primitive_matrix'],
-            symprec=params_dict['symmetry_tolerance'])
-    else:
-        phonon = Phonopy(
-            bulk,
-            supercell_matrix=params_dict['supercell_matrix'],
-            symprec=params_dict['symmetry_tolerance'])
-
-    dos = PhononDosData(
-        frequencies=partial_dos.T[0],
-        dos=np.sum(partial_dos[:, 1:], axis=1),
-        partial_dos=partial_dos[:, 1:].T,
-        atom_labels=phonon.get_primitive().get_chemical_symbols())
-
+def parse_total_dos(filename):
+    data = np.loadtxt(filename)
+    total_dos = {'frequency_points': data[:, 0],
+                 'total_dos': data[:, 1]}
+    dos = get_total_dos(total_dos)
     return dos
+
+
+def parse_projected_dos(filename):
+    data = np.loadtxt(filename)
+    projected_dos = {'frequency_points': data[:, 0],
+                     'projected_dos': data[:, 1:].T}
+    pdos = get_projected_dos(projected_dos)
+    return pdos
 
 
 def parse_thermal_properties(filename):
     import yaml
-    temperature = []
-    free_energy = []
-    entropy = []
-    cv = []
+
+    thermal_properties = {'temperatures': [],
+                          'free_energy': [],
+                          'entropy': [],
+                          'heat_capacity': []}
 
     with open(filename, 'r') as stream:
-        thermal_properties = dict(yaml.load(stream))
-        for tp in thermal_properties['thermal_properties']:
-            temperature.append(tp['temperature'])
-            entropy.append(tp['entropy'])
-            free_energy.append(tp['free_energy'])
-            cv.append(tp['heat_capacity'])
+        try:
+            data = yaml.load(stream, Loader=yaml.FullLoader)
+        except AttributeError:
+            data = yaml.load(stream)
+        for tp in data['thermal_properties']:
+            thermal_properties['temperatures'].append(tp['temperature'])
+            thermal_properties['entropy'].append(tp['entropy'])
+            thermal_properties['free_energy'].append(tp['free_energy'])
+            thermal_properties['heat_capacity'].append(tp['heat_capacity'])
+        for key in thermal_properties:
+            thermal_properties[key] = np.array(thermal_properties[key])
 
-    tp_object = ArrayData()
-    tp_object.set_array('temperature', np.array(temperature))
-    tp_object.set_array('free_energy', np.array(free_energy))
-    tp_object.set_array('entropy', np.array(entropy))
-    tp_object.set_array('heat_capacity', np.array(cv))
+    tprops = get_thermal_properties(thermal_properties)
 
-    return tp_object
+    return tprops
 
 
-def parse_band_structure(filename, input_bands):
+def parse_band_structure(filename, label=None):
     import yaml
 
-    frequencies = []
     with open(filename, 'r') as stream:
-        bands = dict(yaml.load(stream))
+        try:
+            bands = yaml.load(stream, Loader=yaml.FullLoader)
+        except AttributeError:
+            bands = yaml.load(stream)
 
+    frequencies_flat = []
+    qpoints_flat = []
     for k in bands['phonon']:
-        frequencies.append([b['frequency'] for b in k['band']])
-    frequencies = np.array(frequencies)
+        frequencies_flat.append([b['frequency'] for b in k['band']])
+        qpoints_flat.append(k['q-position'])
 
-    nb = input_bands.get_number_of_bands()
-    frequencies = frequencies.reshape((nb, -1, frequencies.shape[1]))
+    frequencies = []
+    qpoints = []
+    for n in bands['segment_nqpoint']:
+        qpoints.append([qpoints_flat.pop(0) for i in range(n)])
+        frequencies.append([frequencies_flat.pop(0) for i in range(n)])
 
-    band_structure = BandStructureData(frequencies=frequencies,
-                                       bands=input_bands.get_bands(),
-                                       labels=input_bands.get_labels(),
-                                       unitcell=input_bands.get_unitcell())
+    label_pairs = []
+    for pair in bands['labels']:
+        label_pairs.append(
+            [x.replace('$', '').replace('\\', '').replace('mathrm{', '').replace('}', '').upper()
+             for x in pair])
 
-    return band_structure
+    labels = [label_pairs[0][0], label_pairs[0][1]]
+    path_connections = []
+    for i, pairs in enumerate(label_pairs[1:]):
+        if pairs[0] == label_pairs[i][1]:
+            labels.append(pairs[1])
+            path_connections.append(True)
+        else:
+            labels += pairs
+            path_connections.append(False)
+    path_connections.append(False)
+
+    bs = get_bands(qpoints, frequencies, labels, path_connections, label=label)
+
+    return bs
 
 
 def parse_kappa(filename):
     import numpy as np
     import h5py
-    from aiida.orm.data.array import ArrayData
+    from aiida.orm.nodes.data.array import ArrayData
 
     kappa = ArrayData()
 
@@ -117,19 +124,24 @@ def parse_kappa(filename):
 
 
 # Generate text strings for files from AIIDA OBJECTS
-def get_BORN_txt(nac_data, parameter_data, structure):
+def get_BORN_txt(nac_data, structure, symmetry_tolerance):
+    """Returns a string of BORN file.
+
+    nac_data : ArrayData
+        Born effective charges and dielectric constants
+    structure : StructureData
+        This is assumed to be the primitive cell in workchain.
+    symmetry_tolerance : float
+        Symmetry tolerance.
+    """
+
     from phonopy.file_IO import get_BORN_lines
 
-    parameters = parameter_data.get_dict()
     born_charges = nac_data.get_array('born_charges')
     epsilon = nac_data.get_array('epsilon')
-    unitcell = phonopy_atoms_from_structure(structure)
-    params = {'supercell_matrix': parameters['supercell_matrix']}
-    if 'symmetry_tolerance' in parameters:
-        params['symprec'] = parameters['symmetry_tolerance']
-    if 'primitive_matrix' in parameters:
-        params['primitive_matrix'] = parameters['primitive_matrix']
-    lines = get_BORN_lines(unitcell, born_charges, epsilon, **params)
+    pcell = phonopy_atoms_from_structure(structure)
+    lines = get_BORN_lines(pcell, born_charges, epsilon,
+                           symprec=symmetry_tolerance)
 
     return "\n".join(lines)
 
@@ -138,8 +150,7 @@ def get_FORCE_SETS_txt(force_sets, displacements_dataset):
     from phonopy.file_IO import get_FORCE_SETS_lines
 
     forces = force_sets.get_array('force_sets')
-    dataset = displacements_dataset.get_dict()
-    lines = get_FORCE_SETS_lines(dataset, forces=forces)
+    lines = get_FORCE_SETS_lines(displacements_dataset, forces=forces)
 
     return "\n".join(lines)
 
@@ -187,23 +198,17 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
     parameters = parameters_object.get_dict()
     supercell_matrix = np.array(parameters['supercell_matrix']).ravel()
     vals = " {}" * len(supercell_matrix)
-    input_file = ('DIM =' + vals + '\n').format(*supercell_matrix)
-    if 'primitive_matrix' in parameters:
-        input_file += 'PRIMITIVE_AXIS = {} {} {}  {} {} {}  {} {} {}\n'.format(
-            *np.array(parameters['primitive_matrix']).ravel())
-    input_file += 'MESH = {} {} {}\n'.format(*parameters['mesh'])
+    lines = [('DIM =' + vals).format(*supercell_matrix)]
+    lines.append('PRIMITIVE_AXIS = AUTO')
+    mesh = parameters['mesh']
+    try:
+        length = float(mesh)
+        lines.append('MESH = {}'.format(length))
+    except TypeError:
+        lines.append('MESH = {} {} {}'.format(*mesh))
+    lines.append('WRITE_MESH = .FALSE.')
 
-    if bands is not None:
-        input_file += 'BAND = '
-        for i, band in enumerate(bands.get_band_ranges()):
-            input_file += ' '.join(np.array(band.flatten(), dtype=str))
-            if i < bands.get_number_of_bands() - 1:
-                input_file += ','
-
-        input_file += '\n'
-        input_file += 'BAND_POINTS = {}\n'.format(bands.get_number_of_points())
-
-    return input_file
+    return '\n'.join(lines)
 
 
 def get_disp_fc3_txt(structure, parameters_data, force_sets):

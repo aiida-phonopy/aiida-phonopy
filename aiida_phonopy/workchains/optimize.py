@@ -1,14 +1,14 @@
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work import workfunction
-from aiida.orm.data.base import Float, Bool, Int
-from aiida.work.workchain import while_
-from aiida.orm import DataFactory
-from aiida_phonopy.common.generate_inputs import generate_inputs
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
+from aiida.orm import Float, Bool, Int
+from aiida.engine import while_
+from aiida.plugins import DataFactory
+from aiida_phonopy.common.generate_inputs import get_calcjob_builder
 from aiida_phonopy.common.parse_interface import parse_optimize_calculation
 import numpy as np
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -60,7 +60,7 @@ class OptimizeStructure(WorkChain):
     def define(cls, spec):
         super(OptimizeStructure, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("es_settings", valid_type=Dict)
         # Optional
         spec.input("pressure",
                    valid_type=Float, required=False, default=Float(0.0))

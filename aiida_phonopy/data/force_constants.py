@@ -1,4 +1,4 @@
-from aiida.orm.data.array import ArrayData
+from aiida.orm.nodes.data.array import ArrayData
 import numpy
 
 class ForceConstantsData(ArrayData):

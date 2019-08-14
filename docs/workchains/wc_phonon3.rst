@@ -9,8 +9,8 @@ are only implemented for VASP plugin.
 .. function:: PhononPhono3py(structure, ph_settings, es_settings [, optimize=True, use_nac=False, pressure= 0.0, calculate_fc=False])
 
    :param structure: StructureData object that contains the crystal unit cell structure.
-   :param ph_settings: ParametersData data object that contains the phonopy input parameters.
-   :param es_settings: ParameterData object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
+   :param ph_settings: Dict data object that contains the phonopy input parameters.
+   :param es_settings: Dict object that contains the calculator input parameters. These parameters depends on the code used (see workchains/launcher examples)
    :param use_nac: (optional) BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.
    :param optimize: (optional) BooleanData object. Determines if a crystal unit cell optimization is performed or not before the phonon calculation. By default this option is True.
    :param pressure: (optional) FloatData object. If optimize is True, this sets the external pressure (in kB) at which the unit cell optimization is preformed. By default this option takes value 0 kB.

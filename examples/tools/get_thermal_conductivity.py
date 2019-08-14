@@ -10,7 +10,7 @@
 from aiida import load_dbenv
 load_dbenv()
 
-from aiida.orm import load_node, load_workflow, DataFactory
+from aiida.plugins import load_node, load_workflow, DataFactory
 
 from phonopy.harmonic.force_constants import show_drift_force_constants
 from phono3py.phonon3.fc3 import show_drift_fc3
@@ -40,7 +40,7 @@ ph_settings = wc.inp.ph_settings
 # If modifications in phonon parameters are necessary
 ph_settings_dict = ph_settings.get_dict()
 ph_settings_dict['mesh'] = [40, 40, 40]
-ph_settings = ParameterData(dict=ph_settings_dict)
+ph_settings = Dict(dict=ph_settings_dict)
 
 # Create phono3py and calculate as usual
 phono3py = Phono3py(phonopy_atoms_from_structure(structure),

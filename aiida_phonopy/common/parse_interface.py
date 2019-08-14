@@ -1,9 +1,9 @@
-from aiida.orm import DataFactory
-from aiida.work import workfunction
-from aiida.orm.data.base import Int
+from aiida.plugins import DataFactory
+from aiida.engine import workfunction
+from aiida.orm import Int
 
 StructureData = DataFactory('structure')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 
 
 @workfunction
@@ -82,7 +82,7 @@ def parse_optimize_calculation(calc):
     else:
         return Exception('Not supported plugin')
 
-    output_data = ParameterData(dict={'energy': energy,
+    output_data = Dict(dict={'energy': energy,
                                       'forces': forces.tolist(),
                                       'stress': stress.tolist()})
 

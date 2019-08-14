@@ -1,110 +1,157 @@
 import numpy as np
-from aiida.work import workfunction
-from aiida.orm import DataFactory, load_node
+from aiida.engine import calcfunction
+from aiida.plugins import DataFactory
+from phonopy.structure.atoms import PhonopyAtoms
+from aiida.orm import Bool
 
 
-def get_path_using_seekpath(structure, band_resolution=30):
-    import seekpath
+@calcfunction
+def get_phonon_setting_info(phonon_settings,
+                            structure,
+                            symmetry_tolerance):
+    return_vals = {}
 
-    phonopy_structure = phonopy_atoms_from_structure(structure)
-    cell = phonopy_structure.get_cell()
-    scaled_positions = phonopy_structure.get_scaled_positions()
-    numbers = phonopy_structure.get_atomic_numbers()
+    ph_settings = {}
+    ph_settings.update(phonon_settings.get_dict())
+    dim = ph_settings['supercell_matrix']
+    if len(np.ravel(dim)) == 3:
+        smat = np.diag(dim)
+    else:
+        smat = np.array(dim)
+    if not np.issubdtype(smat.dtype, np.integer):
+        raise TypeError("supercell_matrix is not integer matrix.")
+    else:
+        ph_settings['supercell_matrix'] = smat.tolist()
 
-    structure = (cell, scaled_positions, numbers)
-    path_data = seekpath.get_path(structure)
+    if 'mesh' not in ph_settings:
+        ph_settings['mesh'] = 100.0
+    if 'distance' not in ph_settings:
+        ph_settings['distance'] = 0.01
+    tolerance = symmetry_tolerance.value
+    ph_settings['symmetry_tolerance'] = tolerance
 
-    labels = path_data['point_coords']
+    ph = get_phonopy_instance(structure, ph_settings, {})
+    ph_settings['primitive_matrix'] = ph.primitive_matrix
+    ph_settings['symmetry'] = {
+        'number': ph.symmetry.dataset['number'],
+        'international': ph.symmetry.dataset['international']}
 
-    band_ranges = []
-    for set in path_data['path']:
-        band_ranges.append([labels[set[0]], labels[set[1]]])
+    if 'displacement_dataset' in ph_settings:
+        ph.dataset = ph_settings['displacement_dataset']
+    else:
+        ph.generate_displacements(distance=ph_settings['distance'])
+        ph_settings['displacement_dataset'] = ph.dataset
 
-    bands = []
-    for q_start, q_end in band_ranges:
-        band = []
-        for i in range(band_resolution+1):
-            band.append(
-                np.array(q_start) + (np.array(q_end) - np.array(q_start))
-                / band_resolution * i)
-        bands.append(band)
+    settings = DataFactory('dict')(dict=ph_settings)
+    settings.label = 'phonon_setting_info'
+    return_vals['phonon_setting_info'] = settings
 
-    band_structure = DataFactory('phonopy.band_structure')(
-        bands=bands,
-        labels=path_data['path'],
-        unitcell=phonopy_structure.get_cell())
-    return band_structure
+    # Supercells and primitive cell
+    for i, scell in enumerate(ph.supercells_with_displacements):
+        structure = phonopy_atoms_to_structure(scell)
+        label = "supercell_%03d" % (i + 1)
+        structure.label = "%s %s" % (
+            structure.get_formula(mode='hill_compact'), label)
+        return_vals[label] = structure
 
+    supercell_structure = phonopy_atoms_to_structure(ph.supercell)
+    supercell_structure.label = "%s %s" % (
+        supercell_structure.get_formula(mode='hill_compact'), 'supercell')
+    return_vals['supercell'] = supercell_structure
 
-@workfunction
-def get_forces_from_uuid(uuid):
-    n = load_node(str(uuid))
-    return {'output_forces': n.out.output_forces}
+    primitive_structure = phonopy_atoms_to_structure(ph.primitive)
+    primitive_structure.label = "%s %s" % (
+        primitive_structure.get_formula(mode='hill_compact'), 'primitive cell')
+    return_vals['primitive'] = primitive_structure
 
-
-@workfunction
-def get_born_epsilon_from_uuid(uuid):
-    n = load_node(str(uuid))
-    return {'output_born_charges': n.out.output_born_charges,
-            'output_dielectrics': n.out.output_dielectrics}
+    return return_vals
 
 
-@workfunction
+@calcfunction
+def check_imported_supercell_structure(supercell_ref,
+                                       supercell_calc,
+                                       symmetry_tolerance):
+    symprec = symmetry_tolerance.value
+    cell_diff = np.subtract(supercell_ref.cell, supercell_calc.cell)
+    if (np.abs(cell_diff) > symprec).any():
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
+
+    positions_ref = [site.position for site in supercell_ref.sites]
+    positions_calc = [site.position for site in supercell_calc.sites]
+    diff = np.subtract(positions_ref, positions_calc)
+    diff -= np.rint(diff)
+    dist = np.sqrt(np.sum(np.dot(diff, supercell_ref.cell) ** 2, axis=1))
+    if (dist > symprec).any():
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
+
+    succeeded = Bool(True)
+    succeeded.label = "True"
+    return succeeded
+
+@calcfunction
 def get_force_sets(**forces_dict):
     forces = []
-    # for i in range(forces_dict['num_supercells']):
     for i in range(len(forces_dict)):
         label = "forces_%03d" % (i + 1)
-        forces.append(forces_dict[label].get_array('final'))
+        if label in forces_dict:
+            forces.append(forces_dict[label].get_array('final'))
+
+    assert len(forces) == len(forces_dict)
+
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
     force_sets.label = 'force_sets'
     return force_sets
 
 
-@workfunction
-def get_force_sets_data(datasets, **forces_dict):
-    dataset_dict = datasets.get_dict()
-    forces = []
-    for i in range(len(dataset_dict['first_atoms'])):
-        label = "supercell_%03d" % (i + 1)
-        forces.append(forces_dict[label].get_array('final'))
-    ForceSetsData = DataFactory('phonopy.force_sets')
-    force_sets = ForceSetsData(datasets=dataset_dict)
-    force_sets.set_forces(forces)
-    return force_sets
+@calcfunction
+def get_nac_params(born_charges, epsilon, nac_structure, **params):
+    """Obtain Born effective charges and dielectric constants in primitive cell
 
+    When Born effective charges and dielectric constants are calculated within
+    phonopy workchain, those values are calculated in the primitive cell.
+    However using immigrant, the cell may not be primitive cell and can be
+    unit cell. In this case, conversion of data is necessary. This conversion
+    needs information of the structure where those values were calcualted and
+    the target primitive cell structure.
 
-@workfunction
-def get_nac_params(born_charges, epsilon):
-    """Worfunction to extract nac ArrayData object from calc"""
+    Two kargs parameters
+    primitive : StructureData
+    symmetry_tolerance : Float
+
+    """
+    from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
+
+    borns = born_charges.get_array('born_charges')
+    eps = epsilon.get_array('epsilon')
+
+    nac_cell = phonopy_atoms_from_structure(nac_structure)
+    kargs = {}
+    if 'symmetry_tolerance' in params:
+        kargs['symprec'] = params['symmetry_tolerance'].value
+    if 'primitive' in params:
+        pcell = phonopy_atoms_from_structure(params['primitive'])
+        kargs['primitive'] = pcell
+    borns_, epsilon_ = symmetrize_borns_and_epsilon(
+        borns, eps, nac_cell, **kargs)
 
     nac_params = DataFactory('array')()
-    nac_params.set_array('born_charges',
-                         born_charges.get_array('born_charges'))
-    nac_params.set_array('epsilon', epsilon.get_array('epsilon'))
+    nac_params.set_array('born_charges', borns_)
+    nac_params.set_array('epsilon', epsilon_)
     nac_params.label = 'born_charges & epsilon'
 
     return nac_params
 
 
-@workfunction
-def get_nac_data(born_charges, epsilon, structure):
-    """Worfunction to extract NacData object from calc"""
-
-    nac_data = DataFactory('phonopy.nac')(
-        structure=structure,
-        born_charges=born_charges.get_array('born_charges'),
-        epsilon=epsilon.get_array('epsilon'))
-
-    return nac_data
-
-
-@workfunction
-def get_force_constants(structure, phonon_settings, force_sets, dataset):
+@calcfunction
+def get_force_constants(structure, phonon_settings, force_sets):
     params = {}
     phonon = get_phonopy_instance(structure, phonon_settings, params)
-    phonon.dataset = dataset.get_dict()
+    phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
     phonon.produce_force_constants()
     force_constants = DataFactory('array')()
@@ -115,76 +162,132 @@ def get_force_constants(structure, phonon_settings, force_sets, dataset):
     return force_constants
 
 
-@workfunction
-def get_phonon(structure, phonon_settings, force_constants, band_paths,
-               **params):
-    phonon = get_phonopy_instance(structure, phonon_settings, params)
-    phonon.force_constants = force_constants.get_array('force_constants')
+@calcfunction
+def get_phonon(structure, phonon_settings, force_constants, **params):
     phonon_settings_dict = phonon_settings.get_dict()
+    ph = get_phonopy_instance(structure, phonon_settings_dict, params)
+    ph.force_constants = force_constants.get_array('force_constants')
+    mesh = phonon_settings_dict['mesh']
 
-    # Normalization factor primitive to unit cell
-    normalization_factor = (phonon.unitcell.get_number_of_atoms()
-                            / phonon.primitive.get_number_of_atoms())
+    # Mesh
+    total_dos, pdos, thermal_properties = get_mesh_property_data(ph, mesh)
 
-    # DOS
-    phonon.set_mesh(phonon_settings_dict['mesh'],
-                    is_eigenvectors=True,
-                    is_mesh_symmetry=False)
-    phonon.set_total_DOS(tetrahedron_method=True)
-    phonon.set_partial_DOS(tetrahedron_method=True)
-    total_dos = phonon.get_total_DOS()
-    partial_dos = phonon.get_partial_DOS()
-    PhononDosData = DataFactory('phonopy.phonon_dos')
-    dos = PhononDosData(
-        frequencies=total_dos[0],
-        dos=(total_dos[1] * normalization_factor),
-        partial_dos=(np.array(partial_dos[1]) * normalization_factor),
-        atom_labels=np.array(phonon.primitive.get_chemical_symbols()))
+    # Band structure
+    bs = get_bands_data(ph)
 
-    # THERMAL PROPERTIES (per primtive cell)
-    phonon.set_thermal_properties()
-    t, free_energy, entropy, cv = phonon.get_thermal_properties()
-
-    # Stores thermal properties (per unit cell) data in DB as a workflow
-    # result
-    thermal_properties = DataFactory('array')()
-    thermal_properties.set_array('temperature', t)
-    thermal_properties.set_array('free_energy',
-                                 free_energy * normalization_factor)
-    thermal_properties.set_array('entropy', entropy * normalization_factor)
-    thermal_properties.set_array('heat_capacity',
-                                 cv * normalization_factor)
-    thermal_properties.label = 'Thermal properties'
-
-    # BAND STRUCTURE
-    bands = band_paths
-    phonon.set_band_structure(bands.get_bands())
-    BandStructureData = DataFactory('phonopy.band_structure')
-    band_structure = BandStructureData(bands=bands.get_bands(),
-                                       labels=bands.get_labels(),
-                                       unitcell=bands.get_unitcell())
-
-    band_structure.set_band_structure_phonopy(phonon.get_band_structure())
-
-    return {'dos': dos,
+    return {'dos': total_dos,
+            'pdos': pdos,
             'thermal_properties': thermal_properties,
-            'band_structure': band_structure}
+            'band_structure': bs}
 
 
-def get_phonopy_instance(structure, phonon_settings, params):
+def get_mesh_property_data(ph, mesh):
+    ph.set_mesh(mesh)
+    ph.run_total_dos()
+
+    dos = get_total_dos(ph.get_total_dos_dict())
+
+    ph.run_thermal_properties()
+    tprops = get_thermal_properties(ph.get_thermal_properties_dict())
+
+    ph.set_mesh(mesh, is_eigenvectors=True, is_mesh_symmetry=False)
+    ph.run_projected_dos()
+    pdos = get_projected_dos(ph.get_projected_dos_dict())
+
+    return dos, pdos, tprops
+
+
+def get_total_dos(total_dos):
+    dos = DataFactory('array.xy')()
+    dos.set_x(total_dos['frequency_points'], 'Frequency', 'THz')
+    dos.set_y(total_dos['total_dos'], 'Total DOS', '1/THz')
+    dos.label = 'Total DOS'
+    return dos
+
+
+def get_projected_dos(projected_dos):
+    pdos = DataFactory('array.xy')()
+    pdos_list = [pd for pd in projected_dos['projected_dos']]
+    pdos.set_x(projected_dos['frequency_points'], 'Frequency', 'THz')
+    pdos.set_y(pdos_list,
+               ['Projected DOS', ] * len(pdos_list),
+               ['1/THz', ] * len(pdos_list))
+    pdos.label = 'Projected DOS'
+    return pdos
+
+
+def get_thermal_properties(thermal_properties):
+    tprops = DataFactory('array.xy')()
+    tprops.set_x(thermal_properties['temperatures'], 'Temperature', 'K')
+    tprops.set_y([thermal_properties['free_energy'],
+                  thermal_properties['entropy'],
+                  thermal_properties['heat_capacity']],
+                 ['Helmholtz free energy', 'Entropy', 'Cv'],
+                 ['kJ/mol', 'J/K/mol', 'J/K/mol'])
+    tprops.label = 'Thermal properties'
+    return tprops
+
+
+def get_bands_data(ph):
+    ph.auto_band_structure()
+    labels = [x.replace('$', '').replace('\\', '').replace('mathrm{', '').replace('}', '').upper()
+              for x in ph.band_structure.labels]
+    frequencies = ph.band_structure.frequencies
+    qpoints = ph.band_structure.qpoints
+    path_connections = ph.band_structure.path_connections
+    label = "%s (%d)" % (ph.symmetry.dataset['international'],
+                         ph.symmetry.dataset['number'])
+
+    return get_bands(qpoints, frequencies, labels, path_connections,
+                     label=label)
+
+
+def get_bands(qpoints, frequencies, labels, path_connections, label=None):
+    qpoints_list = list(qpoints[0])
+    frequencies_list = list(frequencies[0])
+    labels_list = [(0, labels[0]), ]
+    label_index = 1
+
+    for pc, qs, fs in zip(path_connections[:-1], qpoints[1:], frequencies[1:]):
+        if labels[label_index] == 'GAMMA' and pc:
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            if label_index < len(labels):
+                labels_list.append((len(qpoints_list), labels[label_index]))
+            label_index += 1
+            qpoints_list += list(qs)
+            frequencies_list += list(fs)
+        elif pc:
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            label_index += 1
+            qpoints_list += list(qs[1:])
+            frequencies_list += list(fs[1:])
+        else:
+            labels_list.append((len(qpoints_list) - 1, labels[label_index]))
+            label_index += 1
+            if label_index < len(labels):
+                labels_list.append((len(qpoints_list), labels[label_index]))
+                label_index += 1
+            qpoints_list += list(qs)
+            frequencies_list += list(fs)
+    labels_list.append((len(qpoints_list) - 1, labels[-1]))
+
+    bs = DataFactory('array.bands')()
+    bs.set_kpoints(np.array(qpoints_list))
+    bs.set_bands(np.array(frequencies_list), units='THz')
+    bs.labels = labels_list
+    if label is not None:
+        bs.label = label
+
+    return bs
+
+
+def get_phonopy_instance(structure, phonon_settings_dict, params):
     from phonopy import Phonopy
-    phonon_settings_dict = phonon_settings.get_dict()
-    if 'primitive_matrix' in phonon_settings_dict:
-        phonon = Phonopy(
-            phonopy_atoms_from_structure(structure),
-            phonon_settings_dict['supercell_matrix'],
-            primitive_matrix=phonon_settings_dict['primitive_matrix'],
-            symprec=phonon_settings_dict['symmetry_tolerance'])
-    else:
-        phonon = Phonopy(
-            phonopy_atoms_from_structure(structure),
-            phonon_settings_dict['supercell_matrix'],
-            symprec=phonon_settings_dict['symmetry_tolerance'])
+    phonon = Phonopy(
+        phonopy_atoms_from_structure(structure),
+        phonon_settings_dict['supercell_matrix'],
+        primitive_matrix='auto',
+        symprec=phonon_settings_dict['symmetry_tolerance'])
     if 'nac_params' in params:
         from phonopy.interface import get_default_physical_units
         units = get_default_physical_units('vasp')
@@ -228,7 +331,6 @@ def phonopy_atoms_to_structure(cell):
 
 
 def phonopy_atoms_from_structure(structure):
-    from phonopy.structure.atoms import PhonopyAtoms
     cell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)

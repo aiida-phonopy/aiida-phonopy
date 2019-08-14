@@ -13,8 +13,8 @@ Stress_displacement can be set as an optional argument, by default its value is 
 .. function:: GruneisenPhonopy(structure, ph_settings, es_settings [, stress_displacement=1e-2, use_nac=False])
 
    :param structure: StructureData object that contains the crystal unit cell structure.
-   :param ph_settings: ParametersData data  object that contains the phonopy input parameters.
-   :param es_settings: ParameterData object that contains the calculator input parameters.
+   :param ph_settings: Dict object that contains the phonopy input parameters.
+   :param es_settings: Dict object that contains the calculator input parameters.
    :param pressure: (optional) FloatData object. This determines the absolute stress (in kBar) at which the reference crystal structure is optimized (default 0).
    :param stress_displacement: (optional) FloatData object. This determines the stress difference between the 3 phonon calculations (default 1e-2 kB).
    :param use_nac: (optional) BooleanData object. Determines if non-analytical corrections will be included in the phonon calculations. By default this option is False.

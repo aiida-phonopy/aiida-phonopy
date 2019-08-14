@@ -8,7 +8,7 @@
 from aiida import load_dbenv
 load_dbenv()
 
-from aiida.orm import load_node, DataFactory
+from aiida.plugins import load_node, DataFactory
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 from aiida_phonopy.common.raw_parsers import get_poscar_txt, get_BORN_txt
 

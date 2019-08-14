@@ -1,7 +1,9 @@
+from aiida.engine import ExitCode
+from aiida.common.exceptions import NotExistent
 from aiida.parsers.parser import Parser
 from aiida_phonopy.common.raw_parsers import (
-    parse_thermal_properties, parse_FORCE_CONSTANTS, parse_partial_DOS,
-    parse_band_structure)
+    parse_thermal_properties, parse_FORCE_CONSTANTS, parse_projected_dos,
+    parse_total_dos, parse_band_structure)
 
 
 class PhonopyParser(Parser):
@@ -15,24 +17,21 @@ class PhonopyParser(Parser):
         """
         super(PhonopyParser, self).__init__(calc)
 
-    def parse_with_retrieved(self, retrieved):
+    def parse(self, **kwargs):
         """
         Parses the datafolder, stores results.
         """
-
-        # suppose at the start that the job is successful
-        successful = True
+        self.logger.info("Parsing start.")
 
         # select the folder object
         # Check that the retrieved folder is there
         try:
-            out_folder = retrieved[self._calc._get_linkname_retrieved()]
-        except KeyError:
-            self.logger.error("No retrieved folder found")
-            return False, ()
+            output_folder = self.retrieved
+        except NotExistent:
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         # check what is inside the folder
-        list_of_files = out_folder.get_folder_list()
+        list_of_files = output_folder.list_object_names()
 
         # OUTPUT file should exist
         # if not self._calc._OUTPUT_FILE_NAME in list_of_files:
@@ -42,39 +41,41 @@ class PhonopyParser(Parser):
 
         # Get files and do the parsing
 
-        # save the outputs
-        new_nodes_list = []
+        fc_filename = self.node.inputs.force_constants_filename.value
+        if fc_filename in list_of_files:
+            with output_folder.open(fc_filename) as f:
+                fname = f.name
+            self.out('force_constants', parse_FORCE_CONSTANTS(fname))
 
-        if self._calc._INOUT_FORCE_CONSTANTS in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._INOUT_FORCE_CONSTANTS)
-            object_force_constants = parse_FORCE_CONSTANTS(outfile)
-            new_nodes_list.append(('force_constants', object_force_constants))
+        projected_dos_filename = self.node.inputs.projected_dos_filename.value
+        if projected_dos_filename in list_of_files:
+            with output_folder.open(projected_dos_filename) as f:
+                fname = f.name
+            pdos_object = parse_projected_dos(fname)
+            self.out('pdos', pdos_object)
 
-        if self._calc._OUTPUT_DOS in list_of_files:
-            outfile = out_folder.get_abs_path(self._calc._OUTPUT_DOS)
-            dos_object = parse_partial_DOS(outfile, self._calc.inp.structure,
-                                           self._calc.inp.parameters)
-            new_nodes_list.append(('dos', dos_object))
+        total_dos_filename = self.node.inputs.projected_dos_filename.value
+        if total_dos_filename in list_of_files:
+            with output_folder.open(total_dos_filename) as f:
+                fname = f.name
+            pdos_object = parse_total_dos(fname)
+            self.out('dos', pdos_object)
 
-        if self._calc._OUTPUT_THERMAL_PROPERTIES in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._OUTPUT_THERMAL_PROPERTIES)
-            tp_object = parse_thermal_properties(outfile)
-            new_nodes_list.append(('thermal_properties', tp_object))
+        tp_filename = self.node.inputs.thermal_properties_filename.value
+        if tp_filename in list_of_files:
+            with output_folder.open(tp_filename) as f:
+                fname = f.name
+            self.out('thermal_properties', parse_thermal_properties(fname))
 
-        if self._calc._OUTPUT_BAND_STRUCTURE in list_of_files:
-            outfile = out_folder.get_abs_path(
-                self._calc._OUTPUT_BAND_STRUCTURE)
-            bs_object = parse_band_structure(outfile, self._calc.inp.bands)
-            new_nodes_list.append(('band_structure', bs_object))
+        sym_dataset = self.node.inputs.settings['symmetry']
+        label = "%s (%d)" % (sym_dataset['international'],
+                             sym_dataset['number'])
+        band_filename = self.node.inputs.band_structure_filename.value
+        if band_filename in list_of_files:
+            with output_folder.open(band_filename) as f:
+                fname = f.name
+            self.out('band_structure',
+                     parse_band_structure(fname, label=label))
 
-        # look at warnings
-        with open(out_folder.get_abs_path(self._calc._SCHED_ERROR_FILE)) as f:
-            errors = f.readlines()
-        if errors:
-            for error in errors:
-                self.logger.warning(error)
-                successful = False
-
-        return successful, new_nodes_list
+        self.logger.info("Parsing done.")
+        return ExitCode(0)

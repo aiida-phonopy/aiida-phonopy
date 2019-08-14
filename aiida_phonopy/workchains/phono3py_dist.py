@@ -4,13 +4,13 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.orm import Str, Float, Bool, Int
 
 import numpy as np
 
@@ -19,7 +19,7 @@ ForceSetsData = DataFactory('phonopy.force_sets')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -38,7 +38,7 @@ def generate_phono3py_params(structure,
     Generate inputs parameters needed to do a remote phonopy calculation
 
     :param structure: StructureData Object that constains the crystal structure unit cell
-    :param parameters: ParametersData object containing a dictionary with the phonopy input data
+    :param parameters: Dict object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetsData object containing the atomic forces and displacement information
     :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
     :param fc2: ForceConstantsData object containing the 2nd order force constants
@@ -68,7 +68,7 @@ def generate_phono3py_params(structure,
     if grid_point is not None:
         parameters_dic = parameters.get_dict()
         parameters_dic.update({'grid_point': np.array(grid_point).tolist()})
-        parameters = ParameterData(dict=parameters_dic)
+        parameters = Dict(dict=parameters_dic)
 
     if grid_data is not None:
         inputs.grid_data = grid_data
@@ -128,7 +128,7 @@ class Phono3pyDist(WorkChain):
     def define(cls, spec):
         super(Phono3pyDist, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("parameters", valid_type=ParameterData)
+        spec.input("parameters", valid_type=Dict)
         # Optional arguments
         spec.input("force_constants", valid_type=ForceConstantsData, required=False)
         spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)
@@ -244,10 +244,10 @@ if __name__ == '__main__':
                     'max_wallclock_seconds': 3600 * 10,
                     }
 
-    machine = ParameterData(dict=machine_dict)
+    machine = Dict(dict=machine_dict)
 
     # PHONOPY settings
-    ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+    ph_settings = Dict(dict={'supercell': [[2, 0, 0],
                                                     [0, 2, 0],
                                                     [0, 0, 2]],
                                       'primitive': [[0.0, 0.5, 0.5],
