@@ -2,7 +2,7 @@ import numpy as np
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
 from phonopy.structure.atoms import PhonopyAtoms
-from aiida.orm import Bool
+from aiida.orm import Bool, Str, Int, load_node
 
 
 @calcfunction
@@ -92,6 +92,7 @@ def check_imported_supercell_structure(supercell_ref,
     succeeded.label = "True"
     return succeeded
 
+
 @calcfunction
 def get_force_sets(**forces_dict):
     forces = []
@@ -179,6 +180,35 @@ def get_phonon(structure, phonon_settings, force_constants, **params):
             'pdos': pdos,
             'thermal_properties': thermal_properties,
             'band_structure': bs}
+
+
+@calcfunction
+def get_data_from_node_id(node_id):
+    n = load_node(node_id.value)
+    if 'structure' in n.inputs:
+        cell = phonopy_atoms_from_structure(n.inputs.structure)
+        structure = phonopy_atoms_to_structure(cell)
+    else:
+        raise RuntimeError("Crystal structure could not be found.")
+
+    if 'born_charges' in n.outputs and 'dielectrics' in n.outputs:
+        born = DataFactory('array')()
+        born.set_array(
+            'born_charges', n.outputs.born_charges.get_array('born_charges'))
+        born.label = 'born_charges'
+        epsilon = DataFactory('array')()
+        epsilon.set_array(
+            'epsilon', n.outputs.dielectrics.get_array('epsilon'))
+        epsilon.label = 'epsilon'
+        return {'born_charges': born, 'dielectrics': epsilon,
+                'structure': structure}
+    elif 'forces' in n.outputs:
+        forces = DataFactory('array')()
+        forces.set_array('final', n.outputs.forces.get_array('final'))
+        forces.label = 'forces'
+        return {'forces': forces, 'structure': structure}
+    else:
+        raise RuntimeError("Forces or NAC params were not found.")
 
 
 def get_mesh_property_data(ph, mesh):
@@ -335,3 +365,13 @@ def phonopy_atoms_from_structure(structure):
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
     return cell
+
+
+def from_node_id_to_aiida_node_id(node_id):
+    if type(node_id) is int:
+        return Int(node_id)
+    elif type(node_id) is str:
+        return Str(node_id)
+    else:
+        raise RuntimeError("%s is not supported in load_node."
+                           % type(node_id))
