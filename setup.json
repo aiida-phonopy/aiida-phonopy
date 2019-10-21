@@ -22,21 +22,21 @@
       "phonopy.nac = aiida_phonopy.data.nac: NacData"
     ],
     "aiida.calculations": [
-      "phonopy.phonopy = aiida_phonopy.calculations.phonopy.phonopy: PhonopyCalculation",
-      "phonopy.phono3py = aiida_phonopy.calculations.phonopy.phono3py: Phono3pyCalculation"
+      "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation",
+      "phonopy.phono3py = aiida_phonopy.calcs.phono3py: Phono3pyCalculation"
     ],
     "aiida.parsers": [
       "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser",
       "phono3py = aiida_phonopy.parsers.phono3py: Phono3pyParser"
     ],
     "aiida.workflows": [
-      "phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure",
-      "phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy",
-      "phonopy.phonon3 = aiida_phonopy.workchains.phonon3: PhononPhono3py",
-      "phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy",
-      "phonopy.phono3py_dist = aiida_phonopy.workchains.phono3py_dist: Phono3pyDist",
-      "phonopy.qha = aiida_phonopy.workchains.qha: QHAPhonopy",
-      "phonopy.thermal = aiida_phonopy.workchains.thermal_conductivity: ThermalPhono3py"
+      "phonopy.optimize = aiida_phonopy.workflows.optimize: OptimizeStructure",
+      "phonopy.phonon = aiida_phonopy.workflows.phonon: PhononPhonopy",
+      "phonopy.phonon3 = aiida_phonopy.workflows.phonon3: PhononPhono3py",
+      "phonopy.gruneisen = aiida_phonopy.workflows.gruneisen: GruneisenPhonopy",
+      "phonopy.phono3py_dist = aiida_phonopy.workflows.phono3py_dist: Phono3pyDist",
+      "phonopy.qha = aiida_phonopy.workflows.qha: QHAPhonopy",
+      "phonopy.thermal = aiida_phonopy.workflows.thermal_conductivity: ThermalPhono3py"
     ]
   }
 }

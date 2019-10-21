@@ -2,7 +2,7 @@ from aiida.common import InputValidationError
 from aiida.engine import CalcJob
 from aiida.common.utils import classproperty
 from aiida.plugins import DataFactory
-from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
+from aiida_phonopy.calcs.base import BasePhonopyCalculation
 from aiida_phonopy.common.raw_parsers import (get_disp_fc3_txt, get_forces_txt,
                                               write_fc2_to_hdf5_file,
                                               write_fc3_to_hdf5_file,

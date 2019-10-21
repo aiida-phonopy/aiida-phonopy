@@ -25,7 +25,7 @@ PhononPhonopy = WorkflowFactory('phonopy.phonon')
 
 @workfunction
 def phonopy_qha(**kwargs):
-    from aiida_phonopy.workchains.gruneisen import get_qha
+    from aiida_phonopy.workflows.gruneisen import get_qha
 
     n_structures = len([key for key, value in kwargs.items() if 'structure_' in key.lower()])
 

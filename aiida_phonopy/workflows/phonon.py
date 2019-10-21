@@ -71,6 +71,7 @@ class PhononPhonopy(WorkChain):
         PK or UUID instead of string of remote folder.
 
     """
+
     @classmethod
     def define(cls, spec):
         super(PhononPhonopy, cls).define(spec)

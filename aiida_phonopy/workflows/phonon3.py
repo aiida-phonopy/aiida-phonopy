@@ -293,7 +293,7 @@ class PhononPhono3py(WorkChain):
 
     def create_displacement_calculations(self):
 
-        from aiida_phonopy.workchains.phonon import get_primitive
+        from aiida_phonopy.workflows.phonon import get_primitive
 
         print ('create displacements')
         self.report('create displacements')
@@ -363,7 +363,7 @@ class PhononPhono3py(WorkChain):
 
     def create_displacement_calculations_chunk(self):
 
-        from aiida_phonopy.workchains.phonon import get_primitive
+        from aiida_phonopy.workflows.phonon import get_primitive
 
         if 'optimized' in self.ctx:
             self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
@@ -438,7 +438,7 @@ class PhononPhono3py(WorkChain):
 
     def collect_data(self):
 
-        from aiida_phonopy.workchains.phonon import get_nac_from_data
+        from aiida_phonopy.workflows.phonon import get_nac_from_data
         self.report('collect data and create force_sets')
 
         wf_inputs = {}
