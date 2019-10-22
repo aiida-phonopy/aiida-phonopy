@@ -20,37 +20,61 @@ StructureData = DataFactory('structure')
 BandsData = DataFactory('array.bands')
 
 
-class PhononPhonopy(WorkChain):
+class PhonopyWorkChain(WorkChain):
     """ Workchain to do a phonon calculation using phonopy
 
-    :param structure: StructureData object that contains the crystal structure
-        unit cell
-    :param calculator_settings: Dict object that contains a
-        dictionary with the setting needed to calculate the electronic
-        structure:
+    structure : StructureData
+        Unit cell structure.
+    calculator_settings : Dict
+        Settings to run force and nac calculations. For example,
             {'forces': force_config,
              'nac': nac_config}
-        where force_config and nac_config are used for the supercell force
-        calculation and Born effective charges and dielectric constant
-        calculation in primitive cell, respectively.
-    :phonon_settings: Dict object. Needed to run phonon calculation.
-        {'mesh': [20, 20, 20]}. Optional. (default: {mesh: [20, 20, 20]})
-    :is_nac: Bool object. Whether running non-analytical term correction.
-        Optional. (default: False)
-    :run_phonopy: Bool object. Whether running phonon calculation or not.
-        Optional. (default: False)
-    :remote_phonopy: Bool object. Whether running phonon calculation or not.
-        Optional. (default: False)
-    :code_string: Str object. Needed to run phonopy remotely. Optional.
-    :options: Dict object. Needed to run phonopy remotely. Optional.
-    :distance: Float object. Displacement distance. Optional. (default: 0.01)
-    :symmetry_tolerance: Float object. Symmetry tolerance. Optional.
-        (default: 1e-5)
+        At least 'forces' key is necessary. 'nac' is optional.
+        force_config is used for supercell force calculation. nac_config
+        are used for Born effective charges and dielectric constant calculation
+        in primitive cell. The primitive cell is chosen by phonopy
+        automatically.
+    phonon_settings : Dict
+        Setting to run phonon calculation. Keys are:
+        supercell_matrix : list or list of list
+            Multiplicity to create supercell from unit cell. Three integer
+            values (list) or 3x3 integer values (list of list).
+        mesh : list of float, optional
+            List of three integer values or float to represent distance between
+            neighboring q-points. Default is 100.0.
+        distance : float, optional
+            Atomic displacement distance. Default is 0.01.
+        is_nac : bool, optional
+            Whether running non-analytical term correction or not. Default is
+            False.
+        displacement_dataset : dict
+            Atomic displacement dataset that phonopy can understand.
+    run_phonopy : Bool, optional
+        Whether running phonon calculation or not. Default is False.
+    remote_phonopy : Bool, optional
+        Whether running phonon calculation or not at remote. Default is False.
+    code_string : Str, optional
+        Code string of phonopy needed when both of run_phonopy and
+        remote_phonopy are True.
+    options : Dict
+        AiiDa calculation options for phonon calculation used when both of
+        run_phonopy and remote_phonopy are True.
+    symmetry_tolerance : Float, optional
+        Symmetry tolerance. Default is 1e-5.
+    immigrant_calculation_folders : Dict, optional
+        'force' key has to exist and 'nac' is necessary when
+        phonon_settings['is_nac'] is True. The value of the 'force' key is
+        the list of strings of remote directories. The value of 'nac' is the
+        string of remote directory.
+    calculation_nodes : Dict, optional
+        This works similarly as immigrant_calculation_folders but contains
+        PK or UUID instead of string of remote folder.
 
     """
+
     @classmethod
     def define(cls, spec):
-        super(PhononPhonopy, cls).define(spec)
+        super(PhonopyWorkChain, cls).define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('phonon_settings', valid_type=Dict, required=True)
         spec.input('immigrant_calculation_folders',
@@ -298,8 +322,10 @@ class PhononPhonopy(WorkChain):
         calc = self.ctx.born_and_epsilon
         if type(calc) is dict:
             calc_dict = calc
+            structure = calc['structure']
         else:
             calc_dict = calc.outputs
+            structure = calc.inputs.structure
 
         if 'born_charges' not in calc_dict:
             raise RuntimeError(
@@ -317,7 +343,7 @@ class PhononPhonopy(WorkChain):
         self.ctx.nac_params = get_nac_params(
             calc_dict['born_charges'],
             calc_dict['dielectrics'],
-            calc_dict['structure'],
+            structure,
             **params)
         self.out('nac_params', self.ctx.nac_params)
 

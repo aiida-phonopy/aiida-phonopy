@@ -207,6 +207,8 @@ def get_phonopy_conf_file_txt(parameters_object, bands=None):
     except TypeError:
         lines.append('MESH = {} {} {}'.format(*mesh))
     lines.append('WRITE_MESH = .FALSE.')
+    if 'fc_calculator' in parameters:
+        lines.append('FC_CALCULATOR = %s' % parameters['fc_calculator'].upper())
 
     return '\n'.join(lines)
 
