@@ -20,7 +20,7 @@ StructureData = DataFactory('structure')
 BandsData = DataFactory('array.bands')
 
 
-class PhononPhonopy(WorkChain):
+class PhonopyWorkChain(WorkChain):
     """ Workchain to do a phonon calculation using phonopy
 
     structure : StructureData
@@ -71,9 +71,10 @@ class PhononPhonopy(WorkChain):
         PK or UUID instead of string of remote folder.
 
     """
+
     @classmethod
     def define(cls, spec):
-        super(PhononPhonopy, cls).define(spec)
+        super(PhonopyWorkChain, cls).define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('phonon_settings', valid_type=Dict, required=True)
         spec.input('immigrant_calculation_folders',

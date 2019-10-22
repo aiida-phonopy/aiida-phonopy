@@ -9,7 +9,7 @@ from aiida.plugins import load_node, DataFactory, WorkflowFactory, CalculationFa
 from aiida.orm import Str, Float, Bool, Int
 from aiida.engine import _If, _While
 
-from aiida_phonopy.workchains.phono3py_dist import generate_phono3py_params
+from aiida_phonopy.workflows.phono3py_dist import generate_phono3py_params
 
 import numpy as np
 __testing__ = False

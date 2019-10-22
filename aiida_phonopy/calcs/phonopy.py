@@ -1,5 +1,5 @@
 from aiida.plugins import DataFactory
-from aiida_phonopy.calculations.phonopy.base import BasePhonopyCalculation
+from aiida_phonopy.calcs.base import BasePhonopyCalculation
 from aiida.engine import CalcJob, ExitCode
 from aiida.orm import Str
 from aiida.common import InputValidationError
