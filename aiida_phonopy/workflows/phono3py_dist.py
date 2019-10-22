@@ -4,13 +4,13 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.orm import Str, Float, Bool, Int
 
 import numpy as np
 
@@ -19,7 +19,7 @@ ForceSetsData = DataFactory('phonopy.force_sets')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -38,7 +38,7 @@ def generate_phono3py_params(structure,
     Generate inputs parameters needed to do a remote phonopy calculation
 
     :param structure: StructureData Object that constains the crystal structure unit cell
-    :param parameters: ParametersData object containing a dictionary with the phonopy input data
+    :param parameters: Dict object containing a dictionary with the phonopy input data
     :param force_sets: ForceSetsData object containing the atomic forces and displacement information
     :param nac_data: NacData object containing the dielectric tensor and Born effective charges info
     :param fc2: ForceConstantsData object containing the 2nd order force constants
@@ -68,7 +68,7 @@ def generate_phono3py_params(structure,
     if grid_point is not None:
         parameters_dic = parameters.get_dict()
         parameters_dic.update({'grid_point': np.array(grid_point).tolist()})
-        parameters = ParameterData(dict=parameters_dic)
+        parameters = Dict(dict=parameters_dic)
 
     if grid_data is not None:
         inputs.grid_data = grid_data
@@ -98,13 +98,13 @@ def get_grid_points(structure, parameters):
 
     from phono3py.phonon3 import Phono3py
     from phono3py.cui.triplets_info import get_coarse_ir_grid_points
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=parameters.dict.supercell,
                         primitive_matrix=parameters.dict.primitive,
-                        symprec=parameters.dict.symmetry_precision,
+                        symprec=parameters.dict.symmetry_tolerance,
                         log_level=1)
 
     primitive = phono3py.get_primitive()
@@ -128,7 +128,7 @@ class Phono3pyDist(WorkChain):
     def define(cls, spec):
         super(Phono3pyDist, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("parameters", valid_type=ParameterData)
+        spec.input("parameters", valid_type=Dict)
         # Optional arguments
         spec.input("force_constants", valid_type=ForceConstantsData, required=False)
         spec.input("force_constants_3", valid_type=ForceConstantsData, required=False)
@@ -244,10 +244,10 @@ if __name__ == '__main__':
                     'max_wallclock_seconds': 3600 * 10,
                     }
 
-    machine = ParameterData(dict=machine_dict)
+    machine = Dict(dict=machine_dict)
 
     # PHONOPY settings
-    ph_settings = ParameterData(dict={'supercell': [[2, 0, 0],
+    ph_settings = Dict(dict={'supercell': [[2, 0, 0],
                                                     [0, 2, 0],
                                                     [0, 0, 2]],
                                       'primitive': [[0.0, 0.5, 0.5],
@@ -255,7 +255,7 @@ if __name__ == '__main__':
                                                     [0.5, 0.5, 0.0]],
                                       'distance': 0.01,
                                       'mesh': [20, 20, 20],
-                                      'symmetry_precision': 1e-5,
+                                      'symmetry_tolerance': 1e-5,
                                       'code': 'phono3py@stern_in',
                                       'machine': machine_dict})
 

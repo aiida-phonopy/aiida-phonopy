@@ -2,19 +2,19 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-from aiida.work.run import run, submit
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
+from aiida.engine import run, submit
 
-from aiida.orm import load_node, DataFactory, WorkflowFactory
+from aiida.plugins import load_node, DataFactory, WorkflowFactory
 
-from aiida.orm.data.base import Str, Float, Bool
+from aiida.orm import Str, Float, Bool
 
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
 
 ForceConstantsData = DataFactory('phonopy.force_constants')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -28,12 +28,12 @@ __testing__ = False
 
 def get_phonon(structure, force_constants, ph_settings, nac_data=None):
     from phonopy import Phonopy
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
-    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+    phonon = Phonopy(phonopy_atoms_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
-                     symprec=ph_settings.dict.symmetry_precision)
+                     symprec=ph_settings.dict.symmetry_tolerance)
 
     if force_constants is not None:
         phonon.set_force_constants(force_constants.get_data())
@@ -49,12 +49,12 @@ def get_phonon(structure, force_constants, ph_settings, nac_data=None):
 def get_commensurate(structure, ph_settings):
     from phonopy import Phonopy
     from phonopy.harmonic.dynmat_to_fc import DynmatToForceConstants
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
-    phonon = Phonopy(phonopy_bulk_from_structure(structure),
+    phonon = Phonopy(phonopy_atoms_from_structure(structure),
                      ph_settings.dict.supercell,
                      primitive_matrix=ph_settings.dict.primitive,
-                     symprec=ph_settings.dict.symmetry_precision)
+                     symprec=ph_settings.dict.symmetry_tolerance)
 
     primitive = phonon.get_primitive()
     supercell = phonon.get_supercell()
@@ -101,17 +101,17 @@ def get_force_constants(phonon_origin, gruneisen, commensurate, volumes):
 
 def get_thermal_properties(structure, ph_settings, force_constants_list):
     from phonopy import Phonopy
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     free_energy_list = []
     entropy_list = []
     cv_list = []
     temperature = None
     for fc in force_constants_list:
-        phonon = Phonopy(phonopy_bulk_from_structure(structure),
+        phonon = Phonopy(phonopy_atoms_from_structure(structure),
                          ph_settings.dict.supercell,
                          primitive_matrix=ph_settings.dict.primitive,
-                         symprec=ph_settings.dict.symmetry_precision)
+                         symprec=ph_settings.dict.symmetry_tolerance)
 
         # Normalization factor primitive to unit cell
         normalization_factor = phonon.unitcell.get_number_of_atoms()/phonon.primitive.get_number_of_atoms()
@@ -352,7 +352,7 @@ def phonopy_qha_prediction(phonon_structure,
                   'volume_range': [min(qha_output['volume_temperature']), max(qha_output['volume_temperature'])],
                   'stress_range': [max(stresses), min(stresses)]}
 
-    return {'qha_prediction': ParameterData(dict=prediction)
+    return {'qha_prediction': Dict(dict=prediction)
 }
 
 
@@ -406,8 +406,8 @@ class GruneisenPhonopy(WorkChain):
     def define(cls, spec):
         super(GruneisenPhonopy, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))  # in kB
         spec.input("stress_displacement", valid_type=Float, required=False, default=Float(2.0))  # in kB
@@ -450,8 +450,8 @@ class GruneisenPhonopy(WorkChain):
     def calculate_gruneisen(self):
 
         self.report('calculate gruneisen')
-        print ('calculate gruneisen')
-        print self.ctx.plus, self.ctx.minus, self.ctx.origin
+        print('calculate gruneisen')
+        print(self.ctx.plus, self.ctx.minus, self.ctx.origin)
 
         input_gruneisen = {'phonon_plus_structure' : self.ctx.plus.out.final_structure,
                            'phonon_plus_fc' : self.ctx.plus.out.force_constants,

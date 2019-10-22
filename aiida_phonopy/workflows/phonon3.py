@@ -1,17 +1,11 @@
-# Works run by the daemon (using submit)
+from aiida.engine import WorkChain, ToContext
+from aiida.engine import workfunction
 
-from aiida import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
+from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
+from aiida.engine import run, submit
 
-from aiida.work.workchain import WorkChain, ToContext
-from aiida.work.workfunction import workfunction
-
-from aiida.orm import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.work.run import run, submit
-
-from aiida.orm.data.base import Str, Float, Bool, Int
-from aiida.work.workchain import _If, _While
+from aiida.orm import Str, Float, Bool, Int
+from aiida.engine import _If, _While
 
 import numpy as np
 from aiida_phonopy.common.generate_inputs import generate_inputs
@@ -26,7 +20,7 @@ BandStructureData = DataFactory('phonopy.band_structure')
 PhononDosData = DataFactory('phonopy.phonon_dos')
 NacData = DataFactory('phonopy.nac')
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -42,19 +36,19 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings, 
     finite displacements methodology
 
     :param structure: StructureData object
-    :param phonopy_input: ParametersData object containing a dictionary with the data needed for phonopy
+    :param phonopy_input: Dict object containing a dictionary with the data needed for phonopy
     :param cutoff: FloatData object containing the value of the cutoff for 3rd order FC in Angstroms (if 0 no cutoff is applied)
     :return: A set of StructureData Objects containing the supercells with displacements
     """
     from phono3py.phonon3 import Phono3py
 
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=ph_settings.dict.supercell,
                         primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_precision,
+                        symprec=ph_settings.dict.symmetry_tolerance,
                         log_level=1)
 
     if float(cutoff) == 0:
@@ -111,13 +105,13 @@ def create_forces_set(**kwargs):
 def get_force_constants3(data_sets, structure, ph_settings):
 
     from phono3py.phonon3 import Phono3py
-    from aiida_phonopy.workchains.phonon import phonopy_bulk_from_structure
+    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
     # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_bulk_from_structure(structure),
+    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
                         supercell_matrix=ph_settings.dict.supercell,
                         primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_precision,
+                        symprec=ph_settings.dict.symmetry_tolerance,
                         log_level=1)
 
     phono3py.produce_fc3(data_sets.get_forces3(),
@@ -222,7 +216,7 @@ class PhononPhono3py(WorkChain):
     Workchain to do a phonon calculation using phonopy
 
     :param structure: StructureData object that contains the crystal structure unit cell
-    :param ph_settings: ParametersData object that contains a dictionary with the data needed to run phonopy:
+    :param ph_settings: Dict object that contains a dictionary with the data needed to run phonopy:
                                   'supercell': [[2,0,0],
                                                 [0,2,0],
                                                 [0,0,2]],
@@ -233,7 +227,7 @@ class PhononPhono3py(WorkChain):
                                   'mesh': [40, 40, 40],
                                   # 'code': 'phonopy@boston'  # include this to run phonopy remotely otherwise run phonopy localy
 
-    :param es_settings: ParametersData object that contains a dictionary with the setting needed to calculate the electronic structure.
+    :param es_settings: Dict object that contains a dictionary with the setting needed to calculate the electronic structure.
                         The structure of this dictionary strongly depends on the software (VASP, QE, LAMMPS, ...)
     :param optimize: (optional) Set true to perform a crystal structure optimization before the phonon calculation (default: True)
     :param pressure: (optional) Set the external pressure (stress tensor) at which the optimization is performed in KBar (default: 0)
@@ -248,8 +242,8 @@ class PhononPhono3py(WorkChain):
     def define(cls, spec):
         super(PhononPhono3py, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=ParameterData)
-        spec.input("es_settings", valid_type=ParameterData)
+        spec.input("ph_settings", valid_type=Dict)
+        spec.input("es_settings", valid_type=Dict)
         # Optional arguments
         spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
         spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
@@ -299,7 +293,7 @@ class PhononPhono3py(WorkChain):
 
     def create_displacement_calculations(self):
 
-        from aiida_phonopy.workchains.phonon import get_primitive
+        from aiida_phonopy.workflows.phonopy import get_primitive
 
         print ('create displacements')
         self.report('create displacements')
@@ -369,7 +363,7 @@ class PhononPhono3py(WorkChain):
 
     def create_displacement_calculations_chunk(self):
 
-        from aiida_phonopy.workchains.phonon import get_primitive
+        from aiida_phonopy.workflows.phonopy import get_primitive
 
         if 'optimized' in self.ctx:
             self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
@@ -444,7 +438,7 @@ class PhononPhono3py(WorkChain):
 
     def collect_data(self):
 
-        from aiida_phonopy.workchains.phonon import get_nac_from_data
+        from aiida_phonopy.workflows.phonopy import get_nac_from_data
         self.report('collect data and create force_sets')
 
         wf_inputs = {}

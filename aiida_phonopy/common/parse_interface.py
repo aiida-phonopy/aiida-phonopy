@@ -1,18 +1,20 @@
-from aiida.orm import load_node, DataFactory
-from aiida.work.workfunction import workfunction
-from aiida.orm.data.base import Str, Float, Bool, Int
+from aiida.plugins import DataFactory
+from aiida.engine import workfunction
+from aiida.orm import Int
 
 StructureData = DataFactory('structure')
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
+
 
 @workfunction
 def structure_from_trajectory(output_trajectory, pos):
-    """
-    Worfunction to extract a structure object from trajectory node and keep the provenance
+    """Worfunction to extract a structure object from trajectory node and
+    keep the provenance
 
     :param output_trajectory: trajectory node from a QE optimization
     :param pos: number of structure to extract from trajectory node
     :return:
+
     """
     pos = int(pos)
 
@@ -32,10 +34,11 @@ def structure_from_trajectory(output_trajectory, pos):
 
 
 def parse_optimize_calculation(calc):
-    """
-    Parse ths information from plugins nodes and set common units
+    """Parse ths information from plugins nodes and set common units
+
     Stress in kB
     Force in eV/Angstrom
+
     """
 
     import numpy as np
@@ -49,12 +52,14 @@ def parse_optimize_calculation(calc):
         try:
             structure = calc.out.output_structure
         except:
-            structure = structure_from_trajectory(calc.out.output_trajectory, Int(-1))['structure']
+            structure = structure_from_trajectory(calc.out.output_trajectory,
+                                                  Int(-1))['structure']
 
         energy_wo_entrop = calc.out.output_trajectory.get_array('e_wo_entrp')[-1]
         pressure = np.average(np.diag(stress))
         factor = 0.0006241509125883258  # kBar * A^3 -> eV
-        energy = energy_wo_entrop - structure.get_cell_volume() * pressure * factor
+        energy = (energy_wo_entrop
+                  - structure.get_cell_volume() * pressure * factor)
 
     elif plugin == 'lammps.optimize':
         forces = calc.out.output_array.get_array('forces')
@@ -64,18 +69,20 @@ def parse_optimize_calculation(calc):
 
     elif plugin == 'quantumespresso.pw':
         forces = calc.out.output_trajectory.get_array('forces')[-1]
-        stress = calc.out.output_trajectory.get_array('stress')[-1] * 10 # GPa to kBar
+        # GPa to kBar
+        stress = calc.out.output_trajectory.get_array('stress')[-1] * 10
         energy = calc.out.output_parameters.dict.energy
 
         try:
             structure = calc.out.output_structure
         except:
-            structure = structure_from_trajectory(calc.out.output_trajectory, Int(-1))['structure']
+            structure = structure_from_trajectory(
+                calc.out.output_trajectory, Int(-1))['structure']
 
     else:
         return Exception('Not supported plugin')
 
-    output_data = ParameterData(dict={'energy': energy,
+    output_data = Dict(dict={'energy': energy,
                                       'forces': forces.tolist(),
                                       'stress': stress.tolist()})
 

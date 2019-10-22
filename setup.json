@@ -1,42 +1,29 @@
 {
-  "name": "aiida-phonopy",
-  "version": "0.1",
-  "description": "AiiDA plugin for running phonon calculations using phonopy",
-  "author": "Abel Carreras",
-  "author_email": "abelcarreras83@gmail.com",
-  "license": "MIT license",
-  "install_requires": [
-    "phonopy",
-    "numpy",
-    "seekpath"
-  ],
-  "setup_requires": [
-    "reentry"
-  ],
-  "entry_points": {
-    "aiida.data": [
-      "phonopy.band_structure = aiida_phonopy.data.band_structure: BandStructureData",
-      "phonopy.force_constants = aiida_phonopy.data.force_constants: ForceConstantsData",
-      "phonopy.force_sets = aiida_phonopy.data.force_sets: ForceSetsData",
-      "phonopy.phonon_dos = aiida_phonopy.data.phonon_dos: PhononDosData",
-      "phonopy.nac = aiida_phonopy.data.nac: NacData"
+    "name": "aiida-phonopy",
+    "version": "0.1",
+    "description": "AiiDA plugin for running phonon calculations using phonopy",
+    "author": "Atsushi Togo",
+    "author_email": "atz.togo@gmail.com",
+    "license": "MIT license",
+    "install_requires": [
+        "phonopy",
+        "numpy",
+        "seekpath"
     ],
-    "aiida.calculations": [
-      "phonopy.phonopy = aiida_phonopy.calculations.phonopy.phonopy: PhonopyCalculation",
-      "phonopy.phono3py = aiida_phonopy.calculations.phonopy.phono3py: Phono3pyCalculation"
+    "setup_requires": [
+        "reentry"
     ],
-    "aiida.parsers": [
-      "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser",
-      "phono3py = aiida_phonopy.parsers.phono3py: Phono3pyParser"
-    ],
-    "aiida.workflows": [
-      "phonopy.optimize = aiida_phonopy.workchains.optimize: OptimizeStructure",
-      "phonopy.phonon = aiida_phonopy.workchains.phonon: PhononPhonopy",
-      "phonopy.phonon3 = aiida_phonopy.workchains.phonon3: PhononPhono3py",
-      "phonopy.gruneisen = aiida_phonopy.workchains.gruneisen: GruneisenPhonopy",
-      "phonopy.phono3py_dist = aiida_phonopy.workchains.phono3py_dist: Phono3pyDist",
-      "phonopy.qha = aiida_phonopy.workchains.qha: QHAPhonopy",
-      "phonopy.thermal = aiida_phonopy.workchains.thermal_conductivity: ThermalPhono3py"
-    ]
-  }
+    "entry_points": {
+        "aiida.calculations": [
+            "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation"
+        ],
+        "aiida.parsers": [
+            "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
+        ],
+        "aiida.workflows": [
+            "phonopy.phonon = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
+            "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApproximation"
+        ]
+    },
+    "url": "https://github.com/aiida-phonopy/aiida-phonopy"
 }
