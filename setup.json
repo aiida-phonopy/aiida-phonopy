@@ -21,8 +21,8 @@
             "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
         ],
         "aiida.workflows": [
-            "phonopy.phonon = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
-            "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApproximation"
+            "phonopy.phonopy = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
+            "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
         ]
     },
     "url": "https://github.com/aiida-phonopy/aiida-phonopy"

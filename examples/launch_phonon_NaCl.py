@@ -76,7 +76,7 @@ Direct
     nac_config.update({'parser_settings': nac_parser_settings,
                        'parameters': nac_incar_dict})
 
-    PhononPhonopy = WorkflowFactory('phonopy.phonon')
+    PhononPhonopy = WorkflowFactory('phonopy.phonopy')
     builder = PhononPhonopy.get_builder()
     builder.structure = structure
     builder.calculator_settings = Dict(dict={'forces': forces_config,
