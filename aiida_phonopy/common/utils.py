@@ -8,7 +8,8 @@ from aiida.orm import Bool, Str, Int, load_node
 @calcfunction
 def get_phonon_setting_info(phonon_settings,
                             structure,
-                            symmetry_tolerance):
+                            symmetry_tolerance,
+                            displacement_dataset=None):
     return_vals = {}
 
     ph_settings = {}
@@ -36,12 +37,11 @@ def get_phonon_setting_info(phonon_settings,
         'number': ph.symmetry.dataset['number'],
         'international': ph.symmetry.dataset['international']}
 
-    if 'displacement_dataset' in ph_settings:
-        ph.dataset = ph_settings['displacement_dataset']
-    else:
+    if displacement_dataset is None:
         ph.generate_displacements(distance=ph_settings['distance'])
-        ph_settings['displacement_dataset'] = ph.dataset
-
+    else:
+        ph.dataset = displacement_dataset.get_dict()
+    ph_settings['displacement_dataset'] = ph.dataset
     settings = DataFactory('dict')(dict=ph_settings)
     settings.label = 'phonon_setting_info'
     return_vals['phonon_setting_info'] = settings

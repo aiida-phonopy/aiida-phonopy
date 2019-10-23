@@ -1,6 +1,6 @@
-from aiida.engine import WorkChain, ToContext
+from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
-from aiida.orm import Float, Bool, Str, Code, load_node
+from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
 from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
                                                   get_immigrant_builder)
@@ -77,6 +77,7 @@ class PhonopyWorkChain(WorkChain):
         super(PhonopyWorkChain, cls).define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('phonon_settings', valid_type=Dict, required=True)
+        spec.input('displacement_dataset', valid_type=Dict, required=False)
         spec.input('immigrant_calculation_folders',
                    valid_type=Dict, required=False)
         spec.input('calculation_nodes',
@@ -176,10 +177,17 @@ class PhonopyWorkChain(WorkChain):
             raise RuntimeError(
                 "supercell_matrix was not found in phonon_settings.")
 
-        return_vals = get_phonon_setting_info(
-            self.inputs.phonon_settings,
-            self.inputs.structure,
-            self.inputs.symmetry_tolerance)
+        if 'displacement_dataset' in self.inputs:
+            return_vals = get_phonon_setting_info(
+                self.inputs.phonon_settings,
+                self.inputs.structure,
+                self.inputs.symmetry_tolerance,
+                displacement_dataset=self.inputs.displacement_dataset)
+        else:
+            return_vals = get_phonon_setting_info(
+                self.inputs.phonon_settings,
+                self.inputs.structure,
+                self.inputs.symmetry_tolerance)
         self.ctx.phonon_setting_info = return_vals['phonon_setting_info']
         self.out('phonon_setting_info', self.ctx.phonon_setting_info)
 
