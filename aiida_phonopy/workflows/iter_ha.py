@@ -3,7 +3,7 @@ import phonopy
 from phonopy.harmonic.displacement import get_displacements_and_forces
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Bool, Str, Int
+from aiida.orm import Float, Int, QueryBuilder, Group
 from aiida.engine import while_, calcfunction
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
@@ -76,6 +76,62 @@ def _modify_force_constants(ph):
 
 
 class IterHarmonicApprox(WorkChain):
+    """ Workchain for harmonic force constants by iterative approach
+
+    By default, the calculation starts with normal phonon calculation,
+    i.e., in this context, which corresponds to roughly 0K force constants.
+    Then the iteration loop starts. The first run is the iteration-1.
+    The iteration stops after finishing that of max_iteration. Each phonon
+    calculation is named 'step'.
+
+    Steps
+    -----
+    0. Initial phonon calculation at 0K
+    1. First phonon calculation at specified temperature. Random
+       displacements are created from step-0.
+    2. Second phonon calculation at specified temperature. Random
+       displacements are created from step-1.
+    3. Third phonon calculation at specified temperature. Random
+       displacements are created from steps 1 and 2 if
+       number_of_snapshots >= 2. Otherwise only the result from
+       step-2 is used.
+    4. Four phonon calculation at specified temperature. Random
+       displacements are created from number_of_snapshots previous
+       existing steps excluding step-0.
+    *. Continue until iteration number = max_iteration number.
+
+    Manual termination of iteration loop
+    ------------------------------------
+    It is possible to terminate at the initial point of each iteration.
+    This option is not very recommended to use because not reproducible
+    mechanically, but can be useful for experimental calculation.
+
+    This is achieved by just creating AiiDA Group whose label is its
+    uuid string that ejected by AiiDA, i.e., self.uuid.
+
+    inputs
+    ------
+    Most of inputs are imported from PhonopyWorkChain. Specific inputs
+    of this workchain are as follows:
+
+    max_iteration : Int
+        Maximum number of iterations.
+    number_of_snapshots : Int
+        Number of generated supercell snapshots with random displacements
+        at a temperature.
+    number_of_steps_for_fitting : Int
+        Displacements and respective forces of supercells in the previous
+        number_of_steps_for_fitting are used to simultaneously fit to
+        force constants.
+    random_seed : Int
+        Random seed used to sample in canonical ensemble harmonic oscillator
+        space. The value must be 32bit unsigned int. Unless specified,
+        random seed will not be fixed.
+    temperature : Float
+        Temperature (K).
+
+    """
+
     @classmethod
     def define(cls, spec):
         super(IterHarmonicApprox, cls).define(spec)
@@ -83,9 +139,11 @@ class IterHarmonicApprox(WorkChain):
                            exclude=['immigrant_calculation_folders',
                                     'calculation_nodes', 'dry_run'])
         spec.input('max_iteration',
-                   valid_type=Int, required=False, default=Int(5))
+                   valid_type=Int, required=False, default=Int(10))
         spec.input('number_of_snapshots',
                    valid_type=Int, required=False, default=Int(100))
+        spec.input('number_of_steps_for_fitting',
+                   valid_type=Int, required=False, default=Int(4))
         spec.input('random_seed', valid_type=Int, required=False)
         spec.input('temperature',
                    valid_type=Float, required=False, default=Float(300.0))
@@ -98,19 +156,20 @@ class IterHarmonicApprox(WorkChain):
         )
 
     def initialize(self):
-        self.report("initialize")
+        self.report("initialize (%s)" % self.uuid)
         self.ctx.iteration = 0
-        self.ctx.max_iteration = self.inputs.max_iteration.value
         self.ctx.prev_nodes = []
-        self.ctx.num_nodes_for_average = 4
-        if 'random_seed' in self.inputs:
-            self.ctx.random_seed = self.inputs.random_seed.value
-        else:
-            self.ctx.random_seed = None
 
     def is_loop_finished(self):
+        qb = QueryBuilder()
+        qb.append(Group, filters={'label': {'==': self.uuid}})
+        if qb.count() == 1:
+            self.report("Iteration loop is manually terminated at step %d."
+                        % self.ctx.iteration)
+            return False
+
         self.ctx.iteration += 1
-        return self.ctx.iteration <= self.ctx.max_iteration
+        return self.ctx.iteration <= self.inputs.max_iteration.value
 
     def run_initial_phonon(self):
         self.report("run_initial_phonon")
@@ -125,7 +184,7 @@ class IterHarmonicApprox(WorkChain):
     def run_phonon(self):
         self.report("run_phonon_%d" % self.ctx.iteration)
 
-        n_ave = self.ctx.num_nodes_for_average
+        n_ave = self.inputs.number_of_steps_for_fitting.value
         if len(self.ctx.prev_nodes) == 0:
             nodes = [self.ctx.initial_node, ]
         elif len(self.ctx.prev_nodes) < n_ave:

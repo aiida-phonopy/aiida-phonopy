@@ -23,6 +23,8 @@ BandsData = DataFactory('array.bands')
 class PhonopyWorkChain(WorkChain):
     """ Workchain to do a phonon calculation using phonopy
 
+    inputs
+    ------
     structure : StructureData
         Unit cell structure.
     calculator_settings : Dict
