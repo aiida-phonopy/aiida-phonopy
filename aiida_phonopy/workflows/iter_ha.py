@@ -3,8 +3,8 @@ import phonopy
 from phonopy.harmonic.displacement import get_displacements_and_forces
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Int, QueryBuilder, Group
-from aiida.engine import while_, calcfunction
+from aiida.orm import Float, Int, QueryBuilder, Group, load_node
+from aiida.engine import while_, if_, calcfunction
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
 Dict = DataFactory('dict')
@@ -129,6 +129,9 @@ class IterHarmonicApprox(WorkChain):
         random seed will not be fixed.
     temperature : Float
         Temperature (K).
+    initial_nodes : Dict, optional
+        This gives the initial nodes that contain sets of forces, which are
+        provided by PK or UUID.
 
     """
 
@@ -147,13 +150,21 @@ class IterHarmonicApprox(WorkChain):
         spec.input('random_seed', valid_type=Int, required=False)
         spec.input('temperature',
                    valid_type=Float, required=False, default=Float(300.0))
+        spec.input('initial_nodes', valid_type=Dict, required=False)
         spec.outline(
             cls.initialize,
-            cls.run_initial_phonon,
+            if_(cls.import_initial_nodes)(
+                cls.set_initial_nodes,
+            ).else_(
+                cls.run_initial_phonon,
+            ),
             while_(cls.is_loop_finished)(
                 cls.run_phonon,
             ),
         )
+
+    def import_initial_nodes(self):
+        return 'initial_nodes' in self.inputs
 
     def initialize(self):
         self.report("initialize (%s)" % self.uuid)
@@ -170,6 +181,12 @@ class IterHarmonicApprox(WorkChain):
 
         self.ctx.iteration += 1
         return self.ctx.iteration <= self.inputs.max_iteration.value
+
+    def set_initial_nodes(self):
+        self.report("set_initial_phonon")
+        node_ids = self.inputs.initial_nodes['nodes']
+        self.ctx.prev_nodes = [load_node(node_id) for node_id in node_ids]
+        self.ctx.iteration = 1
 
     def run_initial_phonon(self):
         self.report("run_initial_phonon")
