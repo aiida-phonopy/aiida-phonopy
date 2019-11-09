@@ -15,19 +15,34 @@ PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
 def get_random_displacements(structure,
                              number_of_snapshots,
                              temperature,
-                             random_seed=None,
                              **data):
     displacements = []
     forces = []
+    energies = []
 
     for i in range(len(data) // 2):
         forces.append(data['forces_%d' % (i + 1)].get_array('force_sets'))
+        if 'energies' in data['forces_%d' % (i + 1)].get_arraynames():
+            energies.append(data['forces_%d' % (i + 1)].get_array('energies'))
         phonon_setting_info = data['ph_info_%d' % (i + 1)]
         dataset = phonon_setting_info['displacement_dataset']
         disps, _ = get_displacements_and_forces(dataset)
         displacements.append(disps)
     d = np.concatenate(displacements, axis=0)
     f = np.concatenate(forces, axis=0)
+
+    idx = None
+    if len(energies) == len(forces) and 'include_ratio' in data:
+        all_energies = np.concatenate(energies)
+        if len(all_energies) == len(f):
+            ratio = data['include_ratio'].value
+            if 0 < ratio and ratio < 1:
+                num_include = int(np.ceil(ratio * len(all_energies)))
+                if num_include > len(all_energies):
+                    num_include = len(all_energies)
+                idx = np.argsort(all_energies)[:num_include]
+                d = d[idx]
+                f = f[idx]
 
     phonon_setting_info = data['ph_info_1']
     smat = phonon_setting_info['supercell_matrix']
@@ -39,17 +54,25 @@ def get_random_displacements(structure,
 
     _modify_force_constants(ph)
 
-    if random_seed is None:
-        _random_seed = None
+    if 'random_seed' in data:
+        _random_seed = data['random_seed'].value
     else:
-        _random_seed = random_seed.value
+        _random_seed = None
 
     ph.generate_displacements(
         number_of_snapshots=number_of_snapshots.value,
         random_seed=_random_seed,
         temperature=temperature.value)
 
-    return Dict(dict=ph.dataset)
+    ret_dict = {'displacement_dataset': Dict(dict=ph.dataset)}
+
+    if idx is not None:
+        array = DataFactory('array')()
+        array.set_array('supercell_energies', all_energies)
+        array.set_array('included_supercell_indices', idx)
+        ret_dict['supercell_energies'] = array
+
+    return ret_dict
 
 
 def _modify_force_constants(ph):
@@ -132,6 +155,8 @@ class IterHarmonicApprox(WorkChain):
     initial_nodes : Dict, optional
         This gives the initial nodes that contain sets of forces, which are
         provided by PK or UUID.
+    include_ratio : Float
+        How much supercell forces are included from lowest supercell energies.
 
     """
 
@@ -151,10 +176,12 @@ class IterHarmonicApprox(WorkChain):
         spec.input('temperature',
                    valid_type=Float, required=False, default=Float(300.0))
         spec.input('initial_nodes', valid_type=Dict, required=False)
+        spec.input('include_ratio', valid_type=Float, required=False)
         spec.outline(
             cls.initialize,
             if_(cls.import_initial_nodes)(
                 cls.set_initial_nodes,
+                cls.run_phonon,
             ).else_(
                 cls.run_initial_phonon,
             ),
@@ -226,19 +253,20 @@ class IterHarmonicApprox(WorkChain):
             data['ph_info_%d' % (i + 1)] = node.outputs.phonon_setting_info
 
         if 'random_seed' in self.inputs:
-            displacements = get_random_displacements(
-                nodes[-1].inputs.structure,
-                self.inputs.number_of_snapshots,
-                self.inputs.temperature,
-                random_seed=self.inputs.random_seed,
-                **data)
-        else:
-            displacements = get_random_displacements(
-                nodes[-1].inputs.structure,
-                self.inputs.number_of_snapshots,
-                self.inputs.temperature,
-                **data)
-        return displacements
+            data['random_seed'] = self.inputs.random_seed
+            self.report("Random seed is %d." % self.inputs.random_seed.value)
+        if 'include_ratio' in self.inputs:
+            data['include_ratio'] = self.inputs.include_ratio
+            self.report("Include ratio is %f."
+                        % self.inputs.include_ratio.value)
+
+        displacements = get_random_displacements(
+            nodes[-1].inputs.structure,
+            self.inputs.number_of_snapshots,
+            self.inputs.temperature,
+            **data)
+
+        return displacements['displacement_dataset']
 
     def _get_phonopy_inputs(self, dataset, is_nac):
         inputs_in = self.exposed_inputs(PhonopyWorkChain)
