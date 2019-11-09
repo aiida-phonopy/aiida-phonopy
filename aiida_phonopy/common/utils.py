@@ -8,7 +8,8 @@ from aiida.orm import Bool, Str, Int, load_node
 @calcfunction
 def get_phonon_setting_info(phonon_settings,
                             structure,
-                            symmetry_tolerance):
+                            symmetry_tolerance,
+                            displacement_dataset=None):
     return_vals = {}
 
     ph_settings = {}
@@ -36,12 +37,11 @@ def get_phonon_setting_info(phonon_settings,
         'number': ph.symmetry.dataset['number'],
         'international': ph.symmetry.dataset['international']}
 
-    if 'displacement_dataset' in ph_settings:
-        ph.dataset = ph_settings['displacement_dataset']
-    else:
+    if displacement_dataset is None:
         ph.generate_displacements(distance=ph_settings['distance'])
-        ph_settings['displacement_dataset'] = ph.dataset
-
+    else:
+        ph.dataset = displacement_dataset.get_dict()
+    ph_settings['displacement_dataset'] = ph.dataset
     settings = DataFactory('dict')(dict=ph_settings)
     settings.label = 'phonon_setting_info'
     return_vals['phonon_setting_info'] = settings
@@ -96,15 +96,22 @@ def check_imported_supercell_structure(supercell_ref,
 @calcfunction
 def get_force_sets(**forces_dict):
     forces = []
+    energies = []
     for i in range(len(forces_dict)):
         label = "forces_%03d" % (i + 1)
         if label in forces_dict:
             forces.append(forces_dict[label].get_array('final'))
+        label = "misc_%03d" % (i + 1)
+        if label in forces_dict:
+            energies.append(
+                forces_dict[label]['total_energies']['energy_no_entropy'])
 
-    assert len(forces) == len(forces_dict)
+    assert len(forces) == sum(['forces' in k for k in forces_dict])
 
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
+    if energies:
+        force_sets.set_array('energies', np.array(energies))
     force_sets.label = 'force_sets'
     return force_sets
 
