@@ -23,6 +23,8 @@ BandsData = DataFactory('array.bands')
 class PhonopyWorkChain(WorkChain):
     """ Workchain to do a phonon calculation using phonopy
 
+    inputs
+    ------
     structure : StructureData
         Unit cell structure.
     calculator_settings : Dict
@@ -316,7 +318,12 @@ class PhonopyWorkChain(WorkChain):
                        % (i + 1))
                 self.report(msg)
 
-        if len(forces_dict) != len(self.ctx.supercells):
+            if ('misc' in calc_dict and
+                'total_energies' in calc_dict['misc'].keys()):
+                label = "misc_%03d" % (i + 1)
+                forces_dict[label] = calc_dict['misc']
+
+        if sum(['forces' in k for k in forces_dict]) != len(self.ctx.supercells):
             raise RuntimeError("Forces could not be retrieved.")
 
         self.ctx.force_sets = get_force_sets(**forces_dict)

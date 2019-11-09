@@ -1,9 +1,11 @@
 import click
 import spglib
 import phonopy
+import numpy as np
 from phonopy.interface.vasp import (read_vasp_from_strings,
                                     get_vasp_structure_lines)
 from phonopy.structure.atoms import PhonopyAtoms
+from phonopy.harmonic.displacement import get_displacements_and_forces
 from aiida.manage.configuration import load_profile
 from aiida.orm import QueryBuilder, Int, Float, Bool, Str, load_node
 from aiida.plugins import DataFactory, WorkflowFactory
@@ -94,11 +96,12 @@ Direct
               'fc_calculator': 'alm'})
     builder.symmetry_tolerance = Float(1e-5)
     builder.options = Dict(dict=base_config['options'])
-    builder.metadata.label = "SrTiO3 iterative phonon 2x2x2"
-    builder.metadata.description = "SrTiO3 iterative phonon 2x2x2"
-    builder.max_iteration = Int(20)
+    builder.metadata.label = "SrTiO3 iterative phonon 2x2x2 1000K"
+    builder.metadata.description = "SrTiO3 iterative phonon 2x2x2 1000K"
+    builder.max_iteration = Int(40)
     builder.number_of_snapshots = Int(50)
-    builder.temperature = Float(300.0)
+    builder.temperature = Float(1000.0)
+    builder.number_of_steps_for_fitting = Int(8)
 
     # Chose how to run the calculation
     run_by_deamon = True
@@ -109,19 +112,6 @@ Direct
         future = submit(builder)
         print(future)
         print('Running workchain with pk={}'.format(future.pk))
-
-
-def dump_phonopy(pk, pk_nac):
-    ph = get_phonon(pk, pk_nac)
-    settings = {'force_sets': True,
-                'displacements': True,
-                'force_constants': False,
-                'born_effective_charge': True,
-                'dielectric_constant': True}
-    filename = "phonopy_params-%d.yaml" % pk
-    ph.save(filename=filename,
-            settings=settings)
-    print("%s was made for PK=%d." % (filename, pk))
 
 
 def get_phonon(pk, pk_nac):
@@ -148,19 +138,28 @@ def get_phonon(pk, pk_nac):
     return ph
 
 
-def search_pk():
-    qb = QueryBuilder()
+def find_latest_uuid():
     IterHarmonicApprox = WorkflowFactory('phonopy.iter_ha')
+    qb = QueryBuilder()
     qb.append(IterHarmonicApprox)
     qb.order_by({IterHarmonicApprox: {'ctime': 'desc'}})
     qb.first()
-    uuid = qb.first()[0].uuid
+    return qb.first()[0].uuid
+
+
+def search_pk(uuid):
+    IterHarmonicApprox = WorkflowFactory('phonopy.iter_ha')
+
+    if uuid is None:
+        _uuid = find_latest_uuid()
+    else:
+        _uuid = uuid
 
     qb = QueryBuilder()
     qb.append(
         IterHarmonicApprox,
         tag='iter_ha',
-        filters={'uuid': {'==': uuid}})
+        filters={'uuid': {'==': _uuid}})
 
     PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
     qb.append(PhonopyWorkChain, with_incoming='iter_ha')
@@ -171,6 +170,39 @@ def search_pk():
     return pks
 
 
+def get_num_prev(uuid):
+    if uuid is None:
+        _uuid = find_latest_uuid()
+    else:
+        _uuid = uuid
+    n = load_node(_uuid)
+    return n.inputs.number_of_steps_for_fitting.value
+
+
+def bunch_phonons(pks, pk_nac):
+    phonons = [get_phonon(pk, pk_nac) for pk in pks]
+    all_forces = []
+    all_disps = []
+    for ph in phonons:
+        disps, forces = get_displacements_and_forces(ph.dataset)
+        all_disps.append(disps)
+        all_forces.append(forces)
+    d = np.concatenate(all_disps, axis=0)
+    f = np.concatenate(all_forces, axis=0)
+    ph = phonons[0]
+    ph.dataset = {'displacements': d, 'forces': f}
+    return ph
+
+
+def bunch_band_phonopy(pks, pk_nac):
+    ph = bunch_phonons(pks, pk_nac)
+    ph.produce_force_constants(fc_calculator='alm')
+    pks_str = get_pks_str(pks)
+    filename = "bunch-band-%s.yaml" % pks_str
+    ph.auto_band_structure(write_yaml=True, filename=filename)
+    print("%s was made for PKs=%s." % (filename, pks_str))
+
+
 def band_phonopy(pk, pk_nac):
     ph = get_phonon(pk, pk_nac)
     ph.produce_force_constants(fc_calculator='alm')
@@ -179,61 +211,193 @@ def band_phonopy(pk, pk_nac):
     print("%s was made for PK=%d." % (filename, pk))
 
 
+def get_bunch_tp_phonopy(pks, pk_nac, temperature):
+    ph = bunch_phonons(pks, pk_nac)
+    ph.produce_force_constants(fc_calculator='alm')
+    ph.run_mesh(mesh=100.0, shift=[0.5, 0.5, 0.5])
+    ph.run_thermal_properties(temperatures=[temperature, ])
+    free_energy = ph.get_thermal_properties_dict()['free_energy'][0]
+    return free_energy
+
+
+def get_tp_phonopy(pk, pk_nac, temperature):
+    ph = get_phonon(pk, pk_nac)
+    ph.produce_force_constants(fc_calculator='alm')
+    ph.run_mesh(mesh=100.0, shift=[0.5, 0.5, 0.5])
+    ph.run_thermal_properties(temperatures=[temperature, ])
+    free_energy = ph.get_thermal_properties_dict()['free_energy'][0]
+    return free_energy
+
+
+def bunch_dump_phonopy(pks, pk_nac):
+    ph = bunch_phonons(pks, pk_nac)
+    settings = {'force_sets': True,
+                'displacements': True,
+                'force_constants': False,
+                'born_effective_charge': True,
+                'dielectric_constant': True}
+    pks_str = get_pks_str(pks)
+    filename = "phonopy_params-%s.yaml" % pks_str
+    ph.save(filename=filename, settings=settings)
+    print("%s was made for PKs=%s." % (filename, pks_str))
+
+
+def dump_phonopy(pk, pk_nac):
+    ph = get_phonon(pk, pk_nac)
+    settings = {'force_sets': True,
+                'displacements': True,
+                'force_constants': False,
+                'born_effective_charge': True,
+                'dielectric_constant': True}
+    filename = "phonopy_params-%d.yaml" % pk
+    ph.save(filename=filename, settings=settings)
+    print("%s was made for PK=%d." % (filename, pk))
+
+
+def get_pks_str(pks):
+    if len(pks) > 4:
+        pks_str = "%d-%dpks-%d" % (pks[0], len(pks) - 2, pks[-1])
+    else:
+        pks_str = "-".join(["%d" % pk for pk in pks])
+    return pks_str
+
+
+def get_pks_list(pks, num_prev):
+    pks_list = []
+    if len(pks) >= num_prev:
+        for i in range(num_prev - 1):
+            pks_list.append(pks[:(i + 1)])
+        for i in range(len(pks) - num_prev + 1):
+            pks_list.append(pks[i:(i + num_prev)])
+    else:
+        for i in range(len(pks)):
+            pks_list.append(pks[:(i + 1)])
+    return pks_list
+
+
+def get_temperature(uuid):
+    if uuid is None:
+        _uuid = find_latest_uuid()
+    else:
+        _uuid = uuid
+    n = load_node(_uuid)
+    return n.inputs.temperature.value
+
+
 @click.command()
 @click.argument('pks', nargs=-1)
+@click.option('--uuid', default=None)
 @click.option('--dump', default=False, is_flag=True)
+@click.option('--bunch-dump', 'bunch_dump', default=False, is_flag=True)
 @click.option('--band', default=False, is_flag=True)
+@click.option('--bunch-band', 'bunch_band', default=False, is_flag=True)
+@click.option('--fe', 'free_energy', default=False, is_flag=True)
+@click.option('--bunch-fe', 'bunch_free_energy', default=False, is_flag=True)
 @click.option('--list-pks', 'list_pks', default=False, is_flag=True)
-@click.option('--pk-nac', 'pk_nac', default=18077, type=int)
-def main(pks, dump, band, list_pks, pk_nac):
+@click.option('--show-uuid', 'show_uuid', default=False, is_flag=True)
+@click.option('--pk-nac', 'pk_nac', default=None, type=int)
+@click.option('--num-prev', 'num_prev', default=None, type=int)
+def main(uuid, pks, dump, bunch_dump, band, bunch_band,
+         free_energy, bunch_free_energy,
+         list_pks, show_uuid, pk_nac, num_prev):
     """
 
     pk_nac is the node that contains NAC params.
 
     Usage
-    -----
-    If no option is suppied, IterHarmonicApprox calculation starts.
 
+    -----
+
+    If no option is suppied, IterHarmonicApprox calculation starts.
     The command options are used to analyize the (on-going) results.
 
     To list PKs of PhonopyWorkChain calculations
+
     % python launch_phonon_SrTiO3.py --show-pks
 
     To write band-28158.yaml
+
     % python launch_phonon_SrTiO3.py --band 28158 ...
 
     To write all band-*.yaml
+
     % python launch_phonon_SrTiO3.py --band
 
     band-*.yaml can be visualized by phonopy-band command,
+
     % phonopy-bandplot --legacy --legend band-*.yaml
+
     Legacy mode (--legacy) is necessary to plot multiple band-*.yaml
     simultaneously.
 
     To write phonopy_params-28158.yaml ...
+
     % python launch_phonon_SrTiO3.py --dump 28158 ...
 
     To write all phonopy_params-*.yaml
+
     % python launch_phonon_SrTiO3.py --dump
 
     """
 
-    if list_pks:  # List PKs of PhonopyWorkChain
-        print(",".join(["%d" % pk for pk in search_pk()]))
+    if pk_nac is None:
+        _pk_nac = search_pk(uuid)[0]
+    else:
+        _pk_nac = pk_nac
+
+    if num_prev is None:
+        _num_prev = get_num_prev(uuid)
+    else:
+        _num_prev = num_prev
+
+    if pks:
+        _pks = [int(pk) for pk in pks]
+    else:
+        _pks = search_pk(uuid)
+
+    if free_energy or bunch_free_energy:
+        temperature = get_temperature(uuid)
+
+    if show_uuid:  # Show latest IterHarmonicApprox node uuid
+        print(find_latest_uuid())
+    elif list_pks:  # List PKs of PhonopyWorkChain
+        print(",".join(["%d" % pk for pk in search_pk(uuid)]))
+        if len(_pks) > 0:
+            _pks = _pks[1:]  # No.0 is omitted.
+            print(get_pks_list(_pks, get_num_prev(uuid)))
     elif dump:  # write phonopy_params.yaml
-        if pks:
-            for pk in pks:
-                dump_phonopy(int(pk), pk_nac)
-        else:
-            for pk in search_pk():
-                dump_phonopy(int(pk), pk_nac)
+        for pk in _pks:
+            dump_phonopy(int(pk), _pk_nac)
+    elif bunch_dump:
+        if not pks:
+            if len(_pks) > 0:
+                _pks = _pks[1:]  # No.0 is omitted.
+        if _pks:
+            for pk_set in get_pks_list(_pks, _num_prev):
+                bunch_dump_phonopy(pk_set, _pk_nac)
     elif band:  # write band.yaml
-        if pks:
-            for pk in pks:
-                band_phonopy(int(pk), pk_nac)
-        else:
-            for pk in search_pk():
-                band_phonopy(int(pk), pk_nac)
+        for pk in _pks:
+            band_phonopy(pk, _pk_nac)
+    elif bunch_band:
+        if not pks:
+            if len(_pks) > 0:
+                _pks = _pks[1:]  # No.0 is omitted.
+        if _pks:
+            for pk_set in get_pks_list(_pks, _num_prev):
+                bunch_band_phonopy(pk_set, _pk_nac)
+    elif free_energy:  # Show free energy
+        for i, pk in enumerate(_pks):
+            fe = get_tp_phonopy(pk, _pk_nac, temperature)
+            print("%d %f" % (i, fe))
+
+    elif bunch_free_energy:
+        if not pks:
+            if len(_pks) > 0:
+                _pks = _pks[1:]  # No.0 is omitted.
+        if _pks:
+            for i, pk_set in enumerate(get_pks_list(_pks, _num_prev)):
+                fe = get_bunch_tp_phonopy(pk_set, _pk_nac, temperature)
+                print("%d %f" % (i + 1, fe))
     else:
         launch_aiida()
 

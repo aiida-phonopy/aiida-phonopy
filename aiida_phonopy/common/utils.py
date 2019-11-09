@@ -96,15 +96,22 @@ def check_imported_supercell_structure(supercell_ref,
 @calcfunction
 def get_force_sets(**forces_dict):
     forces = []
+    energies = []
     for i in range(len(forces_dict)):
         label = "forces_%03d" % (i + 1)
         if label in forces_dict:
             forces.append(forces_dict[label].get_array('final'))
+        label = "misc_%03d" % (i + 1)
+        if label in forces_dict:
+            energies.append(
+                forces_dict[label]['total_energies']['energy_no_entropy'])
 
-    assert len(forces) == len(forces_dict)
+    assert len(forces) == sum(['forces' in k for k in forces_dict])
 
     force_sets = DataFactory('array')()
     force_sets.set_array('force_sets', np.array(forces))
+    if energies:
+        force_sets.set_array('energies', np.array(energies))
     force_sets.label = 'force_sets'
     return force_sets
 
