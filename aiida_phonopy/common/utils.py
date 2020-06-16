@@ -326,7 +326,7 @@ def get_phonopy_instance(structure, phonon_settings_dict, params):
         primitive_matrix='auto',
         symprec=phonon_settings_dict['symmetry_tolerance'])
     if 'nac_params' in params:
-        from phonopy.interface import get_default_physical_units
+        from phonopy.interface.calculator import get_default_physical_units
         units = get_default_physical_units('vasp')
         factor = units['nac_factor']
         nac_params = {'born': params['nac_params'].get_array('born_charges'),
