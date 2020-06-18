@@ -5,8 +5,16 @@
     "author": "Atsushi Togo",
     "author_email": "atz.togo@gmail.com",
     "classifiers": [
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Plugins",
+        "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.5"
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Scientific/Engineering :: Physics",
+        "Topic :: Scientific/Engineering :: Chemistry",
+        "Framework :: AiiDA"
     ],
     "license": "MIT license",
     "install_requires": [

@@ -88,13 +88,13 @@ class PhonopyWorkChain(WorkChain):
         spec.input('code_string', valid_type=Str, required=False)
         spec.input('options', valid_type=Dict, required=False)
         spec.input('symmetry_tolerance',
-                   valid_type=Float, required=False, default=Float(1e-5))
+                   valid_type=Float, required=False, default=lambda: Float(1e-5))
         spec.input('dry_run',
-                   valid_type=Bool, required=False, default=Bool(False))
+                   valid_type=Bool, required=False, default=lambda: Bool(False))
         spec.input('run_phonopy',
-                   valid_type=Bool, required=False, default=Bool(False))
+                   valid_type=Bool, required=False, default=lambda: Bool(False))
         spec.input('remote_phonopy',
-                   valid_type=Bool, required=False, default=Bool(False))
+                   valid_type=Bool, required=False, default=lambda: Bool(False))
 
         spec.outline(
             cls.initialize_supercell_phonon_calculation,
