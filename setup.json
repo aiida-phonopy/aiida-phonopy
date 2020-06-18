@@ -10,11 +10,11 @@
     ],
     "license": "MIT license",
     "install_requires": [
-        "phonopy>=2.3.2",
+        "phonopy>=2.6.0",
         "numpy",
         "seekpath",
-        "aiida-core>=1.0.0b6,<2.0.0",
-        "aiida-vasp>=0.3.0"
+        "aiida-core>=1.2.1,<2.0.0",
+        "aiida-vasp>=1.0.0"
     ],
     "setup_requires": [
         "reentry"
