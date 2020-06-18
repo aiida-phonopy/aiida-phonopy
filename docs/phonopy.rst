@@ -91,7 +91,7 @@ aiida-phonopy calculation of rocksalt NaCl.
        builder.code_string = Str('phonopy@nancy')
        builder.phonon_settings = Dict(
            dict={'mesh': 50.0,
-                 'supercell_matrix': [1, 1, 1],
+                 'supercell_matrix': [2, 2, 2],
                  'distance': 0.01,
                  'is_nac': True})
        builder.symmetry_tolerance = Float(1e-5)

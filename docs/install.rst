@@ -5,7 +5,7 @@ The following packages are required.
 
 * aiida-core v1.2.1
 * aiida-vasp v1.0.0
-* phonopy v2.7.0
+* phonopy v2.6.1
 * seekpath
 
 Currently only aiida-vasp can be used as the calculator plugin.
