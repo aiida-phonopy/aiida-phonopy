@@ -18,7 +18,7 @@
     ],
     "license": "MIT license",
     "install_requires": [
-        "phonopy>=2.6.0",
+        "phonopy>=2.6.1",
         "numpy",
         "seekpath",
         "aiida-core>=1.2.1,<2.0.0",
