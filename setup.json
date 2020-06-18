@@ -1,11 +1,11 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.2",
+    "version": "0.3",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "author": "Atsushi Togo",
     "author_email": "atz.togo@gmail.com",
     "classifiers": [
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 4 - Beta",
         "Environment :: Plugins",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
@@ -27,6 +27,7 @@
     "setup_requires": [
         "reentry"
     ],
+    "reentry_register": true,
     "entry_points": {
         "aiida.calculations": [
             "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation"
