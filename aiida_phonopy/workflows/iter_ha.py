@@ -70,7 +70,7 @@ def _remove_high_energy_snapshots(d, f, e, ratio):
     idx = np.argsort(e)[:num_include]
     d = d[idx]
     f = f[idx]
-    return d, f, e
+    return d, f, e, idx
 
 
 def _modify_force_constants(ph):
@@ -121,7 +121,7 @@ def get_random_displacements(structure,
     if e is not None and len(e) == len(f) and 'include_ratio' in data:
         ratio = data['include_ratio'].value
         if 0 < ratio and ratio < 1:
-            d, f, e = _remove_high_energy_snapshots(d, f, e, ratio)
+            d, f, e, idx = _remove_high_energy_snapshots(d, f, e, ratio)
 
     # Calculate force constants by fitting using ALM
     phonon_setting_info = data['ph_info_1']
