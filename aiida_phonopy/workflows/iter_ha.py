@@ -46,9 +46,9 @@ def _collect_dataset(data, linear_decay=True):
         dataset = phonon_setting_info['displacement_dataset']
         disps, _ = get_displacements_and_forces(dataset)
 
-        n_include = int(ratios[i] * len(force_sets)) + 1
-        if n_include < len(force_sets):
-            n_include += 1
+        n_include = int(ratios[i] * len(force_sets) + 0.5)
+        if len(force_sets) < n_include:
+            n_include = len(force_sets)
         if len(disps) < n_include:
             n_include = len(disps)
 
@@ -64,8 +64,8 @@ def _collect_dataset(data, linear_decay=True):
 def _remove_high_energy_snapshots(d, f, e, ratio):
     """Remove snapshots that have high energies with a given ratio"""
 
-    num_include = int(np.ceil(ratio * len(e)))
-    if num_include > len(e):
+    num_include = int(ratio * len(e) + 0.5)
+    if len(e) < num_include:
         num_include = len(e)
     idx = np.argsort(e)[:num_include]
     d = d[idx]
@@ -74,25 +74,28 @@ def _remove_high_energy_snapshots(d, f, e, ratio):
 
 
 def _modify_force_constants(ph):
-    # Trick (push up low frequency modes)
-    # Create RandomDisplacements class instance
-    # temperature=300 can be any number just to invoke finite temperature
-    # random_displacements.
+    """Apply treatment to imaginary modes
+
+    This method modifies force constants to make phonon frequencies
+    be real from imaginary. This treatment is expected to be finally
+    forgotten after many iterations. Therefore it is unnecessary
+    to be physical and can be physically dirty. If it works, it is OK,
+    though good treatment may contribute to quick convergence.
+
+    1) All frequencies at commensurate points are converted to their
+       absolute values. freqs -> |freqs|.
+    2) Phonon frequencies in the interval 0.01 < |freqs| < 0.5
+       are shifted by |freqs| + 1.
+
+    """
+
+    # temperature=300 is used just to invoke this feature.
     ph.generate_displacements(number_of_snapshots=1, temperature=300)
-    rd = ph.random_displacements  # Get RandomDisplacements class instance
-    freqs = np.abs(rd.frequencies)  # Make frequencies have absolute values
-
-    # As default phonon frequencies < 0.01 are ignored.
-    # For phonon modes where 0.01 < |freqs| < 0.5  --> |freqs| + 1
+    rd = ph.random_displacements
+    freqs = np.abs(rd.frequencies)
     condition = np.logical_and(freqs > 0.01, freqs < 0.5)
-    # if condition.any():
-    #     self.report("Some phonon frequencies are very low.")
-
-    freqs = np.where(condition, freqs + 1, freqs)
-    # Set modified frequencies to RandomDisplacements class instance
-    rd.frequencies = freqs
-    rd.run_d2f()  # Create force constants using modified frequencies
-    # Set modified force constants to Phonopy class instance
+    rd.frequencies = np.where(condition, freqs + 1, freqs)
+    rd.run_d2f()
     ph.force_constants = rd.force_constants
 
 
@@ -101,8 +104,54 @@ def get_random_displacements(structure,
                              number_of_snapshots,
                              temperature,
                              **data):
-    """
+    """Generate supercells with random displacemens
 
+    The random displacements are generated from phonons and harmonic
+    oscillator distribution function of canonical ensemble. The input
+    phonons are calculated from force constants calculated from
+    forces and displacemens of the supercell snapshots in previous
+    phonon calculation steps.
+
+
+    Parameters
+    ----------
+
+    To control how to include previous snapshots, several parameters
+    can be used.
+
+    1) data['max_previous_steps'] : Int
+        Maximum number of previous phonon calculation steps included. When
+        number of the previous phonon calculations is smaller than this
+        number, all the previous phonon calculations are included. But
+        this number is used for (2) in any case.
+    2) linear_decay : True
+        This will be an option, but currently always True.
+        This controls weights of previous phonon calculations. One previous
+        phonon calculation is included 100%. (max_previous_steps + 1) previous
+        phonon calculation is not include. Between them, those are included
+        with linear scalings. The snapshots in each phonon calculation are
+        included from the first element of the list to the specified number,
+        i.e., [:num_included_snapshots].
+    3) data['include_ratio'] : Int
+        After collecting snapshots in (2), all the snapshots are sorted by
+        total energies. Then only lowest energy snapshots with 'include_ratio'
+        are included to calculate force constants by fitting using ALM.
+    4) data['random_seed'] : Int
+        Using force constants created in (3), phonons are calculated at
+        commensurate points, and these phonons are used to generate atomic
+        displacements by sampling harmonic oscillator distribution function.
+        For this 'random_seed' is used when provided.
+
+    Returns
+    -------
+    'displacement_dataset' : Dict
+        Displacement datasets created by phonopy.
+    'supercell_energies' : Dict
+        'supercell_energies' : List of list
+            Total energies of snapshots before step (3) above.
+        'included_supercell_indices' : List
+            Finally included snapshots after step (4). The snapshots are
+            indexed by concatenating list of list in step (3).
 
     """
 
