@@ -1,6 +1,6 @@
 import numpy as np
-import phonopy
-from phonopy.harmonic.displacement import get_displacements_and_forces
+from phonopy import Phonopy
+from phonopy.structure.dataset import get_displacements_and_forces
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Int, QueryBuilder, Group, load_node
@@ -11,68 +11,66 @@ Dict = DataFactory('dict')
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
 
 
-@calcfunction
-def get_random_displacements(structure,
-                             number_of_snapshots,
-                             temperature,
-                             **data):
+def _collect_dataset(data, linear_decay=True):
+    """Collect supercell displacements, forces, and energies
+
+    With linear_decay=True, numbers of snapshots to be taken
+    are biased. Older snapshots are taken lesser. The fraction
+    of the number of snapshots in each previous phonon calculation
+    (many snapshots in one phonon calculation) to be taken is defined
+    linearly by
+
+        ratios = (np.arange(max_items, dtype=float) + 1) / max_items
+
+    where max_items is the number of previous phonon calculations to be
+    included at maximum.
+
+    """
+
+    nitems = max([int(key.split('_')[-1])
+                  for key in data.keys() if 'forces' in key])
+    max_items = data['max_previous_steps'].value
     displacements = []
     forces = []
     energies = []
 
-    for i in range(len(data) // 2):
-        forces.append(data['forces_%d' % (i + 1)].get_array('force_sets'))
-        if 'energies' in data['forces_%d' % (i + 1)].get_arraynames():
-            energies.append(data['forces_%d' % (i + 1)].get_array('energies'))
+    if linear_decay:
+        ratios = (np.arange(max_items, dtype=float) + 1) / max_items
+    else:
+        ratios = np.ones(max_items, dtype=int)
+    ratios = ratios[-nitems:]
+
+    for i in range(nitems):
+        force_sets = data['forces_%d' % (i + 1)].get_array('force_sets')
         phonon_setting_info = data['ph_info_%d' % (i + 1)]
         dataset = phonon_setting_info['displacement_dataset']
         disps, _ = get_displacements_and_forces(dataset)
-        displacements.append(disps)
-    d = np.concatenate(displacements, axis=0)
-    f = np.concatenate(forces, axis=0)
 
-    idx = None
-    if len(energies) == len(forces) and 'include_ratio' in data:
-        all_energies = np.concatenate(energies)
-        if len(all_energies) == len(f):
-            ratio = data['include_ratio'].value
-            if 0 < ratio and ratio < 1:
-                num_include = int(np.ceil(ratio * len(all_energies)))
-                if num_include > len(all_energies):
-                    num_include = len(all_energies)
-                idx = np.argsort(all_energies)[:num_include]
-                d = d[idx]
-                f = f[idx]
+        n_include = int(ratios[i] * len(force_sets)) + 1
+        if n_include < len(force_sets):
+            n_include += 1
+        if len(disps) < n_include:
+            n_include = len(disps)
 
-    phonon_setting_info = data['ph_info_1']
-    smat = phonon_setting_info['supercell_matrix']
-    ph = phonopy.load(unitcell=phonopy_atoms_from_structure(structure),
-                      supercell_matrix=smat,
-                      primitive_matrix='auto')
-    ph.dataset = {'displacements': d, 'forces': f}
-    ph.produce_force_constants(fc_calculator='alm')
+        forces.append(force_sets[:n_include])
+        if 'energies' in data['forces_%d' % (i + 1)].get_arraynames():
+            energy_sets = data['forces_%d' % (i + 1)].get_array('energies')
+            energies.append(energy_sets[:n_include])
+        displacements.append(disps[:n_include])
 
-    _modify_force_constants(ph)
+    return displacements, forces, energies
 
-    if 'random_seed' in data:
-        _random_seed = data['random_seed'].value
-    else:
-        _random_seed = None
 
-    ph.generate_displacements(
-        number_of_snapshots=number_of_snapshots.value,
-        random_seed=_random_seed,
-        temperature=temperature.value)
+def _remove_high_energy_snapshots(d, f, e, ratio):
+    """Remove snapshots that have high energies with a given ratio"""
 
-    ret_dict = {'displacement_dataset': Dict(dict=ph.dataset)}
-
-    if idx is not None:
-        array = DataFactory('array')()
-        array.set_array('supercell_energies', all_energies)
-        array.set_array('included_supercell_indices', idx)
-        ret_dict['supercell_energies'] = array
-
-    return ret_dict
+    num_include = int(np.ceil(ratio * len(e)))
+    if num_include > len(e):
+        num_include = len(e)
+    idx = np.argsort(e)[:num_include]
+    d = d[idx]
+    f = f[idx]
+    return d, f, e
 
 
 def _modify_force_constants(ph):
@@ -96,6 +94,64 @@ def _modify_force_constants(ph):
     rd.run_d2f()  # Create force constants using modified frequencies
     # Set modified force constants to Phonopy class instance
     ph.force_constants = rd.force_constants
+
+
+@calcfunction
+def get_random_displacements(structure,
+                             number_of_snapshots,
+                             temperature,
+                             **data):
+    """
+
+
+    """
+
+    displacements, forces, energies = _collect_dataset(data)
+
+    # Concatenate the data
+    d = np.concatenate(displacements, axis=0)
+    f = np.concatenate(forces, axis=0)
+    if energies:
+        e = np.concatenate(energies)
+    else:
+        e = None
+
+    # Remove snapshots that have high energies when include_ratio is given.
+    idx = None
+    if e is not None and len(e) == len(f) and 'include_ratio' in data:
+        ratio = data['include_ratio'].value
+        if 0 < ratio and ratio < 1:
+            d, f, e = _remove_high_energy_snapshots(d, f, e, ratio)
+
+    # Calculate force constants by fitting using ALM
+    phonon_setting_info = data['ph_info_1']
+    smat = phonon_setting_info['supercell_matrix']
+    ph = Phonopy(phonopy_atoms_from_structure(structure),
+                 supercell_matrix=smat,
+                 primitive_matrix='auto')
+    ph.dataset = {'displacements': d, 'forces': f}
+    ph.produce_force_constants(fc_calculator='alm')
+
+    # Treatment of imaginary modes
+    _modify_force_constants(ph)
+
+    # Generate random displacements at a given temperature
+    if 'random_seed' in data:
+        _random_seed = data['random_seed'].value
+    else:
+        _random_seed = None
+    ph.generate_displacements(
+        number_of_snapshots=number_of_snapshots.value,
+        random_seed=_random_seed,
+        temperature=temperature.value)
+
+    ret_dict = {'displacement_dataset': Dict(dict=ph.dataset)}
+    e_dict = {'supercell_energies': energies}
+    if idx is not None:
+        e_dict['included_supercell_indices'] = idx.tolist()
+    ret_dict['supercell_energies'] = Dict(dict=e_dict)
+
+    return ret_dict
 
 
 class IterHarmonicApprox(WorkChain):
@@ -154,7 +210,7 @@ class IterHarmonicApprox(WorkChain):
         Temperature (K).
     initial_nodes : Dict, optional
         This gives the initial nodes that contain sets of forces, which are
-        provided by PK or UUID.
+        provided by PKs or UUIDs.
     include_ratio : Float
         How much supercell forces are included from lowest supercell energies.
 
@@ -166,15 +222,15 @@ class IterHarmonicApprox(WorkChain):
         spec.expose_inputs(PhonopyWorkChain,
                            exclude=['immigrant_calculation_folders',
                                     'calculation_nodes', 'dry_run'])
-        spec.input('max_iteration',
-                   valid_type=Int, required=False, default=Int(10))
-        spec.input('number_of_snapshots',
-                   valid_type=Int, required=False, default=Int(100))
-        spec.input('number_of_steps_for_fitting',
-                   valid_type=Int, required=False, default=Int(4))
+        spec.input('max_iteration', valid_type=Int, required=False,
+                   default=lambda: Int(10))
+        spec.input('number_of_snapshots', valid_type=Int, required=False,
+                   default=lambda: Int(100))
+        spec.input('number_of_steps_for_fitting', valid_type=Int,
+                   required=False, default=lambda: Int(4))
         spec.input('random_seed', valid_type=Int, required=False)
-        spec.input('temperature',
-                   valid_type=Float, required=False, default=Float(300.0))
+        spec.input('temperature', valid_type=Float, required=False,
+                   default=lambda: Float(300.0))
         spec.input('initial_nodes', valid_type=Dict, required=False)
         spec.input('include_ratio', valid_type=Float, required=False)
         spec.outline(
@@ -259,6 +315,7 @@ class IterHarmonicApprox(WorkChain):
             data['include_ratio'] = self.inputs.include_ratio
             self.report("Include ratio is %f."
                         % self.inputs.include_ratio.value)
+        data['max_previous_steps'] = self.inputs.number_of_steps_for_fitting
 
         displacements = get_random_displacements(
             nodes[-1].inputs.structure,

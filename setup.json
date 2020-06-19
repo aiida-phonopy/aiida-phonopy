@@ -27,7 +27,6 @@
     "setup_requires": [
         "reentry"
     ],
-    "reentry_register": true,
     "entry_points": {
         "aiida.calculations": [
             "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation"
