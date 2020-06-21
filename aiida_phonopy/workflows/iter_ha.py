@@ -392,6 +392,11 @@ class IterHarmonicApprox(WorkChain):
         self.report("run_phonon_%d" % self.ctx.iteration)
 
         n_ave = self.inputs.number_of_steps_for_fitting.value
+
+        # Initial nodes are not specified, 0K phonon is in
+        # self.ctx.initial_node. This is only once used to generate random
+        # displacements. In the following steps, phonons calculated at
+        # specified temperature are used to generate random displacements.
         if len(self.ctx.prev_nodes) == 0:
             nodes = [self.ctx.initial_node, ]
         elif len(self.ctx.prev_nodes) < n_ave:
