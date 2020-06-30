@@ -3,7 +3,7 @@ from phonopy import Phonopy
 from phonopy.structure.dataset import get_displacements_and_forces
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Int, QueryBuilder, Group, load_node
+from aiida.orm import Bool, Float, Int, QueryBuilder, Group, load_node
 from aiida.engine import while_, if_, calcfunction
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
@@ -169,6 +169,8 @@ def _modify_force_constants(ph):
 def get_random_displacements(structure,
                              number_of_snapshots,
                              temperature,
+                             number_of_steps_for_fitting,
+                             linear_decay,
                              **data):
     """Generate supercells with random displacemens
 
@@ -185,7 +187,7 @@ def get_random_displacements(structure,
     To control how to include previous snapshots, several parameters
     can be used.
 
-    1) data['max_previous_steps'] : Int
+    1) number_of_steps_for_fitting : Int
         Maximum number of previous phonon calculation steps included. When
         number of the previous phonon calculations is smaller than this
         number, all the previous phonon calculations are included. But
@@ -193,11 +195,11 @@ def get_random_displacements(structure,
     2) linear_decay : True
         This will be an option, but currently always True.
         This controls weights of previous phonon calculations. One previous
-        phonon calculation is included 100%. (max_previous_steps + 1) previous
-        phonon calculation is not include. Between them, those are included
-        with linear scalings. The snapshots in each phonon calculation are
-        included from the first element of the list to the specified number,
-        i.e., [:num_included_snapshots].
+        phonon calculation is included 100%. (number_of_steps_for_fitting + 1)
+        previous phonon calculation is not include. Between them, those are
+        included with linear scalings. The snapshots in each phonon calculation
+        are included from the first element of the list to the specified
+        number, i.e., [:num_included_snapshots].
     3) data['include_ratio'] : Int
         After collecting snapshots in (2), all the snapshots are sorted by
         total energies. Then only lowest energy snapshots with 'include_ratio'
@@ -222,13 +224,14 @@ def get_random_displacements(structure,
     """
 
     displacements, forces, energies = _collect_dataset(data)
-    max_items = data['max_previous_steps'].value
+    max_items = number_of_steps_for_fitting.value
     if 'inclde_ratio' in data:
         ratio = data['inclde_ratio'].value
     else:
         ratio = None
     d, f, e, idx = _create_dataset(
-        displacements, forces, energies, max_items, ratio)
+        displacements, forces, energies, max_items, ratio,
+        linear_decay=linear_decay.value)
 
     # Calculate force constants by fitting using ALM
     phonon_setting_info = data['phinfo_1']
@@ -340,6 +343,8 @@ class IterHarmonicApprox(WorkChain):
                    default=lambda: Float(300.0))
         spec.input('initial_nodes', valid_type=Dict, required=False)
         spec.input('include_ratio', valid_type=Float, required=False)
+        spec.input('linear_decay', valid_type=Bool, required=False,
+                   default=lambda: Bool(True))
         spec.outline(
             cls.initialize,
             if_(cls.import_initial_nodes)(
@@ -427,12 +432,13 @@ class IterHarmonicApprox(WorkChain):
             data['include_ratio'] = self.inputs.include_ratio
             self.report("Include ratio is %f."
                         % self.inputs.include_ratio.value)
-        data['max_previous_steps'] = self.inputs.number_of_steps_for_fitting
 
         displacements = get_random_displacements(
             nodes[-1].inputs.structure,
             self.inputs.number_of_snapshots,
             self.inputs.temperature,
+            self.inputs.number_of_steps_for_fitting,
+            self.inputs.linear_decay,
             **data)
 
         return displacements['displacement_dataset']
