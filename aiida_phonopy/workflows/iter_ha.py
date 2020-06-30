@@ -52,9 +52,9 @@ def _extract_dataset_from_db(forces_in_db, ph_info_in_db):
     return displacements, forces, energies
 
 
-def _get_numbers_of_snapshots(displacements, forces, max_items,
-                              linear_decay=True):
-    """Get numbers of snapshots to be included
+def _choose_snapshots_by_linear_decay(displacements, forces, max_items,
+                                      linear_decay=True):
+    """Choose snapshots by linear_decay
 
     With linear_decay=True, numbers of snapshots to be taken
     are biased. Older snapshots are taken lesser. The fraction
@@ -78,7 +78,7 @@ def _get_numbers_of_snapshots(displacements, forces, max_items,
     else:
         ratios = np.ones(max_items, dtype=int)
     ratios = ratios[-nitems:]
-    nums_include = []
+    included = []
 
     for i in range(nitems):
         n = len(forces[i])
@@ -88,39 +88,79 @@ def _get_numbers_of_snapshots(displacements, forces, max_items,
         n_in = int(ratios[i] * n + 0.5)
         if n < n_in:
             n_in = n
-        nums_include.append(n_in)
+        included.append([True, ] * n_in + [False, ] * (n - n_in))
 
-    return nums_include
+    return included
 
 
-def _include_snapshots(displacements, forces, energies, nums_include):
-    _forces = [forces[i][:n] for i, n in enumerate(nums_include)]
-    _displacements = [displacements[i][:n] for i, n in enumerate(nums_include)]
+def _include_snapshots(displacements, forces, energies, included):
+    _forces = [forces[i][included_batch]
+               for i, included_batch in enumerate(included)]
+    _displacements = [np.array(displacements[i])[included_batch]
+                      for i, included_batch in enumerate(included)]
     if energies:
-        _energies = [energies[i][:n] for i, n in enumerate(nums_include)]
+        _energies = [energies[i][included_batch]
+                     for i, included_batch in enumerate(included)]
     else:
         _energies = []
     return _displacements, _forces, _energies
 
 
-def _remove_high_energy_snapshots(d, f, e, ratio):
-    """Remove snapshots that have high energies with a given ratio"""
+def _remove_high_energy_snapshots(energies, included, ratio):
+    """Reject high energy snapshots
 
-    num_include = int(ratio * len(e) + 0.5)
-    if len(e) < num_include:
-        num_include = len(e)
-    idx = np.argsort(e)[:num_include]
-    d = d[idx]
-    f = f[idx]
-    return d, f, e, idx
+    Parameters
+    ----------
+    energies : list of ndarray
+        List of supercell total energies in each batch
+    included : list of list of bool
+        List of list of True/False as included snapshots in each batch
+        Rejected elements are turned to False.
+    ratio : float
+        How much ratio of lowest energy snapshots is included after
+        sorting by energy.
+
+    Returns
+    -------
+    ret_included :
+        Rejected snapshots are turned to False from 'included'.
+
+    """
+
+    concat_included = np.concatenate(included)
+    concat_energies = np.concatenate(energies)
+    included_energies = concat_energies[concat_included]
+    included_indices = np.arange(len(concat_included))[concat_included]
+
+    num_include = int(ratio * len(included_energies) + 0.5)
+    if len(included_energies) < num_include:
+        num_include = len(included_energies)
+    _indices = np.argsort(included_energies)[:num_include]
+    included_indices_after_energy = included_indices[_indices]
+
+    bool_list = [False, ] * len(concat_included)
+    for i in included_indices_after_energy:
+        bool_list[i] = True
+    ret_included = []
+    count = 0
+    for included_batch in included:
+        ret_included.append(bool_list[count:(count + len(included_batch))])
+        count += len(included_batch)
+    return ret_included
 
 
 def _create_dataset(displacements, forces, energies, max_items, ratio,
                     linear_decay=True):
-    nums_include = _get_numbers_of_snapshots(displacements, forces, max_items,
-                                             linear_decay=linear_decay)
+    included = _choose_snapshots_by_linear_decay(
+        displacements, forces, max_items, linear_decay=linear_decay)
+
+    # Remove snapshots that have high energies when include_ratio is given.
+    if energies is not None and ratio is not None:
+        if 0 < ratio and ratio < 1:
+            included = _remove_high_energy_snapshots(energies, included, ratio)
+
     _displacements, _forces, _energies = _include_snapshots(
-        displacements, forces, energies, nums_include)
+        displacements, forces, energies, included)
 
     # Concatenate the data
     d = np.concatenate(_displacements, axis=0)
@@ -130,13 +170,7 @@ def _create_dataset(displacements, forces, energies, max_items, ratio,
     else:
         e = None
 
-    # Remove snapshots that have high energies when include_ratio is given.
-    idx = None
-    if e is not None and ratio is not None:
-        if 0 < ratio and ratio < 1:
-            d, f, e, idx = _remove_high_energy_snapshots(d, f, e, ratio)
-
-    return d, f, e, idx
+    return d, f, e, included
 
 
 def _modify_force_constants(ph):
@@ -229,7 +263,7 @@ def get_random_displacements(structure,
         ratio = data['inclde_ratio'].value
     else:
         ratio = None
-    d, f, e, idx = _create_dataset(
+    d, f, e, included = _create_dataset(
         displacements, forces, energies, max_items, ratio,
         linear_decay=linear_decay.value)
 
@@ -256,9 +290,8 @@ def get_random_displacements(structure,
         temperature=temperature.value)
 
     ret_dict = {'displacement_dataset': Dict(dict=ph.dataset)}
-    e_dict = {'supercell_energies': energies}
-    if idx is not None:
-        e_dict['included_supercell_indices'] = idx.tolist()
+    e_dict = {'supercell_energies': energies,
+              'included': included}
     ret_dict['supercell_energies'] = Dict(dict=e_dict)
 
     return ret_dict
