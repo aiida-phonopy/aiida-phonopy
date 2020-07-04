@@ -1,33 +1,21 @@
-from aiida.engine import WorkChain, ToContext
-from aiida.engine import workfunction
-
-from aiida.plugins import Code, CalculationFactory, load_node, DataFactory, WorkflowFactory
-from aiida.engine import run, submit
-
-from aiida.orm import Str, Float, Bool, Int
-from aiida.engine import _If, _While
-
 import numpy as np
-from aiida_phonopy.common.generate_inputs import generate_inputs
+from phonopy import Phonopy
+from aiida.engine import WorkChain
+from aiida.plugins import WorkflowFactory, DataFactory
+from aiida.orm import Float, Bool, Str, Code
+from aiida.engine import if_
+from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
+                                                  get_immigrant_builder)
+from aiida_phonopy.common.utils import (
+    get_force_sets, get_force_constants, get_nac_params, get_phonon,
+    get_phonon_setting_info, check_imported_supercell_structure,
+    from_node_id_to_aiida_node_id, get_data_from_node_id)
 
-# Should be improved by some kind of WorkChainFactory
-# For now all workchains should be copied to aiida/workflows
-# from aiida.workflows.wc_optimize import OptimizeStructure
 
-ForceConstantsData = DataFactory('phonopy.force_constants')
-ForceSetsData = DataFactory('phonopy.force_sets')
-BandStructureData = DataFactory('phonopy.band_structure')
-PhononDosData = DataFactory('phonopy.phonon_dos')
-NacData = DataFactory('phonopy.nac')
-
+PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
-
-OptimizeStructure = WorkflowFactory('phonopy.optimize')
-
-__testing__ = False
-
 
 @workfunction
 def create_supercells_with_displacements_using_phono3py(structure, ph_settings, cutoff):
@@ -40,7 +28,7 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings, 
     :param cutoff: FloatData object containing the value of the cutoff for 3rd order FC in Angstroms (if 0 no cutoff is applied)
     :return: A set of StructureData Objects containing the supercells with displacements
     """
-    from phono3py.phonon3 import Phono3py
+    from phono3py import Phono3py
 
     from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 
@@ -79,180 +67,17 @@ def create_supercells_with_displacements_using_phono3py(structure, ph_settings, 
     return disp_cells
 
 
-@workfunction
-def create_forces_set(**kwargs):
-    """
-    Build data_sets from forces of supercells with displacments
+class Phono3pyWorkChain(WorkChain):
+    """Phono3py workchain
 
-    :param forces_X: ArrayData objects that contain the atomic forces for each supercell with displacement, respectively (X is integer)
-    :param data_sets: ForceSetsData object that contains the displacements info (This info should match with forces_X)
-    :return: ForceSetsData object that contains the atomic forces and displacements info (datasets dict in phonopy)
-
-    """
-    data_sets = kwargs.pop('data_sets')
-    force_sets = ForceSetsData(data_sets3=data_sets.get_data_sets3())
-
-    forces = []
-    for i in range(data_sets.get_number_of_displacements()):
-        if 'forces_{}'.format(i) in kwargs:
-            forces.append(kwargs.pop('forces_{}'.format(i)).get_array('forces')[-1])
-
-    force_sets.set_forces(forces)
-
-    return {'force_sets': force_sets}
-
-@workfunction
-def get_force_constants3(data_sets, structure, ph_settings):
-
-    from phono3py.phonon3 import Phono3py
-    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
-
-    # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
-                        supercell_matrix=ph_settings.dict.supercell,
-                        primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_tolerance,
-                        log_level=1)
-
-    phono3py.produce_fc3(data_sets.get_forces3(),
-                         displacement_dataset=data_sets.get_data_sets3(),
-                         is_translational_symmetry=True,
-                         is_permutation_symmetry=True,
-                         is_permutation_symmetry_fc2=True)
-    fc3 = phono3py.get_fc3()
-    fc2 = phono3py.get_fc2()
-
-    force_constants_2 = ForceConstantsData(data=fc2)
-    force_constants_3 = ForceConstantsData(data=fc3)
-
-    return {'force_constants_2order': force_constants_2,
-            'force_constants_3order': force_constants_3}
-
-
-def get_recover_calc(wc, label):
-
-    if type(wc) is Bool:
-        return None
-
-    try:
-        pk_list = wc.out.calcs_pk
-    except:
-        pk_list = []
-
-    out_list = [load_node(pk) for pk in pk_list]
-
-    for calc in wc.get_outputs() + out_list:
-        if calc.label == label:
-            if calc.get_state() == 'FINISHED':
-                return calc
-
-    return None
-
-
-def cut_supercells(supercells, data_sets):
-
-    if type(data_sets) is Bool:
-        return supercells
-
-    data_sets_dict = data_sets.get_data_sets3()
-
-    if data_sets_dict is None:
-        data_sets_dict = data_sets.get_data_sets()
-        for i in range(data_sets.get_number_of_displacements()):
-            del supercells['structure_{}'.format(i)]
-            print ('removed: structure_{}'.format(i))
-    else:
-        calculation_list = []
-        i = len(data_sets_dict['first_atoms'])
-        for first_atoms in data_sets_dict['first_atoms']:
-            for second_atoms in first_atoms['second_atoms']:
-                if 'included' in second_atoms:
-                    if not second_atoms['included']:
-                        calculation_list.append('structure_{}'.format(i))
-                i += 1
-
-        supercells = {key:value for key, value in supercells.items() if key in calculation_list}
-    return supercells
-
-
-def get_forces_from_sets(data_sets, index):
-
-    if type(data_sets) is Bool:
-        return None
-
-    forces = data_sets.get_forces3()
-    data_sets_dict = data_sets.get_data_sets3()
-
-    if data_sets_dict is None:
-        harmonic_displacements = data_sets.get_number_of_displacements()
-    else:
-        harmonic_displacements = len(data_sets_dict['first_atoms'])
-
-    if index < harmonic_displacements:
-        return forces[index]
-
-    if data_sets_dict is not None:
-        i = i_ref = len(data_sets_dict['first_atoms'])
-        #i_ref = len(data_sets['first_atoms'])
-        for first_atoms in data_sets_dict['first_atoms']:
-            for second_atoms in first_atoms['second_atoms']:
-                if 'included' in second_atoms:
-                    if second_atoms['included']:
-                        if index == i_ref:
-                            return forces[i]
-                        i += 1
-                else:
-                    if index == i_ref:
-                        return forces[i]
-                    i += 1
-                i_ref += 1
-
-    return None
-
-
-
-class PhononPhono3py(WorkChain):
-    """
-    Workchain to do a phonon calculation using phonopy
-
-    :param structure: StructureData object that contains the crystal structure unit cell
-    :param ph_settings: Dict object that contains a dictionary with the data needed to run phonopy:
-                                  'supercell': [[2,0,0],
-                                                [0,2,0],
-                                                [0,0,2]],
-                                  'primitive': [[1.0, 0.0, 0.0],
-                                                [0.0, 1.0, 0.0],
-                                                [0.0, 0.0, 1.0]],
-                                  'distance': 0.01,
-                                  'mesh': [40, 40, 40],
-                                  # 'code': 'phonopy@boston'  # include this to run phonopy remotely otherwise run phonopy localy
-
-    :param es_settings: Dict object that contains a dictionary with the setting needed to calculate the electronic structure.
-                        The structure of this dictionary strongly depends on the software (VASP, QE, LAMMPS, ...)
-    :param optimize: (optional) Set true to perform a crystal structure optimization before the phonon calculation (default: True)
-    :param pressure: (optional) Set the external pressure (stress tensor) at which the optimization is performed in KBar (default: 0)
-    :param use_nac: (optional) Bool type object that determines if non-analytical correction term is calculated or not
-    :param calculate_fc: (optional) Bool type object that determines if non-analytical correction term is calculated or not
-    :param chunks: (optional) Int type object that defines the  maximum number of maximum calculations allowed to run simultaneously (default:100)
-    :param cutoff: (optional) Float type object that defined the distance cutoff used in the generation of supercells with displacements in phono3py.
-    :param data_sets: (optional) ForceSetsData type object that contains the forces data from a previous calculation to be reused
 
     """
     @classmethod
     def define(cls, spec):
-        super(PhononPhono3py, cls).define(spec)
-        spec.input("structure", valid_type=StructureData)
-        spec.input("ph_settings", valid_type=Dict)
-        spec.input("es_settings", valid_type=Dict)
-        # Optional arguments
-        spec.input("optimize", valid_type=Bool, required=False, default=Bool(True))
-        spec.input("pressure", valid_type=Float, required=False, default=Float(0.0))
-        spec.input("use_nac", valid_type=Bool, required=False, default=Bool(False))  # false by default
-        spec.input("calculate_fc", valid_type=Bool, required=False, default=Bool(False))  # false by default
-        spec.input("chunks", valid_type=Int, required=False, default=Int(100))
-        spec.input("cutoff", valid_type=Float, required=False, default=Float(0))
-        spec.input("recover", required=False, default=Bool(False)) # temporal patch
-        spec.input("data_sets", required=False, default=Bool(False))
+        super(Phono3pyWorkChain, cls).define(spec)
+        spec.expose_inputs(PhonopyWorkChain,
+                           exclude=['immigrant_calculation_folders',
+                                    'calculation_nodes', 'dry_run'])
 
         spec.outline(_If(cls.use_optimize)(cls.optimize),
                      # cls.create_displacement_calculations,

@@ -259,8 +259,8 @@ def get_random_displacements(structure,
 
     displacements, forces, energies = _collect_dataset(data)
     max_items = number_of_steps_for_fitting.value
-    if 'inclde_ratio' in data:
-        ratio = data['inclde_ratio'].value
+    if 'include_ratio' in data:
+        ratio = data['include_ratio'].value
     else:
         ratio = None
     d, f, e, included = _create_dataset(
@@ -281,12 +281,12 @@ def get_random_displacements(structure,
 
     # Generate random displacements at a given temperature
     if 'random_seed' in data:
-        _random_seed = data['random_seed'].value
+        random_seed = data['random_seed'].value
     else:
-        _random_seed = None
+        random_seed = None
     ph.generate_displacements(
         number_of_snapshots=number_of_snapshots.value,
-        random_seed=_random_seed,
+        random_seed=random_seed,
         temperature=temperature.value)
 
     ret_dict = {'displacement_dataset': Dict(dict=ph.dataset)}
