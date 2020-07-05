@@ -4,67 +4,16 @@ from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
-from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
-                                                  get_immigrant_builder)
+from aiida_phonopy.common.generate_inputs import get_calcjob_builder
 from aiida_phonopy.common.utils import (
-    get_force_sets, get_force_constants, get_nac_params, get_phonon,
-    get_phonon_setting_info, check_imported_supercell_structure,
-    from_node_id_to_aiida_node_id, get_data_from_node_id)
+    generate_phono3py_cells,
+    get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
 
 
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
-
-@workfunction
-def create_supercells_with_displacements_using_phono3py(structure, ph_settings, cutoff):
-    """
-    Use phono3py to create the supercells with displacements to calculate the force constants by using
-    finite displacements methodology
-
-    :param structure: StructureData object
-    :param phonopy_input: Dict object containing a dictionary with the data needed for phonopy
-    :param cutoff: FloatData object containing the value of the cutoff for 3rd order FC in Angstroms (if 0 no cutoff is applied)
-    :return: A set of StructureData Objects containing the supercells with displacements
-    """
-    from phono3py import Phono3py
-
-    from aiida_phonopy.common.utils import phonopy_atoms_from_structure
-
-    # Generate phonopy phonon object
-    phono3py = Phono3py(phonopy_atoms_from_structure(structure),
-                        supercell_matrix=ph_settings.dict.supercell,
-                        primitive_matrix=ph_settings.dict.primitive,
-                        symprec=ph_settings.dict.symmetry_tolerance,
-                        log_level=1)
-
-    if float(cutoff) == 0:
-        cutoff = None
-    else:
-        cutoff = float(cutoff)
-
-    phono3py.generate_displacements(distance=ph_settings.dict.distance,
-                                    cutoff_pair_distance=cutoff)
-
-    cells_with_disp = phono3py.get_supercells_with_displacements()
-
-    # Transform cells to StructureData and set them ready to return
-    data_sets = phono3py.get_displacement_dataset()
-    data_sets_object = ForceSetsData(data_sets3=data_sets)
-
-    disp_cells = {'data_sets': data_sets_object}
-    for i, phonopy_supercell in enumerate(cells_with_disp):
-        if phonopy_supercell is None:
-            print ('structure_{} cutoff skip'.format(i))
-            continue
-        supercell = StructureData(cell=phonopy_supercell.get_cell())
-        for symbol, position in zip(phonopy_supercell.get_chemical_symbols(),
-                                    phonopy_supercell.get_positions()):
-            supercell.append_atom(position=position, symbols=symbol)
-        disp_cells['structure_{}'.format(i)] = supercell
-
-    return disp_cells
 
 
 class Phono3pyWorkChain(WorkChain):
@@ -77,240 +26,113 @@ class Phono3pyWorkChain(WorkChain):
         super(Phono3pyWorkChain, cls).define(spec)
         spec.expose_inputs(PhonopyWorkChain,
                            exclude=['immigrant_calculation_folders',
-                                    'calculation_nodes', 'dry_run'])
+                                    'calculation_nodes',
+                                    'run_phonopy',
+                                    'remote_phonopy'])
+        spec.input('run_phono3py', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
+        spec.input('remote_phono3py', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
 
-        spec.outline(_If(cls.use_optimize)(cls.optimize),
-                     # cls.create_displacement_calculations,
-                     _While(cls.continue_submitting)(cls.create_displacement_calculations_chunk),
-                     cls.collect_data,
-                     _If(cls.calculate_fc)(cls.calculate_force_constants))
-        # spec.outline(cls.calculate_force_constants)  # testing
+        spec.outline(
+            cls.initialize,
+            cls.run_force_and_nac_calculations,
+            if_(cls.dry_run)(
+                cls.postprocess_of_dry_run,
+            ).else_(
+                cls.create_force_sets,
+                if_(cls.is_nac)(cls.create_nac_params),
+                if_(cls.run_phono3py)(
+                    if_(cls.remote_phono3py)(
+                        cls.run_phono3py_remote,
+                        cls.collect_data,
+                    ).else_(
+                        cls.create_force_constants,
+                        cls.run_phono3py_in_workchain,
+                    )
+                )
+            )
+        )
+        spec.output('fc3', valid_type=ArrayData, required=False)
+        spec.output('fc2', valid_type=ArrayData, required=False)
+        spec.output('primitive', valid_type=StructureData, required=False)
+        spec.output('supercell', valid_type=StructureData, required=False)
+        spec.output('phonon_supercell', valid_type=StructureData,
+                    required=False)
+        spec.output('forces_fc3', valid_type=ArrayData, required=False)
+        spec.output('forces_fc2', valid_type=ArrayData, required=False)
+        spec.output('nac_params', valid_type=ArrayData, required=False)
+        spec.output('phonon_setting_info', valid_type=Dict, required=True)
 
-    def use_optimize(self):
-        print('start phonon3 (pk={})'.format(self.pid))
-        return self.inputs.optimize
+    def dry_run(self):
+        return self.inputs.dry_run
 
-    def calculate_fc(self):
-        return self.inputs.calculate_fc
+    def remote_phono3py(self):
+        return self.inputs.remote_phonopy
 
-    def continue_submitting(self):
+    def run_phono3py(self):
+        return self.inputs.run_phonopy
 
-        if 'i_disp' in self.ctx:
-            if self.ctx.i_disp < 1:
-                return False
-            self.ctx.i_disp -= 1
-        return True
+    def initialize(self):
+        """Set default settings and create supercells and primitive cell"""
 
-    def optimize(self):
-        print ('start optimize')
-        future = submit(OptimizeStructure,
-                        structure=self.inputs.structure,
-                        es_settings=self.inputs.es_settings,
-                        pressure=self.inputs.pressure,
-                        )
-        if __testing__:
-            self.ctx._content['optimize'] = load_node(9357)
-            return
+        self.report('initialize')
 
-        print ('optimize workchain: {}'.format(future.pid))
+        if self.inputs.run_phono3py and self.inputs.remote_phono3py:
+            if ('code_string' not in self.inputs or
+                'options' not in self.inputs):
+                raise RuntimeError(
+                    "code_string and options have to be specified.")
 
-        return ToContext(optimized=future)
+        if 'supercell_matrix' not in self.inputs.phonon_settings.attributes:
+            raise RuntimeError(
+                "supercell_matrix was not found in phonon_settings.")
 
-    def create_displacement_calculations(self):
+        kwargs = {}
+        if 'displacement_dataset' in self.inputs:
+            kwargs['dataset'] = self.inputs.displacement_dataset
+        return_vals = generate_phono3py_cells(self.inputs.phonon_settings,
+                                              self.inputs.structure,
+                                              self.inputs.symmetry_tolerance,
+                                              **kwargs)
 
-        from aiida_phonopy.workflows.phonopy import get_primitive
+        for key in ('phonon_setting_info', 'primitive', 'supercell'):
+            self.ctx[key] = return_vals[key]
+            self.out(key, self.ctx[key])
+        self.ctx.supercells = {}
+        self.ctx.phonon_supercells = {}
+        for key in return_vals:
+            if "supercell_" in key:
+                self.ctx.supercells[key] = return_vals[key]
+            if "phonon_supercell_" in key:
+                self.ctx.phonon_supercells[key] = return_vals[key]
+        self.ctx.primitive = return_vals['primitive']
+        self.ctx.supercell = return_vals['supercell']
+        if 'phonon_supercell' in return_vals:
+            self.ctx.phonon_supercell = return_vals['phonon_supercell']
 
-        print ('create displacements')
-        self.report('create displacements')
+    def postprocess_of_dry_run(self):
+        self.report('Finish here because of dry-run setting')
 
-        if 'optimized' in self.ctx:
-            self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
-            self.out('optimized_data', self.ctx.optimized.out.optimized_structure_data)
-        else:
-            self.ctx.final_structure = self.inputs.structure
+    def create_force_sets(self):
+        """Build datasets from forces of supercells with displacments"""
 
-        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure,
-                                                     self.inputs.ph_settings)['primitive_structure']
+        self.report('create force sets')
 
-        supercells = create_supercells_with_displacements_using_phono3py(self.ctx.final_structure,
-                                                                         self.inputs.ph_settings,
-                                                                         self.inputs.cutoff)
+        forces_dict = collect_vasp_forces_and_energies(
+            self.ctx, self.ctx.supercells)
+        for key, val in get_vasp_force_sets_dict(**forces_dict).items():
+            self.ctx[key] = val
+            self.out(key, self.ctx[key])
 
-        self.ctx.data_sets = supercells.pop('data_sets')
-        self.ctx.number_of_displacements = len(supercells)
-
-        if __testing__:
-            f = open('labels', 'r')
-            lines = f.readlines()
-            f.close()
-
-            from aiida.orm import load_node
-            nodes = [int(line.split()[3]) for line in lines]
-            print (nodes)
-            labels = [line.split()[0] for line in lines]
-            print (labels)
-            for pk, label in zip(nodes, labels):
-                future = load_node(pk)
-                self.ctx._content[label] = future
-                print ('{} pk = {}'.format(label, pk))
-
-            return
-
-        calcs = {}
-        for label, supercell in supercells.iteritems():
-
-            JobCalculation, calculation_input = generate_inputs(supercell,
-                                                                # self.inputs.machine,
-                                                                self.inputs.es_settings,
-                                                                # pressure=self.input.pressure,
-                                                                type='forces')
-
-            calculation_input._label = label
-            future = submit(JobCalculation, **calculation_input)
-            print ('{} pk = {}'.format(label, future.pid))
-            # self.report('{} pk = {}'.format(label, future.pid))
-
-            calcs[label] = future
-
-        # Born charges (for primitive cell)
-        if bool(self.inputs.use_nac):
-            self.report('calculate born charges')
-            JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
-                                                                # self.inputs.machine,
-                                                                self.inputs.es_settings,
-                                                                # pressure=self.input.pressure,
-                                                                type='born_charges')
-            future = submit(JobCalculation, **calculation_input)
-            print ('single_point: {}'.format(future.pid))
-            calcs['single_point'] = future
-
-        return ToContext(**calcs)
-
-    def create_displacement_calculations_chunk(self):
-
-        from aiida_phonopy.workflows.phonopy import get_primitive
-
-        if 'optimized' in self.ctx:
-            self.ctx.final_structure = self.ctx.optimized.out.optimized_structure
-            self.out('optimized_data', self.ctx.optimized.out.optimized_structure_data)
-        else:
-            self.ctx.final_structure = self.inputs.structure
-
-        self.ctx.primitive_structure = get_primitive(self.ctx.final_structure,
-                                                     self.inputs.ph_settings)['primitive_structure']
-
-        supercells = create_supercells_with_displacements_using_phono3py(self.ctx.final_structure,
-                                                                         self.inputs.ph_settings,
-                                                                         self.inputs.cutoff)
-
-
-        self.ctx.data_sets = supercells.pop('data_sets')
-        self.ctx.number_of_displacements = len(supercells)
-
-        supercells = cut_supercells(supercells, self.inputs.data_sets)
-
-        calcs = {}
-
-        n_disp = len(supercells)
-        if 'i_disp' in self.ctx:
-            list = range(self.ctx.i_disp * int(self.inputs.chunks),
-                         (self.ctx.i_disp + 1) * int(self.inputs.chunks))
-        else:
-            self.ctx.i_disp = n_disp / int(self.inputs.chunks)
-            list = range(self.ctx.i_disp * int(self.inputs.chunks), n_disp)
-            print ('create displacements')
-            self.report('create displacements')
-            print ('total displacements: {}'.format(n_disp))
-
-            # Born charges (for primitive cell)
-            if bool(self.inputs.use_nac):
-                self.report('calculate born charges')
-                JobCalculation, calculation_input = generate_inputs(self.ctx.primitive_structure,
-                                                                    # self.inputs.machine,
-                                                                    self.inputs.es_settings,
-                                                                    # pressure=self.input.pressure,
-                                                                    type='born_charges')
-                future = submit(JobCalculation, **calculation_input)
-                print ('single_point: {}'.format(future.pid))
-                calcs['single_point'] = future
-
-        supercell_list = np.array(supercells.items())[list]
-
-        for label, supercell in supercell_list:
-
-            recover_calc = get_recover_calc(self.inputs.recover, label)
-
-            # Recover calculations (temporal beta patch)
-            if recover_calc is not None:
-                self.ctx._content[label] = recover_calc
-                print ('recovered: {}'.format(label))
-                continue
-            # Recover calculations end (temporal beta patch)
-
-            JobCalculation, calculation_input = generate_inputs(supercell,
-                                                                # self.inputs.machine,
-                                                                self.inputs.es_settings,
-                                                                # pressure=self.input.pressure,
-                                                                type='forces')
-
-            calculation_input['_label'] = label
-            future = submit(JobCalculation, **calculation_input)
-            print ('{} pk = {}'.format(label, future.pid))
-
-            calcs[label] = future
-
-        return ToContext(**calcs)
+    def run_phono3py_remote(self):
+        self.report('remote phonopy calculation')
 
     def collect_data(self):
+        self.report('collect data')
 
-        from aiida_phonopy.workflows.phonopy import get_nac_from_data
-        self.report('collect data and create force_sets')
+    def create_force_constants(self):
+        self.report('create force constants')
 
-        wf_inputs = {}
-        for i in range(self.ctx.data_sets.get_number_of_displacements()):
-
-            forces = get_forces_from_sets(self.inputs.data_sets, i)
-            if forces is not None:
-                print ('read_{}'.format(i))
-                array_data = ArrayData()
-                array_data.set_array('forces', np.array([forces]))
-                wf_inputs['forces_{}'.format(i)] = array_data
-                continue
-
-            calc = self.ctx.get('structure_{}'.format(i))
-            #print ('collect structure_{}'.format(i))
-            if calc is not None:
-                print ('calculated_{} OK'.format(i))
-
-                # This has to be changed to make uniform plugin interface
-                try:
-                    wf_inputs['forces_{}'.format(i)] = calc.out.output_trajectory
-                except:
-                    wf_inputs['forces_{}'.format(i)] = calc.out.output_array
-
-        wf_inputs['data_sets'] = self.ctx.data_sets
-
-        self.ctx.force_sets = create_forces_set(**wf_inputs)['force_sets']
-
-        if 'single_point' in self.ctx:
-            nac_data = get_nac_from_data(born_charges=self.ctx.single_point.out.born_charges,
-                                         epsilon=self.ctx.single_point.out.output_array,
-                                         structure=self.ctx.primitive_structure)
-
-            self.out('nac_data', nac_data['nac_data'])
-
-        self.out('force_sets', self.ctx.force_sets)
-        self.out('final_structure', self.ctx.final_structure)
-
-        self.report('phonon3py calculation finished ')
-
-    def calculate_force_constants(self):
-
-        force_constants = get_force_constants3(self.ctx.force_sets,
-                                               self.ctx.final_structure,
-                                               self.inputs.ph_settings)
-
-        self.out('force_constants_2order', force_constants['force_constants_2order'])
-        self.out('force_constants_3order', force_constants['force_constants_3order'])
-
-        return
+    def run_phono3py_in_workchain(self):
+        self.report('phonopy calculation in workchain')
