@@ -195,19 +195,17 @@ class PhonopyWorkChain(WorkChain):
                                              self.inputs.symmetry_tolerance,
                                              **kwargs)
 
-        self.ctx.phonon_setting_info = return_vals['ph_settings']
-        self.out('phonon_setting_info', self.ctx.phonon_setting_info)
-
+        for key in ('phonon_setting_info', 'primitive', 'supercell'):
+            self.ctx[key] = return_vals[key]
+            self.out(key, self.ctx[key])
         self.ctx.supercells = {}
         for key in return_vals:
             if "supercell_" in key:
                 self.ctx.supercells[key] = return_vals[key]
         if self.inputs.subtract_residual_forces:
-            self.ctx.supercells["supercell_000"] = return_vals['supercell']
-        self.ctx.primitive = return_vals['primitive']
-        self.ctx.supercell = return_vals['supercell']
-        self.out('primitive', self.ctx.primitive)
-        self.out('supercell', self.ctx.supercell)
+            digits = len(str(len(self.ctx.supercells)))
+            label = "supercell_%s" % "0".zfill(digits)
+            self.ctx.supercells[label] = return_vals['supercell']
 
     def run_force_and_nac_calculations(self):
         self.report('run force calculations')
@@ -219,8 +217,9 @@ class PhonopyWorkChain(WorkChain):
                                           calc_type='forces',
                                           label=key)
             future = self.submit(builder)
-            self.report('{} pk = {}'.format(key, future.pk))
-            self.to_context(**{key: future})
+            label = "force_calc_%s" % key.split('_')[-1]
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
 
         # Born charges and dielectric constant
         if self.ctx.phonon_setting_info['is_nac']:
@@ -231,14 +230,15 @@ class PhonopyWorkChain(WorkChain):
                                           label='born_and_epsilon')
             future = self.submit(builder)
             self.report('born_and_epsilon: {}'.format(future.pk))
-            self.to_context(**{'born_and_epsilon': future})
+            self.to_context(**{'born_and_epsilon_calc': future})
 
     def read_force_and_nac_calculations_from_files(self):
         self.report('import calculation data in files')
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        digits = len(str(len(calc_folders_Dict['force'])))
         for i, force_folder in enumerate(calc_folders_Dict['force']):
-            label = "supercell_%03d" % (i + 1)
+            label = "force_calc_%s" % str(i + 1).zfill(digits)
             builder = get_immigrant_builder(force_folder,
                                             self.inputs.calculator_settings,
                                             calc_type='forces')
@@ -248,7 +248,7 @@ class PhonopyWorkChain(WorkChain):
             self.to_context(**{label: future})
 
         if self.ctx.phonon_setting_info['is_nac']:  # NAC the last one
-            label = 'born_and_epsilon'
+            label = 'born_and_epsilon_calc'
             builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
                                             self.inputs.calculator_settings,
                                             calc_type='nac')
@@ -262,14 +262,15 @@ class PhonopyWorkChain(WorkChain):
 
         calc_nodes_Dict = self.inputs.calculation_nodes
 
+        digits = len(str(len(calc_nodes_Dict['force'])))
         for i, node_id in enumerate(calc_nodes_Dict['force']):
-            label = "supercell_%03d" % (i + 1)
+            label = "force_calc_%s" % str(i + 1).zfill(digits)
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
             # self.ctx[label]['forces'] -> ArrayData()('final')
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
         if self.ctx.phonon_setting_info['is_nac']:  # NAC the last one
-            label = 'born_and_epsilon'
+            label = 'born_and_epsilon_cal'
             node_id = calc_nodes_Dict['nac'][0]
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
             # self.ctx[label]['born_charges'] -> ArrayData()('born_charges')
@@ -282,14 +283,14 @@ class PhonopyWorkChain(WorkChain):
         msg = ("Immigrant failed because of inconsistency of supercell"
                "structure")
 
-        for i in range(len(self.ctx.supercells)):
-            label = "supercell_%03d" % (i + 1)
-            calc = self.ctx[label]
+        for key in self.ctx.supercells:
+            num = key.split('_')[-1]
+            calc = self.ctx["force_calc_%s" % num]
             if type(calc) is dict:
                 calc_dict = calc
             else:
                 calc_dict = calc.inputs
-            supercell_ref = self.ctx.supercells[label]
+            supercell_ref = self.ctx.supercells["supercell_%s" % num]
             supercell_calc = calc_dict['structure']
             if not check_imported_supercell_structure(
                     supercell_ref,
@@ -314,7 +315,7 @@ class PhonopyWorkChain(WorkChain):
     def create_nac_params(self):
         self.report('create nac data')
 
-        calc = self.ctx.born_and_epsilon
+        calc = self.ctx.born_and_epsilon_calc
         if type(calc) is dict:
             calc_dict = calc
             structure = calc['structure']

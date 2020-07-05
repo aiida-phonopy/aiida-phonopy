@@ -31,6 +31,29 @@ def generate_phonopy_cells(phonon_settings,
 
     _update_structure_info(ph_settings, ph)
     structures_dict = _generate_aiida_structures(ph)
+    return_vals = {'phonon_setting_info': Dict(dict=ph_settings)}
+    return_vals.update(structures_dict)
+
+    return return_vals
+
+
+@calcfunction
+def generate_phono3py_cells(phonon_settings,
+                            structure,
+                            symmetry_tolerance,
+                            dataset=None):
+    ph_settings = _get_setting_info(phonon_settings,
+                                    structure,
+                                    symmetry_tolerance)
+
+    ph = get_phonopy_instance(structure, ph_settings, {})
+    if dataset is None:
+        ph.generate_displacements(distance=ph_settings['distance'])
+    else:
+        ph.dataset = dataset.get_dict()
+
+    _update_structure_info(ph_settings, ph)
+    structures_dict = _generate_aiida_structures(ph)
     return_vals = {'ph_settings': Dict(dict=ph_settings)}
     return_vals.update(structures_dict)
 
@@ -384,8 +407,7 @@ def collect_vasp_forces_and_energies(ctx, ctx_supercells):
     for key in ctx_supercells:
         # key: e.g. "supercell_001", "phonon_supercell_001"
         num = key.split('_')[-1]  # e.g. "001"
-
-        calc = ctx[key]
+        calc = ctx["force_calc_%s" % num]
         if type(calc) is dict:
             calc_dict = calc
         else:
@@ -474,9 +496,10 @@ def _generate_aiida_structures(ph):
 
     structures_dict = {}
 
+    digits = len(str(len(ph.supercells_with_displacements)))
     for i, scell in enumerate(ph.supercells_with_displacements):
         structure = phonopy_atoms_to_structure(scell)
-        label = "supercell_%03d" % (i + 1)
+        label = "supercell_%s" % str(i + 1).zfill(digits)
         structure.label = "%s %s" % (
             structure.get_formula(mode='hill_compact'), label)
         structures_dict[label] = structure
