@@ -5,9 +5,10 @@ from aiida.engine import if_
 from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
                                                   get_immigrant_builder)
 from aiida_phonopy.common.utils import (
-    get_force_sets, get_force_constants, get_nac_params, get_phonon,
-    get_phonon_setting_info, check_imported_supercell_structure,
-    from_node_id_to_aiida_node_id, get_data_from_node_id)
+    get_force_constants, get_nac_params, get_phonon,
+    generate_phonopy_cells, check_imported_supercell_structure,
+    from_node_id_to_aiida_node_id, get_data_from_node_id,
+    get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
 
 
 # Should be improved by some kind of WorkChainFactory
@@ -51,6 +52,9 @@ class PhonopyWorkChain(WorkChain):
             False.
         displacement_dataset : dict
             Atomic displacement dataset that phonopy can understand.
+    subtract_residual_forces : Bool, optional
+        Run a perfect supercell force calculation and subtract the residual
+        forces from forces in supercells with displacements. Default is False.
     run_phonopy : Bool, optional
         Whether running phonon calculation or not. Default is False.
     remote_phonopy : Bool, optional
@@ -87,17 +91,19 @@ class PhonopyWorkChain(WorkChain):
         spec.input('calculator_settings', valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
         spec.input('options', valid_type=Dict, required=False)
-        spec.input('symmetry_tolerance',
-                   valid_type=Float, required=False, default=lambda: Float(1e-5))
-        spec.input('dry_run',
-                   valid_type=Bool, required=False, default=lambda: Bool(False))
-        spec.input('run_phonopy',
-                   valid_type=Bool, required=False, default=lambda: Bool(False))
-        spec.input('remote_phonopy',
-                   valid_type=Bool, required=False, default=lambda: Bool(False))
+        spec.input('symmetry_tolerance', valid_type=Float, required=False,
+                   default=lambda: Float(1e-5))
+        spec.input('dry_run', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
+        spec.input('subtract_residual_forces', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
+        spec.input('run_phonopy', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
+        spec.input('remote_phonopy', valid_type=Bool, required=False,
+                   default=lambda: Bool(False))
 
         spec.outline(
-            cls.initialize_supercell_phonon_calculation,
+            cls.initialize,
             if_(cls.import_calculations)(
                 if_(cls.import_calculations_from_files)(
                     cls.read_force_and_nac_calculations_from_files,
@@ -129,6 +135,8 @@ class PhonopyWorkChain(WorkChain):
         spec.output('primitive', valid_type=StructureData, required=False)
         spec.output('supercell', valid_type=StructureData, required=False)
         spec.output('force_sets', valid_type=ArrayData, required=False)
+        spec.output('supercell_forces', valid_type=ArrayData, required=False)
+        spec.output('supercell_energy', valid_type=Float, required=False)
         spec.output('nac_params', valid_type=ArrayData, required=False)
         spec.output('thermal_properties', valid_type=XyData, required=False)
         spec.output('band_structure', valid_type=BandsData, required=False)
@@ -164,10 +172,10 @@ class PhonopyWorkChain(WorkChain):
             return True
         return False
 
-    def initialize_supercell_phonon_calculation(self):
+    def initialize(self):
         """Set default settings and create supercells and primitive cell"""
 
-        self.report('initialize_supercell_phonon_calculation')
+        self.report('initialize')
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
             if ('code_string' not in self.inputs or
@@ -179,24 +187,23 @@ class PhonopyWorkChain(WorkChain):
             raise RuntimeError(
                 "supercell_matrix was not found in phonon_settings.")
 
+        kwargs = {}
         if 'displacement_dataset' in self.inputs:
-            return_vals = get_phonon_setting_info(
-                self.inputs.phonon_settings,
-                self.inputs.structure,
-                self.inputs.symmetry_tolerance,
-                displacement_dataset=self.inputs.displacement_dataset)
-        else:
-            return_vals = get_phonon_setting_info(
-                self.inputs.phonon_settings,
-                self.inputs.structure,
-                self.inputs.symmetry_tolerance)
-        self.ctx.phonon_setting_info = return_vals['phonon_setting_info']
+            kwargs['dataset'] = self.inputs.displacement_dataset
+        return_vals = generate_phonopy_cells(self.inputs.phonon_settings,
+                                             self.inputs.structure,
+                                             self.inputs.symmetry_tolerance,
+                                             **kwargs)
+
+        self.ctx.phonon_setting_info = return_vals['ph_settings']
         self.out('phonon_setting_info', self.ctx.phonon_setting_info)
 
         self.ctx.supercells = {}
-        for i in range(len(return_vals) - 3):
-            label = "supercell_%03d" % (i + 1)
-            self.ctx.supercells[label] = return_vals[label]
+        for key in return_vals:
+            if "supercell_" in key:
+                self.ctx.supercells[key] = return_vals[key]
+        if self.inputs.subtract_residual_forces:
+            self.ctx.supercells["supercell_000"] = return_vals['supercell']
         self.ctx.primitive = return_vals['primitive']
         self.ctx.supercell = return_vals['supercell']
         self.out('primitive', self.ctx.primitive)
@@ -206,15 +213,14 @@ class PhonopyWorkChain(WorkChain):
         self.report('run force calculations')
 
         # Forces
-        for i in range(len(self.ctx.supercells)):
-            label = "supercell_%03d" % (i + 1)
-            builder = get_calcjob_builder(self.ctx.supercells[label],
+        for key in self.ctx.supercells:
+            builder = get_calcjob_builder(self.ctx.supercells[key],
                                           self.inputs.calculator_settings,
                                           calc_type='forces',
-                                          label=label)
+                                          label=key)
             future = self.submit(builder)
-            self.report('{} pk = {}'.format(label, future.pk))
-            self.to_context(**{label: future})
+            self.report('{} pk = {}'.format(key, future.pk))
+            self.to_context(**{key: future})
 
         # Born charges and dielectric constant
         if self.ctx.phonon_setting_info['is_nac']:
@@ -299,41 +305,15 @@ class PhonopyWorkChain(WorkChain):
 
         self.report('create force sets')
 
-        # VASP specific
-        forces_dict = {}
-
-        for i in range(len(self.ctx.supercells)):
-            label = "supercell_%03d" % (i + 1)
-            calc = self.ctx[label]
-            if type(calc) is dict:
-                calc_dict = calc
-            else:
-                calc_dict = calc.outputs
-            if ('forces' in calc_dict and
-                'final' in calc_dict['forces'].get_arraynames()):
-                label = "forces_%03d" % (i + 1)
-                forces_dict[label] = calc_dict['forces']
-            else:
-                msg = ("Forces could not be found in calculation %03d."
-                       % (i + 1))
-                self.report(msg)
-
-            if ('misc' in calc_dict and
-                'total_energies' in calc_dict['misc'].keys()):
-                label = "misc_%03d" % (i + 1)
-                forces_dict[label] = calc_dict['misc']
-
-        if sum(['forces' in k for k in forces_dict]) != len(self.ctx.supercells):
-            raise RuntimeError("Forces could not be retrieved.")
-
-        self.ctx.force_sets = get_force_sets(**forces_dict)
-        self.out('force_sets', self.ctx.force_sets)
+        forces_dict = collect_vasp_forces_and_energies(
+            self.ctx, self.ctx.supercells)
+        for key, val in get_vasp_force_sets_dict(**forces_dict).items():
+            self.ctx[key] = val
+            self.out(key, self.ctx[key])
 
     def create_nac_params(self):
         self.report('create nac data')
 
-        # VASP specific
-        # Call workfunction to make links
         calc = self.ctx.born_and_epsilon
         if type(calc) is dict:
             calc_dict = calc
@@ -351,15 +331,15 @@ class PhonopyWorkChain(WorkChain):
                 "Dielectric constant could not be found "
                 "in the calculation. Please check the calculation setting.")
 
-        params = {'symmetry_tolerance':
-                  Float(self.ctx.phonon_setting_info['symmetry_tolerance'])}
+        kwargs = {}
         if self.import_calculations():
-            params['primitive'] = self.ctx.primitive
+            kwargs['primitive'] = self.ctx.primitive
         self.ctx.nac_params = get_nac_params(
             calc_dict['born_charges'],
             calc_dict['dielectrics'],
             structure,
-            **params)
+            self.inputs.symmetry_tolerance,
+            **kwargs)
         self.out('nac_params', self.ctx.nac_params)
 
     def run_phonopy_remote(self):
