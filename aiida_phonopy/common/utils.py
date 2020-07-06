@@ -426,12 +426,12 @@ def from_node_id_to_aiida_node_id(node_id):
                            % type(node_id))
 
 
-def collect_vasp_forces_and_energies(ctx, ctx_supercells):
+def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
     forces_dict = {}
     for key in ctx_supercells:
         # key: e.g. "supercell_001", "phonon_supercell_001"
         num = key.split('_')[-1]  # e.g. "001"
-        calc = ctx["force_calc_%s" % num]
+        calc = ctx["%s_%s" % (prefix, num)]
         if type(calc) is dict:
             calc_dict = calc
         else:
