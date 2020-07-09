@@ -159,7 +159,7 @@ class Phono3pyWorkChain(WorkChain):
             self.to_context(**{label: future})
 
         # Born charges and dielectric constant
-        if self.ctx.phonon_setting_info['is_nac']:
+        if self.is_nac():
             self.report('calculate born charges and dielectric constant')
             builder = get_calcjob_builder(self.ctx.primitive,
                                           self.inputs.calculator_settings,

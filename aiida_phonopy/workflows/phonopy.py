@@ -222,7 +222,7 @@ class PhonopyWorkChain(WorkChain):
             self.to_context(**{label: future})
 
         # Born charges and dielectric constant
-        if self.ctx.phonon_setting_info['is_nac']:
+        if self.is_nac():
             self.report('calculate born charges and dielectric constant')
             builder = get_calcjob_builder(self.ctx.primitive,
                                           self.inputs.calculator_settings,
@@ -247,7 +247,7 @@ class PhonopyWorkChain(WorkChain):
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
-        if self.ctx.phonon_setting_info['is_nac']:  # NAC the last one
+        if self.is_nac():  # NAC the last one
             label = 'born_and_epsilon_calc'
             builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
                                             self.inputs.calculator_settings,
@@ -269,7 +269,7 @@ class PhonopyWorkChain(WorkChain):
             # self.ctx[label]['forces'] -> ArrayData()('final')
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
-        if self.ctx.phonon_setting_info['is_nac']:  # NAC the last one
+        if self.is_nac():
             label = 'born_and_epsilon_cal'
             node_id = calc_nodes_Dict['nac'][0]
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)

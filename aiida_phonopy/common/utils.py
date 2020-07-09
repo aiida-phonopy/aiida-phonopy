@@ -340,7 +340,7 @@ def get_phonopy_instance(structure, phonon_settings_dict, params):
     from phonopy import Phonopy
     phonon = Phonopy(
         phonopy_atoms_from_structure(structure),
-        phonon_settings_dict['supercell_matrix'],
+        supercell_matrix=phonon_settings_dict['supercell_matrix'],
         primitive_matrix='auto',
         symprec=phonon_settings_dict['symmetry_tolerance'])
     if 'nac_params' in params:
@@ -363,7 +363,7 @@ def get_phono3py_instance(structure, phonon_settings_dict, params):
         ph_smat = None
     ph3py = Phono3py(
         phonopy_atoms_from_structure(structure),
-        phonon_settings_dict['supercell_matrix'],
+        supercell_matrix=phonon_settings_dict['supercell_matrix'],
         primitive_matrix='auto',
         phonon_supercell_matrix=ph_smat,
         symprec=phonon_settings_dict['symmetry_tolerance'])
@@ -512,6 +512,11 @@ def _update_structure_info(ph_settings, ph):
     ph_settings['symmetry'] = {
         'number': ph.symmetry.dataset['number'],
         'international': ph.symmetry.dataset['international']}
+
+    if 'phonon_supercell_matrix' in ph.__dir__():
+        if ph.phonon_supercell_matrix is not None:
+            ph_settings['phonon_displacement_dataset'] = ph.phonon_dataset
+
     return ph_settings
 
 
