@@ -387,6 +387,7 @@ class IterHarmonicApprox(WorkChain):
                 cls.run_initial_phonon,
             ),
             while_(cls.is_loop_finished)(
+                cls.generate_displacements,
                 cls.run_phonon,
             ),
         )
@@ -426,8 +427,8 @@ class IterHarmonicApprox(WorkChain):
         self.report('{} pk = {}'.format(inputs['metadata'].label, future.pk))
         self.to_context(**{'phonon_0': future})
 
-    def run_phonon(self):
-        self.report("run_phonon_%d" % self.ctx.iteration)
+    def generate_displacements(self):
+        self.report("run_generate_displacements_%d" % self.ctx.iteration)
 
         n_ave = self.inputs.number_of_steps_for_fitting.value
 
@@ -441,8 +442,12 @@ class IterHarmonicApprox(WorkChain):
             nodes = self.ctx.prev_nodes
         else:
             nodes = self.ctx.prev_nodes[-n_ave:]
-        dataset = self._set_ave_fc(nodes)
-        inputs = self._get_phonopy_inputs(dataset, False)
+        self.ctx.dataset = self._set_ave_fc(nodes)
+
+    def run_phonon(self):
+        self.report("run_phonon_%d" % self.ctx.iteration)
+
+        inputs = self._get_phonopy_inputs(self.ctx.dataset, False)
         label = "Phonon calculation %d" % self.ctx.iteration
         inputs['metadata'].label = label
         inputs['metadata'].description = label

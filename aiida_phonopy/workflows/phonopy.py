@@ -2,8 +2,8 @@ from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
-from aiida_phonopy.common.generate_inputs import (get_calcjob_builder,
-                                                  get_immigrant_builder)
+from aiida_phonopy.common.builders import (
+    get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     get_force_constants, get_nac_params, get_phonon,
     generate_phonopy_cells, check_imported_supercell_structure,
@@ -80,7 +80,7 @@ class PhonopyWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(PhonopyWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('phonon_settings', valid_type=Dict, required=True)
         spec.input('displacement_dataset', valid_type=Dict, required=False)
@@ -355,9 +355,10 @@ class PhonopyWorkChain(WorkChain):
         builder.metadata.options.update(self.inputs.options)
         builder.metadata.label = self.inputs.metadata.label
         builder.force_sets = self.ctx.force_sets
-        if 'nac_params' in self.ctx:
-            builder.nac_params = self.ctx.nac_params
-            builder.primitive = self.ctx.primitive
+        # if 'nac_params' in self.ctx:
+        #     builder.nac_params = self.ctx.nac_params
+        #     builder.primitive = self.ctx.primitive
+        builder.fc_only = Bool(True)
         future = self.submit(builder)
 
         self.report('phonopy calculation: {}'.format(future.pk))
@@ -366,14 +367,15 @@ class PhonopyWorkChain(WorkChain):
 
     def collect_data(self):
         self.report('collect data')
-        self.out('thermal_properties',
-                 self.ctx.phonon_properties.outputs.thermal_properties)
-        self.out('dos', self.ctx.phonon_properties.outputs.dos)
-        self.out('pdos', self.ctx.phonon_properties.outputs.pdos)
-        self.out('band_structure',
-                 self.ctx.phonon_properties.outputs.band_structure)
-        self.out('force_constants',
-                 self.ctx.phonon_properties.outputs.force_constants)
+        ph_props = ('thermal_properties',
+                    'dos',
+                    'pdos',
+                    'band_structure',
+                    'force_constants')
+
+        for prop in ph_props:
+            if prop in self.ctx.phonon_properties.outputs:
+                self.out(prop, self.ctx.phonon_properties.outputs[prop])
 
         self.report('finish phonon')
 

@@ -1,10 +1,8 @@
-import numpy as np
-from phonopy import Phonopy
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
-from aiida_phonopy.common.generate_inputs import get_calcjob_builder
+from aiida_phonopy.common.builders import get_calcjob_builder
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells, get_nac_params,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
@@ -23,7 +21,7 @@ class Phono3pyWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(Phono3pyWorkChain, cls).define(spec)
+        super().define(spec)
         spec.expose_inputs(PhonopyWorkChain,
                            exclude=['immigrant_calculation_folders',
                                     'calculation_nodes',
