@@ -70,13 +70,14 @@ def get_phonopy_yaml_txt(structure,
 
 def get_phonopy_options(settings):
     mesh_opts = []
-    mesh = settings['mesh']
-    try:
-        length = float(mesh)
-        mesh_opts.append('--mesh=%f' % length)
-    except TypeError:
-        mesh_opts.append('--mesh=\"%d %d %d\"' % tuple(mesh))
-    mesh_opts.append('--nowritemesh')
+    if 'mesh' in settings:
+        mesh = settings['mesh']
+        try:
+            length = float(mesh)
+            mesh_opts.append('--mesh=%f' % length)
+        except TypeError:
+            mesh_opts.append('--mesh=\"%d %d %d\"' % tuple(mesh))
+        mesh_opts.append('--nowritemesh')
 
     fc_opts = []
     if 'fc_calculator' in settings:

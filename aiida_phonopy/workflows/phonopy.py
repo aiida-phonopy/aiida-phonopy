@@ -81,26 +81,23 @@ class PhonopyWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('structure', valid_type=StructureData, required=True)
-        spec.input('phonon_settings', valid_type=Dict, required=True)
+        spec.input('structure', valid_type=StructureData)
+        spec.input('phonon_settings', valid_type=Dict)
+        spec.input('symmetry_tolerance', valid_type=Float,
+                   default=lambda: Float(1e-5))
+        spec.input('dry_run', valid_type=Bool, default=lambda: Bool(False))
+        spec.input('subtract_residual_forces', valid_type=Bool,
+                   default=lambda: Bool(False))
+        spec.input('run_phonopy', valid_type=Bool, default=lambda: Bool(False))
+        spec.input('remote_phonopy', valid_type=Bool,
+                   default=lambda: Bool(False))
         spec.input('displacement_dataset', valid_type=Dict, required=False)
-        spec.input('immigrant_calculation_folders',
-                   valid_type=Dict, required=False)
-        spec.input('calculation_nodes',
-                   valid_type=Dict, required=False)
+        spec.input('immigrant_calculation_folders', valid_type=Dict,
+                   required=False)
+        spec.input('calculation_nodes', valid_type=Dict, required=False)
         spec.input('calculator_settings', valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
         spec.input('options', valid_type=Dict, required=False)
-        spec.input('symmetry_tolerance', valid_type=Float, required=False,
-                   default=lambda: Float(1e-5))
-        spec.input('dry_run', valid_type=Bool, required=False,
-                   default=lambda: Bool(False))
-        spec.input('subtract_residual_forces', valid_type=Bool, required=False,
-                   default=lambda: Bool(False))
-        spec.input('run_phonopy', valid_type=Bool, required=False,
-                   default=lambda: Bool(False))
-        spec.input('remote_phonopy', valid_type=Bool, required=False,
-                   default=lambda: Bool(False))
 
         spec.outline(
             cls.initialize,
@@ -142,7 +139,7 @@ class PhonopyWorkChain(WorkChain):
         spec.output('band_structure', valid_type=BandsData, required=False)
         spec.output('dos', valid_type=XyData, required=False)
         spec.output('pdos', valid_type=XyData, required=False)
-        spec.output('phonon_setting_info', valid_type=Dict, required=True)
+        spec.output('phonon_setting_info', valid_type=Dict)
 
     def dry_run(self):
         return self.inputs.dry_run
@@ -355,10 +352,9 @@ class PhonopyWorkChain(WorkChain):
         builder.metadata.options.update(self.inputs.options)
         builder.metadata.label = self.inputs.metadata.label
         builder.force_sets = self.ctx.force_sets
-        # if 'nac_params' in self.ctx:
-        #     builder.nac_params = self.ctx.nac_params
-        #     builder.primitive = self.ctx.primitive
-        builder.fc_only = Bool(True)
+        if 'nac_params' in self.ctx:
+            builder.nac_params = self.ctx.nac_params
+            builder.primitive = self.ctx.primitive
         future = self.submit(builder)
 
         self.report('phonopy calculation: {}'.format(future.pk))

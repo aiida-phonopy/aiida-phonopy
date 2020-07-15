@@ -20,7 +20,6 @@ def generate_phonopy_cells(phonon_settings,
                            symmetry_tolerance,
                            dataset=None):
     ph_settings = _get_setting_info(phonon_settings,
-                                    structure,
                                     symmetry_tolerance)
 
     ph = get_phonopy_instance(structure, ph_settings, {})
@@ -43,7 +42,6 @@ def generate_phono3py_cells(phonon_settings,
                             symmetry_tolerance,
                             dataset=None):
     ph_settings = _get_setting_info(phonon_settings,
-                                    structure,
                                     symmetry_tolerance)
 
     ph = get_phono3py_instance(structure, ph_settings, {})
@@ -451,7 +449,6 @@ def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
 
 
 def _get_setting_info(phonon_settings,
-                      structure,
                       symmetry_tolerance,
                       code_name='phonopy'):
     """Convert AiiDA inputs to a dict

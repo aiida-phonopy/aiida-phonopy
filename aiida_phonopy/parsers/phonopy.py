@@ -65,11 +65,14 @@ class PhonopyParser(Parser):
                 fname = f.name
             self.out('thermal_properties', parse_thermal_properties(fname))
 
-        sym_dataset = self.node.inputs.settings['symmetry']
-        label = "%s (%d)" % (sym_dataset['international'],
-                             sym_dataset['number'])
         band_filename = self.node.inputs.band_structure_filename.value
         if band_filename in list_of_files:
+            if 'symmetry' in self.node.inputs.settings:
+                sym_dataset = self.node.inputs.settings['symmetry']
+                label = "%s (%d)" % (sym_dataset['international'],
+                                     sym_dataset['number'])
+            else:
+                label = None
             with output_folder.open(band_filename) as f:
                 fname = f.name
             self.out('band_structure',
