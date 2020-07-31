@@ -44,7 +44,6 @@ can be used.
 """
 
 
-@calcfunction
 def get_random_displacements(structure,
                              number_of_snapshots,
                              temperature,

@@ -24,7 +24,12 @@ def generate_phonopy_cells(phonon_settings,
 
     ph = get_phonopy_instance(structure, ph_settings, {})
     if dataset is None:
-        ph.generate_displacements(distance=ph_settings['distance'])
+        supported_keys = (
+            'distance', 'is_plusminus', 'is_diagonal', 'is_trigonal',
+            'number_of_snapshots', 'random_seed')
+        kwargs = {key: ph_settings[key]
+                  for key in ph_settings if key in supported_keys}
+        ph.generate_displacements(**kwargs)
     else:
         ph.dataset = dataset.get_dict()
 
