@@ -233,8 +233,8 @@ class PhonopyWorkChain(WorkChain):
         self.report('import calculation data in files')
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
-        digits = len(str(len(calc_folders_Dict['force'])))
-        for i, force_folder in enumerate(calc_folders_Dict['force']):
+        digits = len(str(len(calc_folders_Dict['forces'])))
+        for i, force_folder in enumerate(calc_folders_Dict['forces']):
             label = "force_calc_%s" % str(i + 1).zfill(digits)
             builder = get_immigrant_builder(force_folder,
                                             self.inputs.calculator_settings,

@@ -2,10 +2,12 @@ from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_
-from aiida_phonopy.common.builders import get_calcjob_builder
+from aiida_phonopy.common.builders import (
+    get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells, get_nac_params,
-    get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
+    get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
+    check_imported_supercell_structure)
 
 
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
@@ -23,8 +25,7 @@ class Phono3pyWorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.expose_inputs(PhonopyWorkChain,
-                           exclude=['immigrant_calculation_folders',
-                                    'calculation_nodes',
+                           exclude=['calculation_nodes',
                                     'run_phonopy',
                                     'remote_phonopy'])
         spec.input('run_phono3py', valid_type=Bool, required=False,
@@ -34,7 +35,12 @@ class Phono3pyWorkChain(WorkChain):
 
         spec.outline(
             cls.initialize,
-            cls.run_force_and_nac_calculations,
+            if_(cls.import_calculations_from_files)(
+                cls.read_force_and_nac_calculations_from_files,
+                cls.check_imported_supercell_structures,
+            ).else_(
+                cls.run_force_and_nac_calculations,
+            ),
             if_(cls.dry_run)(
                 cls.postprocess_of_dry_run,
             ).else_(
@@ -67,6 +73,16 @@ class Phono3pyWorkChain(WorkChain):
                     required=False)
         spec.output('nac_params', valid_type=ArrayData, required=False)
         spec.output('phonon_setting_info', valid_type=Dict, required=True)
+        spec.exit_code(700, 'ERROR_NO_FORCES_CALCULATOR_SETTING',
+                       message='Force calculator setting not found.')
+        spec.exit_code(701, 'ERROR_NO_NAC_CALCULATOR_SETTING',
+                       message='NAC calculator setting not found.')
+        spec.exit_code(
+            710, 'ERROR_NO_FORCES_FOLDERS',
+            message='Forces calculation folders for immigrant not found.')
+        spec.exit_code(
+            711, 'ERROR_NO_NAC_FOLDER',
+            message='NAC calculation folder for immigrant not found.')
 
     def is_nac(self):
         if 'is_nac' in self.inputs.phonon_settings.attributes:
@@ -83,10 +99,24 @@ class Phono3pyWorkChain(WorkChain):
     def run_phono3py(self):
         return self.inputs.run_phono3py
 
+    def import_calculations_from_files(self):
+        return 'immigrant_calculation_folders' in self.inputs
+
     def initialize(self):
         """Set default settings and create supercells and primitive cell"""
 
         self.report('initialize')
+
+        if 'forces' not in self.inputs.calculator_settings.attributes:
+            self.report("'forces' item is necessary in "
+                        "calculator_settings input.")
+            return self.exit_code.ERROR_NO_FORCES_CALCULATOR_SETTING
+
+        if self.is_nac():
+            if 'nac' not in self.inputs.calculator_settings.attributes:
+                self.report("'nac' item is necessary in "
+                            "calculator_settings input.")
+                return self.exit_code.ERROR_NO_NAC_CALCULATOR_SETTING
 
         if self.inputs.run_phono3py and self.inputs.remote_phono3py:
             if ('code_string' not in self.inputs or
@@ -166,6 +196,90 @@ class Phono3pyWorkChain(WorkChain):
             future = self.submit(builder)
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon_calc': future})
+
+    def read_force_and_nac_calculations_from_files(self):
+        self.report('import calculation data in files')
+
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+
+        if 'forces' not in calc_folders_Dict.attributes:
+            return self.exit_code.ERROR_NO_FORCES_FOLDERS
+
+        if self.is_nac():  # NAC the last one
+            if 'nac' not in calc_folders_Dict.attributes:
+                return self.exit_code.ERROR_NO_NAC_FOLDER
+
+        digits = len(str(len(calc_folders_Dict['forces'])))
+        for i, force_folder in enumerate(calc_folders_Dict['forces']):
+            label = "force_calc_%s" % str(i + 1).zfill(digits)
+            builder = get_immigrant_builder(force_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='forces')
+            builder.metadata.label = label
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
+
+        if 'phonon_forces' in calc_folders_Dict.attributes:
+            folders = calc_folders_Dict['phonon_forces']
+            digits = len(str(len(folders)))
+            for i, force_folder in enumerate(folders):
+                label = "force_calc_%s" % str(i + 1).zfill(digits)
+                builder = get_immigrant_builder(
+                    force_folder,
+                    self.inputs.calculator_settings,
+                    calc_type='phonon_forces')
+                builder.metadata.label = label
+                future = self.submit(builder)
+                self.report('{} pk = {}'.format(label, future.pk))
+                self.to_context(**{label: future})
+
+        if self.is_nac():  # NAC the last one
+            label = 'born_and_epsilon_calc'
+            builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
+                                            self.inputs.calculator_settings,
+                                            calc_type='nac')
+            builder.metadata.label = label
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
+
+    def check_imported_supercell_structures(self):
+        self.report('check imported supercell structures')
+
+        msg = ("Immigrant failed because of inconsistency of supercell"
+               "structure")
+
+        for key in self.ctx.supercells:
+            num = key.split('_')[-1]
+            calc = self.ctx["force_calc_%s" % num]
+            if type(calc) is dict:  # dict when using get_data_from_node_id
+                calc_dict = calc
+            else:
+                calc_dict = calc.inputs
+            supercell_ref = self.ctx.supercells["supercell_%s" % num]
+            supercell_calc = calc_dict['structure']
+            if not check_imported_supercell_structure(
+                    supercell_ref,
+                    supercell_calc,
+                    self.inputs.symmetry_tolerance):
+                raise RuntimeError(msg)
+
+        for key in self.ctx.phonon_supercells:
+            num = key.split('_')[-1]
+            calc = self.ctx["phonon_force_calc_%s" % num]
+            if type(calc) is dict:    # dict when using get_data_from_node_id
+                calc_dict = calc
+            else:
+                calc_dict = calc.inputs
+            supercell_ref = self.ctx.phonon_supercells[
+                "phonon_supercell_%s" % num]
+            supercell_calc = calc_dict['structure']
+            if not check_imported_supercell_structure(
+                    supercell_ref,
+                    supercell_calc,
+                    self.inputs.symmetry_tolerance):
+                raise RuntimeError(msg)
 
     def create_force_sets(self):
         """Build datasets from forces of supercells with displacments"""
