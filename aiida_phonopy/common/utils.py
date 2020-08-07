@@ -64,32 +64,6 @@ def generate_phono3py_cells(phonon_settings,
 
 
 @calcfunction
-def check_imported_supercell_structure(supercell_ref,
-                                       supercell_calc,
-                                       symmetry_tolerance):
-    symprec = symmetry_tolerance.value
-    cell_diff = np.subtract(supercell_ref.cell, supercell_calc.cell)
-    if (np.abs(cell_diff) > symprec).any():
-        succeeded = Bool(False)
-        succeeded.label = "False"
-        return succeeded
-
-    positions_ref = [site.position for site in supercell_ref.sites]
-    positions_calc = [site.position for site in supercell_calc.sites]
-    diff = np.subtract(positions_ref, positions_calc)
-    diff -= np.rint(diff)
-    dist = np.sqrt(np.sum(np.dot(diff, supercell_ref.cell) ** 2, axis=1))
-    if (dist > symprec).any():
-        succeeded = Bool(False)
-        succeeded.label = "False"
-        return succeeded
-
-    succeeded = Bool(True)
-    succeeded.label = "True"
-    return succeeded
-
-
-@calcfunction
 def get_vasp_force_sets_dict(**forces_dict):
     forces = []
     energies = []
@@ -237,6 +211,29 @@ def get_data_from_node_id(node_id):
         return {'forces': forces, 'structure': structure}
     else:
         raise RuntimeError("Forces or NAC params were not found.")
+
+
+def compare_structures(cell_ref, cell_calc, symmetry_tolerance):
+    symprec = symmetry_tolerance.value
+    cell_diff = np.subtract(cell_ref.cell, cell_calc.cell)
+    if (np.abs(cell_diff) > symprec).any():
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
+
+    positions_ref = [site.position for site in cell_ref.sites]
+    positions_calc = [site.position for site in cell_calc.sites]
+    diff = np.subtract(positions_ref, positions_calc)
+    diff -= np.rint(diff)
+    dist = np.sqrt(np.sum(np.dot(diff, cell_ref.cell) ** 2, axis=1))
+    if (dist > symprec).any():
+        succeeded = Bool(False)
+        succeeded.label = "False"
+        return succeeded
+
+    succeeded = Bool(True)
+    succeeded.label = "True"
+    return succeeded
 
 
 def get_mesh_property_data(ph, mesh):

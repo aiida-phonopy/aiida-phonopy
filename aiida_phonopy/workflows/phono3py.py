@@ -1,13 +1,13 @@
 from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Bool, Str, Code
+from aiida.orm import Float, Bool
 from aiida.engine import if_
 from aiida_phonopy.common.builders import (
     get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells, get_nac_params,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
-    check_imported_supercell_structure)
+    compare_structures)
 
 
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
@@ -37,7 +37,7 @@ class Phono3pyWorkChain(WorkChain):
             cls.initialize,
             if_(cls.import_calculations_from_files)(
                 cls.read_force_and_nac_calculations_from_files,
-                cls.check_imported_supercell_structures,
+                cls.check_imported_structures,
             ).else_(
                 cls.run_force_and_nac_calculations,
             ),
@@ -244,7 +244,7 @@ class Phono3pyWorkChain(WorkChain):
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
-    def check_imported_supercell_structures(self):
+    def check_imported_structures(self):
         self.report('check imported supercell structures')
 
         msg = ("Immigrant failed because of inconsistency of supercell"
@@ -259,7 +259,7 @@ class Phono3pyWorkChain(WorkChain):
                 calc_dict = calc.inputs
             supercell_ref = self.ctx.supercells["supercell_%s" % num]
             supercell_calc = calc_dict['structure']
-            if not check_imported_supercell_structure(
+            if not compare_structures(
                     supercell_ref,
                     supercell_calc,
                     self.inputs.symmetry_tolerance):
@@ -275,10 +275,9 @@ class Phono3pyWorkChain(WorkChain):
             supercell_ref = self.ctx.phonon_supercells[
                 "phonon_supercell_%s" % num]
             supercell_calc = calc_dict['structure']
-            if not check_imported_supercell_structure(
-                    supercell_ref,
-                    supercell_calc,
-                    self.inputs.symmetry_tolerance):
+            if not compare_structures(supercell_ref,
+                                      supercell_calc,
+                                      self.inputs.symmetry_tolerance):
                 raise RuntimeError(msg)
 
     def create_force_sets(self):
@@ -319,7 +318,7 @@ class Phono3pyWorkChain(WorkChain):
                 "in the calculation. Please check the calculation setting.")
 
         kwargs = {}
-        if self.import_calculations():
+        if self.import_calculations_from_files():
             kwargs['primitive'] = self.ctx.primitive
         self.ctx.nac_params = get_nac_params(
             calc_dict['born_charges'],

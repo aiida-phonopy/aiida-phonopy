@@ -6,7 +6,7 @@ from aiida_phonopy.common.builders import (
     get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     get_force_constants, get_nac_params, get_phonon,
-    generate_phonopy_cells, check_imported_supercell_structure,
+    generate_phonopy_cells, compare_structures,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
 
@@ -108,7 +108,7 @@ class PhonopyWorkChain(WorkChain):
                 if_(cls.import_calculations_from_nodes)(
                     cls.read_calculation_data_from_nodes,
                 ),
-                cls.check_imported_supercell_structures,
+                cls.check_imported_structures,
             ).else_(
                 cls.run_force_and_nac_calculations,
             ),
@@ -274,7 +274,7 @@ class PhonopyWorkChain(WorkChain):
             # self.ctx[label]['dielectrics'] -> ArrayData()('epsilon')
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
-    def check_imported_supercell_structures(self):
+    def check_imported_structures(self):
         self.report('check imported supercell structures')
 
         msg = ("Immigrant failed because of inconsistency of supercell"
@@ -289,10 +289,9 @@ class PhonopyWorkChain(WorkChain):
                 calc_dict = calc.inputs
             supercell_ref = self.ctx.supercells["supercell_%s" % num]
             supercell_calc = calc_dict['structure']
-            if not check_imported_supercell_structure(
-                    supercell_ref,
-                    supercell_calc,
-                    self.inputs.symmetry_tolerance):
+            if not compare_structures(supercell_ref,
+                                      supercell_calc,
+                                      self.inputs.symmetry_tolerance):
                 raise RuntimeError(msg)
 
     def postprocess_of_dry_run(self):
