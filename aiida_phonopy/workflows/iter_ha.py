@@ -120,11 +120,11 @@ def collect_dataset(number_of_steps_for_fitting,
 
     d, f, energies = _extract_dataset_from_db(forces_in_db, ph_info_in_db)
 
-    displacements, forces, included = _create_dataset(
+    displacements, forces, included = create_dataset(
         d, f, energies,
-        number_of_steps_for_fitting.value,
-        include_ratio.value,
-        linear_decay.value)
+        max_items=number_of_steps_for_fitting.value,
+        ratio=include_ratio.value,
+        linear_decay=linear_decay.value)
     dataset = ArrayData()
     dataset.set_array('forces', forces)
     dataset.set_array('displacements', displacements)
@@ -132,6 +132,26 @@ def collect_dataset(number_of_steps_for_fitting,
                                     'included': included})
 
     return {'dataset': dataset, 'supercell_energies': supercell_energies}
+
+
+def create_dataset(displacements, forces, energies,
+                   max_items=None, ratio=None, linear_decay=False):
+    included = _choose_snapshots_by_linear_decay(
+        displacements, forces, max_items=max_items, linear_decay=linear_decay)
+
+    # Remove snapshots that have high energies when include_ratio is given.
+    if energies is not None and ratio is not None:
+        if 0 < ratio and ratio < 1:
+            included = _remove_high_energy_snapshots(energies, included, ratio)
+
+    _displacements, _forces, _energies = _include_snapshots(
+        displacements, forces, energies, included)
+
+    # Concatenate the data
+    d = np.concatenate(_displacements, axis=0)
+    f = np.concatenate(_forces, axis=0)
+
+    return d, f, included
 
 
 def _extract_dataset_from_db(forces_in_db, ph_info_in_db):
@@ -154,28 +174,9 @@ def _extract_dataset_from_db(forces_in_db, ph_info_in_db):
     return displacements, forces, energies
 
 
-def _create_dataset(displacements, forces, energies,
-                    max_items, ratio, linear_decay):
-    included = _choose_snapshots_by_linear_decay(
-        displacements, forces, max_items, linear_decay=linear_decay)
-
-    # Remove snapshots that have high energies when include_ratio is given.
-    if energies is not None and ratio is not None:
-        if 0 < ratio and ratio < 1:
-            included = _remove_high_energy_snapshots(energies, included, ratio)
-
-    _displacements, _forces, _energies = _include_snapshots(
-        displacements, forces, energies, included)
-
-    # Concatenate the data
-    d = np.concatenate(_displacements, axis=0)
-    f = np.concatenate(_forces, axis=0)
-
-    return d, f, included
-
-
-def _choose_snapshots_by_linear_decay(displacements, forces, max_items,
-                                      linear_decay=True):
+def _choose_snapshots_by_linear_decay(displacements, forces,
+                                      max_items=None,
+                                      linear_decay=False):
     """Choose snapshots by linear_decay
 
     With linear_decay=True, numbers of snapshots to be taken
@@ -194,11 +195,15 @@ def _choose_snapshots_by_linear_decay(displacements, forces, max_items,
     assert len(forces) == len(displacements)
 
     nitems = len(forces)
+    if max_items is None:
+        _max_items = nitems
+    else:
+        _max_items = max_items
 
     if linear_decay:
-        ratios = (np.arange(max_items, dtype=float) + 1) / max_items
+        ratios = (np.arange(_max_items, dtype=float) + 1) / _max_items
     else:
-        ratios = np.ones(max_items, dtype=int)
+        ratios = np.ones(_max_items, dtype=int)
     ratios = ratios[-nitems:]
     included = []
 

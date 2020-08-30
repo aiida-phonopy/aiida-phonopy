@@ -205,9 +205,12 @@ class PhonopyWorkChain(WorkChain):
             self.ctx.supercells[label] = return_vals['supercell']
 
     def run_force_and_nac_calculations(self):
-        self.report('run force calculations')
+        self._run_force_calculations()
+        self._run_nac_calculation()
 
+    def _run_force_calculations(self):
         # Forces
+        self.report('run force calculations')
         for key in self.ctx.supercells:
             builder = get_calcjob_builder(self.ctx.supercells[key],
                                           self.inputs.calculator_settings,
@@ -218,7 +221,9 @@ class PhonopyWorkChain(WorkChain):
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
+    def _run_nac_calculation(self):
         # Born charges and dielectric constant
+        self.report('run nac calculation')
         if self.is_nac():
             self.report('calculate born charges and dielectric constant')
             builder = get_calcjob_builder(self.ctx.primitive,
