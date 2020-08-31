@@ -1,7 +1,7 @@
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
 from aiida.orm import Float, Bool, Str, Code
-from aiida.engine import if_
+from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import (
     get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
@@ -103,7 +103,10 @@ class PhonopyWorkChain(WorkChain):
             cls.initialize,
             if_(cls.import_calculations)(
                 if_(cls.import_calculations_from_files)(
-                    cls.read_force_and_nac_calculations_from_files,
+                    while_(cls.continue_import)(
+                        cls.read_force_calculations_from_files,
+                    ),
+                    cls.read_nac_calculations_from_files,
                 ),
                 if_(cls.import_calculations_from_nodes)(
                     cls.read_calculation_data_from_nodes,
@@ -124,9 +127,10 @@ class PhonopyWorkChain(WorkChain):
                     ).else_(
                         cls.create_force_constants,
                         cls.run_phonopy_in_workchain,
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
+            cls.finalize,
         )
         spec.output('force_constants', valid_type=ArrayData, required=False)
         spec.output('primitive', valid_type=StructureData, required=False)
@@ -164,10 +168,16 @@ class PhonopyWorkChain(WorkChain):
 
     def import_calculations(self):
         if 'immigrant_calculation_folders' in self.inputs:
+            self.ctx.num_imported = 0
+            self.ctx.num_supercell_forces = len(
+                self.inputs.immigrant_calculation_folders['forces'])
             return True
         if 'calculation_nodes' in self.inputs:
             return True
         return False
+
+    def continue_import(self):
+        return self.ctx.num_imported < self.ctx.num_supercell_forces
 
     def initialize(self):
         """Set default settings and create supercells and primitive cell"""
@@ -234,22 +244,27 @@ class PhonopyWorkChain(WorkChain):
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon_calc': future})
 
-    def read_force_and_nac_calculations_from_files(self):
-        self.report('import calculation data in files')
+    def read_force_calculations_from_files(self):
+        self.report('import supercell force calculation data in files')
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
-        digits = len(str(len(calc_folders_Dict['forces'])))
-        for i, force_folder in enumerate(calc_folders_Dict['forces']):
-            label = "force_calc_%s" % str(i + 1).zfill(digits)
-            builder = get_immigrant_builder(force_folder,
-                                            self.inputs.calculator_settings,
-                                            calc_type='forces')
-            builder.metadata.label = label
-            future = self.submit(builder)
-            self.report('{} pk = {}'.format(label, future.pk))
-            self.to_context(**{label: future})
+        digits = len(str(self.ctx.num_supercell_forces))
+        i = self.ctx.num_imported
+        self.ctx.num_imported += 1
+        force_folder = calc_folders_Dict['forces'][i]
+        label = "force_calc_%s" % str(i + 1).zfill(digits)
+        builder = get_immigrant_builder(force_folder,
+                                        self.inputs.calculator_settings,
+                                        calc_type='forces')
+        builder.metadata.label = label
+        future = self.submit(builder)
+        self.report('{} pk = {}'.format(label, future.pk))
+        self.to_context(**{label: future})
 
+    def read_nac_calculations_from_files(self):
         if self.is_nac():  # NAC the last one
+            self.report('import NAC calculation data in files')
+            calc_folders_Dict = self.inputs.immigrant_calculation_folders
             label = 'born_and_epsilon_calc'
             builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
                                             self.inputs.calculator_settings,
@@ -403,3 +418,6 @@ class PhonopyWorkChain(WorkChain):
         self.out('band_structure', result['band_structure'])
 
         self.report('finish phonon')
+
+    def finalize(self):
+        self.report('phonopy calculation has been done.')
