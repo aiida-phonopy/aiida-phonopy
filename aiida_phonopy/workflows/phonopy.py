@@ -245,21 +245,28 @@ class PhonopyWorkChain(WorkChain):
             self.to_context(**{'born_and_epsilon_calc': future})
 
     def read_force_calculations_from_files(self):
-        self.report('import supercell force calculation data in files')
+        self.report('import supercell force calculation data in files.')
+        num_batch = 50
+        self.report('%d calculations per batch.' % num_batch)
 
-        calc_folders_Dict = self.inputs.immigrant_calculation_folders
-        digits = len(str(self.ctx.num_supercell_forces))
-        i = self.ctx.num_imported
-        self.ctx.num_imported += 1
-        force_folder = calc_folders_Dict['forces'][i]
-        label = "force_calc_%s" % str(i + 1).zfill(digits)
-        builder = get_immigrant_builder(force_folder,
-                                        self.inputs.calculator_settings,
-                                        calc_type='forces')
-        builder.metadata.label = label
-        future = self.submit(builder)
-        self.report('{} pk = {}'.format(label, future.pk))
-        self.to_context(**{label: future})
+        initial_count = self.ctx.num_imported
+        for i in range(initial_count, initial_count + num_batch):
+            calc_folders_Dict = self.inputs.immigrant_calculation_folders
+            digits = len(str(self.ctx.num_supercell_forces))
+
+            force_folder = calc_folders_Dict['forces'][i]
+            label = "force_calc_%s" % str(i + 1).zfill(digits)
+            builder = get_immigrant_builder(force_folder,
+                                            self.inputs.calculator_settings,
+                                            calc_type='forces')
+            builder.metadata.label = label
+            future = self.submit(builder)
+            self.report('{} pk = {}'.format(label, future.pk))
+            self.to_context(**{label: future})
+
+            self.ctx.num_imported += 1
+            if not self.continue_import():
+                break
 
     def read_nac_calculations_from_files(self):
         if self.is_nac():  # NAC the last one
