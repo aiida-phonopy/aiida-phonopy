@@ -27,7 +27,6 @@
     "setup_requires": [
         "reentry"
     ],
-    "reentry_register": true,
     "entry_points": {
         "aiida.calculations": [
             "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation"
@@ -37,6 +36,7 @@
         ],
         "aiida.workflows": [
             "phonopy.phonopy = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
+            "phonopy.phono3py = aiida_phonopy.workflows.phono3py: Phono3pyWorkChain",
             "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
         ]
     },
