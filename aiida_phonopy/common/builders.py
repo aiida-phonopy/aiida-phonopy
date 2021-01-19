@@ -1,3 +1,4 @@
+from aiida.engine import calcfunction
 from aiida.plugins import DataFactory, WorkflowFactory, CalculationFactory
 from aiida.common import InputValidationError
 from aiida.orm import Str, Bool, Code
@@ -7,27 +8,54 @@ Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 
 
-def get_calcjob_builder(structure, calculator_settings, calc_type=None,
-                        pressure=0.0, label=None):
-    if calc_type:
-        code = Code.get_from_string(
-            calculator_settings[calc_type]['code_string'])
-    else:
-        code = Code.get_from_string(
-            calculator_settings['code_string'])
+@calcfunction
+def get_force_calcjob_inputs(calculator_settings, supercell):
+    return _get_calcjob_inputs(calculator_settings, supercell, 'forces')
 
+
+@calcfunction
+def get_nac_calcjob_inputs(calculator_settings, unitcell):
+    return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
+
+
+def _get_calcjob_inputs(calculator_settings, supercell, calc_type):
+    code = Code.get_from_string(calculator_settings[calc_type]['code_string'])
     if code.attributes['input_plugin'] in ['vasp.vasp']:
-        if calc_type is None:
-            settings_dict = calculator_settings.get_dict()
-        else:
-            settings_dict = calculator_settings[calc_type]
-
-        return _get_vasp_builder(structure,
-                                 settings_dict,
-                                 pressure=pressure,
-                                 label=label)
+        settings = calculator_settings[calc_type]
+        builder_inputs = {'options': _get_vasp_options(settings),
+                          'parameters': _get_vasp_parameters(settings),
+                          'settings': _get_vasp_settings(settings),
+                          'kpoints': _get_vasp_kpoints(settings, supercell)}
     else:
         raise RuntimeError("Code could not be found.")
+
+    potential_family = Str(settings['potential_family'])
+    potential_mapping = Dict(dict=settings['potential_mapping'])
+    builder_inputs.update({'potential_family': potential_family,
+                           'potential_mapping': potential_mapping})
+    return builder_inputs
+
+
+def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
+    code = Code.get_from_string(code_string)
+    if code.attributes['input_plugin'] in ['vasp.vasp']:
+        VaspWorkflow = WorkflowFactory('vasp.vasp')
+        builder = VaspWorkflow.get_builder()
+        if label:
+            builder.metadata.label = label
+        builder.code = Code.get_from_string(code_string)
+        builder.structure = structure
+        builder.options = builder_inputs['options']
+        builder.clean_workdir = Bool(False)
+        builder.settings = builder_inputs['settings']
+        builder.parameters = builder_inputs['parameters']
+        builder.potential_family = builder_inputs['potential_family']
+        builder.potential_mapping = builder_inputs['potential_mapping']
+        builder.kpoints = builder_inputs['kpoints']
+    else:
+        raise RuntimeError("Code could not be found.")
+
+    return builder
 
 
 def get_immigrant_builder(calculation_folder,
@@ -62,46 +90,30 @@ def get_immigrant_builder(calculation_folder,
     return builder
 
 
-def _get_vasp_builder(structure, settings_dict, pressure=0.0, label=None):
-    """
-    Generate the input paramemeters needed to run a calculation for VASP
+def _get_vasp_options(settings_dict):
+    return Dict(dict=settings_dict['options'])
 
-    :param structure:  StructureData object containing the crystal structure
-    :param settings:  dict object containing a dictionary with the
-        INCAR parameters
-    :return: Calculation process object, input dictionary
-    """
 
-    code_string = settings_dict['code_string']
-    VaspWorkflow = WorkflowFactory('vasp.vasp')
-    builder = VaspWorkflow.get_builder()
-    if label:
-        builder.metadata.label = label
-    builder.code = Code.get_from_string(code_string)
-    builder.structure = structure
-    options = Dict(dict=settings_dict['options'])
-    builder.options = options
-    builder.clean_workdir = Bool(False)
+def _get_vasp_parameters(settings_dict):
+    parameters = settings_dict['parameters']
+    incar = parameters['incar']
+    keys_lower = [key.lower() for key in incar]
+    if 'ediff' not in keys_lower:
+        incar.update({'EDIFF': 1.0E-8})
+    return Dict(dict=parameters)
 
+
+def _get_vasp_settings(settings_dict):
     if 'parser_settings' in settings_dict:
         parser_settings_dict = settings_dict['parser_settings']
     else:
         parser_settings_dict = {}
     if 'add_forces' not in parser_settings_dict:
         parser_settings_dict.update({'add_forces': True})
+    return Dict(dict={'parser_settings': parser_settings_dict})
 
-    builder.settings = DataFactory('dict')(
-        dict={'parser_settings': parser_settings_dict})
 
-    incar = dict(settings_dict['parameters'])
-    keys_lower = [key.lower() for key in incar]
-    if 'ediff' not in keys_lower:
-        incar.update({'EDIFF': 1.0E-8})
-    builder.parameters = Dict(dict=incar)
-    builder.potential_family = Str(settings_dict['potential_family'])
-    builder.potential_mapping = Dict(
-        dict=settings_dict['potential_mapping'])
-
+def _get_vasp_kpoints(settings_dict, structure):
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
     if 'kpoints_density' in settings_dict:
@@ -119,6 +131,33 @@ def _get_vasp_builder(structure, settings_dict, pressure=0.0, label=None):
             'no kpoint definition in input. '
             'Define either kpoints_density or kpoints_mesh')
 
-    builder.kpoints = kpoints
+    return kpoints
+
+
+def _get_vasp_builder(structure, settings_dict, label=None):
+    """
+    Generate the input paramemeters needed to run a calculation for VASP
+
+    :param structure:  StructureData object containing the crystal structure
+    :param settings:  dict object containing a dictionary with the
+        INCAR parameters
+    :return: Calculation process object, input dictionary
+    """
+
+    code_string = settings_dict['code_string']
+    VaspWorkflow = WorkflowFactory('vasp.vasp')
+    builder = VaspWorkflow.get_builder()
+    if label:
+        builder.metadata.label = label
+    builder.code = Code.get_from_string(code_string)
+    builder.structure = structure
+    builder.options = _get_vasp_options(settings_dict)
+    builder.clean_workdir = Bool(False)
+    builder.settings = _get_vasp_settings(settings_dict)
+    builder.parameters = _get_vasp_parameters(settings_dict)
+    builder.potential_family = Str(settings_dict['potential_family'])
+    builder.potential_mapping = Dict(
+        dict=settings_dict['potential_mapping'])
+    builder.kpoints = _get_vasp_kpoints(settings_dict, structure)
 
     return builder

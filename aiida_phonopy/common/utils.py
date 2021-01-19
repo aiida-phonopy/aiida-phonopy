@@ -88,11 +88,14 @@ def get_vasp_force_sets_dict(**forces_dict):
             else:
                 forces[num - 1] = forces_ndarray
         elif 'misc' in key:
-            energy = forces_dict[key]['total_energies']['energy_no_entropy']
-            if num == 0:
-                energy_0 = energy
-            else:
-                energies[num - 1] = energy
+            for energy_key in ('energy_extrapolated', ):
+                if energy_key in forces_dict[key]['total_energies']:
+                    energy = forces_dict[key]['total_energies'][energy_key]
+                if num == 0:
+                    energy_0 = energy
+                else:
+                    energies[num - 1] = energy
+                break
 
     if forces_0 is not None:
         for forces_ndarray in forces:
