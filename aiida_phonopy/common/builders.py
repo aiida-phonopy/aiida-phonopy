@@ -6,7 +6,7 @@ from aiida.orm import Str, Bool, Code
 KpointsData = DataFactory("array.kpoints")
 Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
-
+PotcarData = DataFactory('vasp.potcar')
 
 @calcfunction
 def get_force_calcjob_inputs(calculator_settings, supercell):
@@ -41,17 +41,24 @@ def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
     if code.attributes['input_plugin'] in ['vasp.vasp']:
         VaspWorkflow = WorkflowFactory('vasp.vasp')
         builder = VaspWorkflow.get_builder()
+        # VaspCalc = CalculationFactory('vasp.vasp')
+        # potential = PotcarData.get_potcars_from_structure(
+        #     structure, builder_inputs['potential_family'].value,
+        #     mapping=builder_inputs['potential_mapping'].get_dict())
+        # builder = VaspCalc.get_builder()
         if label:
             builder.metadata.label = label
         builder.code = Code.get_from_string(code_string)
         builder.structure = structure
-        builder.options = builder_inputs['options']
-        builder.clean_workdir = Bool(False)
         builder.settings = builder_inputs['settings']
         builder.parameters = builder_inputs['parameters']
+        builder.kpoints = builder_inputs['kpoints']
         builder.potential_family = builder_inputs['potential_family']
         builder.potential_mapping = builder_inputs['potential_mapping']
-        builder.kpoints = builder_inputs['kpoints']
+        builder.options = builder_inputs['options']
+        builder.clean_workdir = Bool(False)
+        # builder.potential = potential
+        # builder.metadata['options'].update(builder_inputs['options'].get_dict())
     else:
         raise RuntimeError("Code could not be found.")
 
