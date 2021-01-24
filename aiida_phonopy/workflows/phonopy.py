@@ -3,7 +3,8 @@ from aiida.plugins import DataFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import (
-    get_calcjob_builder, get_immigrant_builder)
+    get_calcjob_builder, get_force_calcjob_inputs,
+    get_nac_calcjob_inputs, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     get_force_constants, get_nac_params, get_phonon,
     generate_phonopy_cells, compare_structures,
@@ -221,11 +222,14 @@ class PhonopyWorkChain(WorkChain):
     def _run_force_calculations(self):
         # Forces
         self.report('run force calculations')
+        builder_inputs = get_force_calcjob_inputs(
+            self.inputs.calculator_settings, self.ctx.supercell)
         for key in self.ctx.supercells:
-            builder = get_calcjob_builder(self.ctx.supercells[key],
-                                          self.inputs.calculator_settings,
-                                          calc_type='forces',
-                                          label=key)
+            builder = get_calcjob_builder(
+                self.ctx.supercells[key],
+                self.inputs.calculator_settings['forces']['code_string'],
+                builder_inputs,
+                label=key)
             future = self.submit(builder)
             label = "force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
@@ -236,10 +240,13 @@ class PhonopyWorkChain(WorkChain):
         self.report('run nac calculation')
         if self.is_nac():
             self.report('calculate born charges and dielectric constant')
-            builder = get_calcjob_builder(self.ctx.primitive,
-                                          self.inputs.calculator_settings,
-                                          calc_type='nac',
-                                          label='born_and_epsilon')
+            builder_inputs = get_nac_calcjob_inputs(
+                self.inputs.calculator_settings, self.ctx.primitive)
+            builder = get_calcjob_builder(
+                self.ctx.primitive,
+                self.inputs.calculator_settings['nac']['code_string'],
+                builder_inputs,
+                label='born_and_epsilon')
             future = self.submit(builder)
             self.report('born_and_epsilon: {}'.format(future.pk))
             self.to_context(**{'born_and_epsilon_calc': future})
