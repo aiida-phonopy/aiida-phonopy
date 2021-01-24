@@ -3,7 +3,8 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Bool
 from aiida.engine import if_
 from aiida_phonopy.common.builders import (
-    get_calcjob_builder, get_immigrant_builder)
+    get_force_calcjob_inputs, get_phonon_force_calcjob_inputs,
+    get_nac_calcjob_inputs, get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells, get_nac_params,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
@@ -163,39 +164,58 @@ class Phono3pyWorkChain(WorkChain):
         self.report('Finish here because of dry-run setting')
 
     def run_force_and_nac_calculations(self):
-        self.report('run force calculations')
+        self._run_force_calculations()
+        if 'phonon_supercell' in self.ctx:
+            self._run_phonon_force_calculations()
+        if self.is_nac():
+            self._run_nac_calculation()
 
-        # Forces
+    def _run_force_calculations(self):
+        """FC3 force calculation"""
+        self.report('run force calculations')
+        builder_inputs = get_force_calcjob_inputs(
+            self.inputs.calculator_settings, self.ctx.supercell)
         for key in self.ctx.supercells:
-            builder = get_calcjob_builder(self.ctx.supercells[key],
-                                          self.inputs.calculator_settings,
-                                          calc_type='forces',
-                                          label=key)
+            builder = get_calcjob_builder(
+                self.ctx.supercells[key],
+                self.inputs.calculator_settings['forces']['code_string'],
+                builder_inputs,
+                label=key)
             future = self.submit(builder)
             label = "force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
+    def _run_phonon_force_calculations(self):
+        """FC2 force calculation"""
+        self.report('run phonon force calculations')
+        calc_settings = self.inputs.calculator_settings
+        builder_inputs = get_phonon_force_calcjob_inputs(
+            calc_settings, self.ctx.phonon_supercell)
         for key in self.ctx.phonon_supercells:
-            builder = get_calcjob_builder(self.ctx.phonon_supercells[key],
-                                          self.inputs.calculator_settings,
-                                          calc_type='phonon_forces',
-                                          label=key)
+            builder = get_calcjob_builder(
+                self.ctx.phonon_supercells[key],
+                calc_settings['phonon_forces']['code_string'],
+                builder_inputs,
+                label=key)
             future = self.submit(builder)
             label = "phonon_force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
-        # Born charges and dielectric constant
-        if self.is_nac():
-            self.report('calculate born charges and dielectric constant')
-            builder = get_calcjob_builder(self.ctx.primitive,
-                                          self.inputs.calculator_settings,
-                                          calc_type='nac',
-                                          label='born_and_epsilon')
-            future = self.submit(builder)
-            self.report('born_and_epsilon: {}'.format(future.pk))
-            self.to_context(**{'born_and_epsilon_calc': future})
+    def _run_nac_calculation(self):
+        """Born charges and dielectric constant calculation"""
+        self.report('calculate born charges and dielectric constant')
+        builder_inputs = get_nac_calcjob_inputs(
+            self.inputs.calculator_settings, self.ctx.primitive)
+        builder = get_calcjob_builder(
+            self.ctx.primitive,
+            self.inputs.calculator_settings['nac']['code_string'],
+            builder_inputs,
+            label='born_and_epsilon')
+        future = self.submit(builder)
+        self.report('born_and_epsilon: {}'.format(future.pk))
+        self.to_context(**{'born_and_epsilon_calc': future})
 
     def read_force_and_nac_calculations_from_files(self):
         self.report('import calculation data in files')

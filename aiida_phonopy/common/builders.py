@@ -12,6 +12,9 @@ PotcarData = DataFactory('vasp.potcar')
 def get_force_calcjob_inputs(calculator_settings, supercell):
     return _get_calcjob_inputs(calculator_settings, supercell, 'forces')
 
+@calcfunction
+def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
+    return _get_calcjob_inputs(calculator_settings, supercell, 'phonon_forces')
 
 @calcfunction
 def get_nac_calcjob_inputs(calculator_settings, unitcell):
