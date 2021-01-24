@@ -21,7 +21,7 @@
         "numpy",
         "seekpath",
         "aiida-core>=1.2.1,<2.0.0",
-        "aiida-vasp>=1.0.0"
+        "aiida-vasp>=2.0.0"
     ],
     "setup_requires": [
         "reentry"
