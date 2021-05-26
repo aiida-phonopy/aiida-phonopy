@@ -48,7 +48,6 @@ class BasePhonopyCalculation(CalcJob):
                    help='Primitive cell structure')
         spec.input('dataset', valid_type=(Dict, ArrayData), required=False,
                    help='Displacements and forces dataset')
-        spec.inputs['metadata']['options']['withmpi'].default = False
 
     def prepare_for_submission(self, folder):
         """Create the input files from the input nodes passed to this instance of the `CalcJob`.
@@ -80,6 +79,8 @@ class BasePhonopyCalculation(CalcJob):
                 handle.write(born_txt)
             for params in self._additional_cmd_params:
                 params.append('--nac')
+
+        self.inputs.metadata.options.withmpi = False
 
         # ============================ calcinfo ===============================
 

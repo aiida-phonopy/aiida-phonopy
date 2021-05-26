@@ -1,6 +1,6 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.3",
+    "version": "0.4",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "author": "Atsushi Togo",
     "author_email": "atz.togo@gmail.com",
@@ -12,7 +12,7 @@
         "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering :: Physics",
         "Topic :: Scientific/Engineering :: Chemistry",
-	"Development Status :: 5 - Production/Stable",
+        "Development Status :: 5 - Production/Stable",
         "Framework :: AiiDA"
     ],
     "license": "MIT license",

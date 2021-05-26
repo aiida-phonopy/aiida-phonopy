@@ -1,5 +1,5 @@
 from aiida.engine import WorkChain
-from aiida.plugins import DataFactory
+from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import (
@@ -20,6 +20,7 @@ ArrayData = DataFactory('array')
 XyData = DataFactory('array.xy')
 StructureData = DataFactory('structure')
 BandsData = DataFactory('array.bands')
+PhonopyCalculation = CalculationFactory('phonopy.phonopy')
 
 
 class PhonopyWorkChain(WorkChain):
@@ -53,6 +54,9 @@ class PhonopyWorkChain(WorkChain):
             False.
         displacement_dataset : dict
             Atomic displacement dataset that phonopy can understand.
+        options : dict
+            AiiDA calculation options for phonon calculation used when both of
+            run_phonopy and remote_phonopy are True.
     subtract_residual_forces : Bool, optional
         Run a perfect supercell force calculation and subtract the residual
         forces from forces in supercells with displacements. Default is False.
@@ -63,9 +67,6 @@ class PhonopyWorkChain(WorkChain):
     code_string : Str, optional
         Code string of phonopy needed when both of run_phonopy and
         remote_phonopy are True.
-    options : Dict
-        AiiDa calculation options for phonon calculation used when both of
-        run_phonopy and remote_phonopy are True.
     symmetry_tolerance : Float, optional
         Symmetry tolerance. Default is 1e-5.
     immigrant_calculation_folders : Dict, optional
@@ -98,7 +99,6 @@ class PhonopyWorkChain(WorkChain):
         spec.input('calculation_nodes', valid_type=Dict, required=False)
         spec.input('calculator_settings', valid_type=Dict, required=False)
         spec.input('code_string', valid_type=Str, required=False)
-        spec.input('options', valid_type=Dict, required=False)
 
         spec.outline(
             cls.initialize,
@@ -156,7 +156,7 @@ class PhonopyWorkChain(WorkChain):
         return self.inputs.run_phonopy
 
     def is_nac(self):
-        if 'is_nac' in self.inputs.phonon_settings.attributes:
+        if 'is_nac' in self.inputs.phonon_settings.dict:
             return self.inputs.phonon_settings['is_nac']
         else:
             False
@@ -186,12 +186,10 @@ class PhonopyWorkChain(WorkChain):
         self.report('initialize')
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
-            if ('code_string' not in self.inputs or
-                'options' not in self.inputs):
-                raise RuntimeError(
-                    "code_string and options have to be specified.")
+            if 'code_string' not in self.inputs:
+                raise RuntimeError("code_string has to be specified.")
 
-        if 'supercell_matrix' not in self.inputs.phonon_settings.attributes:
+        if 'supercell_matrix' not in self.inputs.phonon_settings.dict:
             raise RuntimeError(
                 "supercell_matrix was not found in phonon_settings.")
 
@@ -381,8 +379,8 @@ class PhonopyWorkChain(WorkChain):
         builder = Code.get_from_string(code_string).get_builder()
         builder.structure = self.inputs.structure
         builder.settings = self.ctx.phonon_setting_info
-        builder.metadata.options.update(self.inputs.options)
         builder.metadata.label = self.inputs.metadata.label
+        builder.metadata.options.update(self.inputs.phonon_settings['options'])
         builder.force_sets = self.ctx.force_sets
         if 'nac_params' in self.ctx:
             builder.nac_params = self.ctx.nac_params

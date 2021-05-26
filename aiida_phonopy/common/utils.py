@@ -3,8 +3,10 @@ from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
 from aiida.orm import Float, Bool, Str, Int, load_node
 from phonopy.structure.atoms import PhonopyAtoms
-from phonopy.interface.calculator import get_default_displacement_distance
+from phonopy.interface.calculator import (get_default_displacement_distance,
+                                          get_default_physical_units)
 from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
+from phonopy import Phonopy
 
 
 Dict = DataFactory('dict')
@@ -19,10 +21,17 @@ def generate_phonopy_cells(phonon_settings,
                            structure,
                            symmetry_tolerance,
                            dataset=None):
-    ph_settings = _get_setting_info(phonon_settings,
-                                    symmetry_tolerance)
+    """Generate supercells and primitive cell.
 
-    ph = get_phonopy_instance(structure, ph_settings, {})
+    Returns
+    -------
+
+
+
+    """
+    ph_settings = _get_setting_info(phonon_settings, symmetry_tolerance)
+
+    ph = _get_phonopy_instance(structure, ph_settings, {})
     if dataset is None:
         supported_keys = (
             'distance', 'is_plusminus', 'is_diagonal', 'is_trigonal',
@@ -49,7 +58,7 @@ def generate_phono3py_cells(phonon_settings,
     ph_settings = _get_setting_info(phonon_settings,
                                     symmetry_tolerance)
 
-    ph = get_phono3py_instance(structure, ph_settings, {})
+    ph = _get_phono3py_instance(structure, ph_settings, {})
     if dataset is None:
         ph.generate_displacements(distance=ph_settings['distance'])
     else:
@@ -156,7 +165,7 @@ def get_nac_params(born_charges, epsilon, nac_structure, symmetry_tolerance,
 @calcfunction
 def get_force_constants(structure, phonon_settings, force_sets):
     params = {}
-    phonon = get_phonopy_instance(structure, phonon_settings, params)
+    phonon = _get_phonopy_instance(structure, phonon_settings, params)
     phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
     phonon.produce_force_constants()
@@ -171,7 +180,7 @@ def get_force_constants(structure, phonon_settings, force_sets):
 @calcfunction
 def get_phonon(structure, phonon_settings, force_constants, **params):
     phonon_settings_dict = phonon_settings.get_dict()
-    ph = get_phonopy_instance(structure, phonon_settings_dict, params)
+    ph = _get_phonopy_instance(structure, phonon_settings_dict, params)
     ph.force_constants = force_constants.get_array('force_constants')
     mesh = phonon_settings_dict['mesh']
 
@@ -339,15 +348,14 @@ def get_bands(qpoints, frequencies, labels, path_connections, label=None):
     return bs
 
 
-def get_phonopy_instance(structure, phonon_settings_dict, params):
-    from phonopy import Phonopy
+def _get_phonopy_instance(structure, phonon_settings_dict, params):
+    """Create Phonopy instance"""
     phonon = Phonopy(
         phonopy_atoms_from_structure(structure),
         supercell_matrix=phonon_settings_dict['supercell_matrix'],
         primitive_matrix='auto',
         symprec=phonon_settings_dict['symmetry_tolerance'])
     if 'nac_params' in params:
-        from phonopy.interface.calculator import get_default_physical_units
         units = get_default_physical_units('vasp')
         factor = units['nac_factor']
         nac_params = {'born': params['nac_params'].get_array('born_charges'),
@@ -358,7 +366,8 @@ def get_phonopy_instance(structure, phonon_settings_dict, params):
     return phonon
 
 
-def get_phono3py_instance(structure, phonon_settings_dict, params):
+def _get_phono3py_instance(structure, phonon_settings_dict, params):
+    """Create Phono3py instance"""
     from phono3py import Phono3py
     if 'phonon_supercell_matrix' in phonon_settings_dict:
         ph_smat = phonon_settings_dict['phonon_supercell_matrix']
@@ -382,37 +391,18 @@ def get_phono3py_instance(structure, phonon_settings_dict, params):
     return ph3py
 
 
-def get_primitive(structure, ph_settings):
-    from phonopy import Phonopy
-
-    phonon = Phonopy(
-        phonopy_atoms_from_structure(structure),
-        supercell_matrix=ph_settings.get_dict()['supercell_matrix'],
-        primitive_matrix=ph_settings.get_dict()['primitive_matrix'],
-        symprec=ph_settings.get_dict()['symmetry_tolerance'])
-    primitive_phonopy = phonon.get_primitive()
-
-    primitive_cell = primitive_phonopy.get_cell()
-    symbols = primitive_phonopy.get_chemical_symbols()
-    positions = primitive_phonopy.get_positions()
-
-    primitive_structure = StructureData(cell=primitive_cell)
-    for symbol, position in zip(symbols, positions):
-        primitive_structure.append_atom(position=position, symbols=symbol)
-
-    return {'primitive_structure': primitive_structure}
-
-
 def phonopy_atoms_to_structure(cell):
-    symbols = cell.get_chemical_symbols()
-    positions = cell.get_positions()
-    structure = StructureData(cell=cell.get_cell())
+    """Convert PhonopyAtoms to StructureData"""
+    symbols = cell.symbols
+    positions = cell.positions
+    structure = StructureData(cell=cell.cell)
     for symbol, position in zip(symbols, positions):
         structure.append_atom(position=position, symbols=symbol)
     return structure
 
 
 def phonopy_atoms_from_structure(structure):
+    """Convert StructureData to PhonopyAtoms"""
     cell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
@@ -420,6 +410,7 @@ def phonopy_atoms_from_structure(structure):
 
 
 def from_node_id_to_aiida_node_id(node_id):
+    """Convert PK or UUID to an AiiDA data type"""
     if type(node_id) is int:
         return Int(node_id)
     elif type(node_id) is str:
@@ -430,6 +421,25 @@ def from_node_id_to_aiida_node_id(node_id):
 
 
 def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
+    """Collect forces and energies from calculation outputs.
+
+
+    Parameters
+    ----------
+    ctx : AttributeDict-like
+        AiiDA workchain context.
+    ctx_supercells : dict of StructDict
+        Supercells. For phono3py, this can be phonon_supercells.
+    prefix : str
+        Prefix string of dictionary keys of ctx.
+
+    Returns
+    -------
+    dict
+        Forces and energies.
+
+    """
+
     forces_dict = {}
     for key in ctx_supercells:
         # key: e.g. "supercell_001", "phonon_supercell_001"
@@ -529,6 +539,21 @@ def _generate_phonon_structures(ph):
     ----
     Designed to be shared by phonopy and phono3py.
     ph is either an instance of Phonopy or Phono3py.
+
+    Returns
+    -------
+    dict of StructureData
+        'supercell'
+            Perfect supercell.
+        'supercell_001', 'supercell_002', ...
+            Supercells with displacements
+        'primitive':
+            Primitive cell.
+        'phonon_supercell'
+            For phono3py. Perfect supercell for harmonic phonon calculation.
+        'phonon_supercell_001', 'phonon_supercell_002', ...
+            For phono3py. Supercells with displacements for harmonic phonon
+            calculation.
 
     """
 
