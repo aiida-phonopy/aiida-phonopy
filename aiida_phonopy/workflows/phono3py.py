@@ -6,9 +6,10 @@ from aiida_phonopy.common.builders import (
     get_force_calcjob_inputs, get_phonon_force_calcjob_inputs,
     get_nac_calcjob_inputs, get_calcjob_builder, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
-    generate_phono3py_cells, get_nac_params,
+    generate_phono3py_cells,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
     compare_structures)
+from aiida_phonopy.workflows.nac_params import get_nac_params
 
 
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')

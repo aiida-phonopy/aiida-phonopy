@@ -5,7 +5,6 @@ from aiida.orm import Float, Bool, Str, Int, load_node
 from phonopy.structure.atoms import PhonopyAtoms
 from phonopy.interface.calculator import (get_default_displacement_distance,
                                           get_default_physical_units)
-from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
 from phonopy import Phonopy
 
 
@@ -124,42 +123,6 @@ def get_vasp_force_sets_dict(**forces_dict):
         ret_dict['supercell_energy'] = Float(energy_0)
 
     return ret_dict
-
-
-@calcfunction
-def get_nac_params(born_charges, epsilon, nac_structure, symmetry_tolerance,
-                   primitive=None):
-    """Obtain Born effective charges and dielectric constants in primitive cell
-
-    When Born effective charges and dielectric constants are calculated within
-    phonopy workchain, those values are calculated in the primitive cell.
-    However using immigrant, the cell may not be primitive cell and can be
-    unit cell. In this case, conversion of data is necessary. This conversion
-    needs information of the structure where those values were calcualted and
-    the target primitive cell structure.
-
-    Two kargs parameters
-    primitive : StructureData
-    symmetry_tolerance : Float
-
-    """
-    borns = born_charges.get_array('born_charges')
-    eps = epsilon.get_array('epsilon')
-
-    nac_cell = phonopy_atoms_from_structure(nac_structure)
-    kwargs = {}
-    kwargs['symprec'] = symmetry_tolerance.value
-    if primitive is not None:
-        kwargs['primitive'] = phonopy_atoms_from_structure(primitive)
-    borns_, epsilon_ = symmetrize_borns_and_epsilon(
-        borns, eps, nac_cell, **kwargs)
-
-    nac_params = ArrayData()
-    nac_params.set_array('born_charges', borns_)
-    nac_params.set_array('epsilon', epsilon_)
-    nac_params.label = 'born_charges & epsilon'
-
-    return nac_params
 
 
 @calcfunction

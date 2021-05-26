@@ -3,13 +3,13 @@ from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import (
-    get_calcjob_builder, get_force_calcjob_inputs,
-    get_nac_calcjob_inputs, get_immigrant_builder)
+    get_calcjob_builder, get_force_calcjob_inputs, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
-    get_force_constants, get_nac_params, get_phonon,
+    get_force_constants, get_phonon,
     generate_phonopy_cells, compare_structures,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
+from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
 
 
 # Should be improved by some kind of WorkChainFactory
@@ -216,7 +216,12 @@ class PhonopyWorkChain(WorkChain):
     def run_force_and_nac_calculations(self):
         self._run_force_calculations()
         if self.is_nac():
-            self._run_nac_calculation()
+            builder = NacParamsWorkChain.get_builder()
+            builder.structure = self.ctx.primitive
+            builder.calculator_settings = Dict(dict=self.inputs.calculator_settings['nac'])
+            future = self.submit(builder)
+            self.report('nac_params: {}'.format(future.pk))
+            self.to_context(**{'nac_params_calc': future})
 
     def _run_force_calculations(self):
         """Force calculation"""
@@ -233,20 +238,6 @@ class PhonopyWorkChain(WorkChain):
             label = "force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
-
-    def _run_nac_calculation(self):
-        """Born charges and dielectric constant calculation"""
-        self.report('calculate born charges and dielectric constant')
-        builder_inputs = get_nac_calcjob_inputs(
-            self.inputs.calculator_settings, self.ctx.primitive)
-        builder = get_calcjob_builder(
-            self.ctx.primitive,
-            self.inputs.calculator_settings['nac']['code_string'],
-            builder_inputs,
-            label='born_and_epsilon')
-        future = self.submit(builder)
-        self.report('born_and_epsilon: {}'.format(future.pk))
-        self.to_context(**{'born_and_epsilon_calc': future})
 
     def read_force_calculations_from_files(self):
         self.report('import supercell force calculation data in files.')
@@ -276,7 +267,7 @@ class PhonopyWorkChain(WorkChain):
         if self.is_nac():  # NAC the last one
             self.report('import NAC calculation data in files')
             calc_folders_Dict = self.inputs.immigrant_calculation_folders
-            label = 'born_and_epsilon_calc'
+            label = 'nac_params_calc'
             builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
                                             self.inputs.calculator_settings,
                                             calc_type='nac')
@@ -298,11 +289,9 @@ class PhonopyWorkChain(WorkChain):
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
         if self.is_nac():
-            label = 'born_and_epsilon_cal'
+            label = 'nac_params_calc'
             node_id = calc_nodes_Dict['nac'][0]
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
-            # self.ctx[label]['born_charges'] -> ArrayData()('born_charges')
-            # self.ctx[label]['dielectrics'] -> ArrayData()('epsilon')
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
     def check_imported_structures(self):
@@ -340,34 +329,19 @@ class PhonopyWorkChain(WorkChain):
             self.out(key, self.ctx[key])
 
     def create_nac_params(self):
-        self.report('create nac data')
+        """Attach nac_params to outpus"""
+        self.report('create nac params')
 
-        calc = self.ctx.born_and_epsilon_calc
-        if type(calc) is dict:
-            calc_dict = calc
-            structure = calc['structure']
-        else:
-            calc_dict = calc.outputs
-            structure = calc.inputs.structure
-
-        if 'born_charges' not in calc_dict:
-            raise RuntimeError(
-                "Born effective charges could not be found "
-                "in the calculation. Please check the calculation setting.")
-        if 'dielectrics' not in calc_dict:
-            raise RuntimeError(
-                "Dielectric constant could not be found "
-                "in the calculation. Please check the calculation setting.")
-
-        kwargs = {}
         if self.import_calculations():
             kwargs['primitive'] = self.ctx.primitive
-        self.ctx.nac_params = get_nac_params(
-            calc_dict['born_charges'],
-            calc_dict['dielectrics'],
-            structure,
-            self.inputs.symmetry_tolerance,
-            **kwargs)
+            self.ctx.nac_params = get_nac_params(
+                calc_dict['born_charges'],
+                calc_dict['dielectrics'],
+                structure,
+                self.inputs.symmetry_tolerance,
+                **kwargs)
+        else:
+            self.ctx.nac_params = self.ctx.nac_params_calc.outputs.nac_params
         self.out('nac_params', self.ctx.nac_params)
 
     def run_phonopy_remote(self):
