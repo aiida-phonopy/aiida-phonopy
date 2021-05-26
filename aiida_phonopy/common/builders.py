@@ -9,22 +9,37 @@ StructureData = DataFactory('structure')
 PotcarData = DataFactory('vasp.potcar')
 
 @calcfunction
+def get_calcjob_inputs(calculator_settings, cell):
+    """Return builder inputs of a calculation"""
+    return _get_calcjob_inputs(calculator_settings, cell)
+
+
+@calcfunction
 def get_force_calcjob_inputs(calculator_settings, supercell):
+    """Return builder inputs of force calculations"""
     return _get_calcjob_inputs(calculator_settings, supercell, 'forces')
+
 
 @calcfunction
 def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
+    """Return builder inputs of force calculations for phono3py fc2"""
     return _get_calcjob_inputs(calculator_settings, supercell, 'phonon_forces')
+
 
 @calcfunction
 def get_nac_calcjob_inputs(calculator_settings, unitcell):
+    """Return builder inputs of an NAC params calculation"""
     return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
 
 
-def _get_calcjob_inputs(calculator_settings, supercell, calc_type):
-    code = Code.get_from_string(calculator_settings[calc_type]['code_string'])
-    if code.attributes['input_plugin'] in ['vasp.vasp']:
+def _get_calcjob_inputs(calculator_settings, supercell, calc_type=None):
+    """Return builder inputs of a calculation"""
+    if calc_type is None:
+        settings = calculator_settings.get_dict()
+    else:
         settings = calculator_settings[calc_type]
+    code = Code.get_from_string(settings['code_string'])
+    if code.get_input_plugin_name() == 'vasp.vasp':
         builder_inputs = {'options': _get_vasp_options(settings),
                           'parameters': _get_vasp_parameters(settings),
                           'settings': _get_vasp_settings(settings),
@@ -41,14 +56,9 @@ def _get_calcjob_inputs(calculator_settings, supercell, calc_type):
 
 def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
     code = Code.get_from_string(code_string)
-    if code.attributes['input_plugin'] in ['vasp.vasp']:
+    if code.get_input_plugin_name() == 'vasp.vasp':
         VaspWorkflow = WorkflowFactory('vasp.vasp')
         builder = VaspWorkflow.get_builder()
-        # VaspCalc = CalculationFactory('vasp.vasp')
-        # potential = PotcarData.get_potcars_from_structure(
-        #     structure, builder_inputs['potential_family'].value,
-        #     mapping=builder_inputs['potential_mapping'].get_dict())
-        # builder = VaspCalc.get_builder()
         if label:
             builder.metadata.label = label
         builder.code = Code.get_from_string(code_string)
@@ -60,8 +70,6 @@ def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
         builder.potential_mapping = builder_inputs['potential_mapping']
         builder.options = builder_inputs['options']
         builder.clean_workdir = Bool(False)
-        # builder.potential = potential
-        # builder.metadata['options'].update(builder_inputs['options'].get_dict())
     else:
         raise RuntimeError("Code could not be found.")
 
@@ -78,7 +86,7 @@ def get_immigrant_builder(calculation_folder,
         code = Code.get_from_string(
             calculator_settings['code_string'])
 
-    if code.attributes['input_plugin'] in ['vasp.vasp']:
+    if code.get_input_plugin_name() == 'vasp.vasp':
         if calc_type is None:
             settings_dict = calculator_settings.get_dict()
         else:
