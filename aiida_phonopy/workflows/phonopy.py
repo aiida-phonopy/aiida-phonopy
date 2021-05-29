@@ -5,7 +5,7 @@ from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import (
     get_calcjob_builder, get_force_calcjob_inputs, get_immigrant_builder)
 from aiida_phonopy.common.utils import (
-    get_force_constants, get_phonon,
+    get_force_constants, get_phonon_properties,
     generate_phonopy_cells, compare_structures,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
@@ -24,7 +24,7 @@ PhonopyCalculation = CalculationFactory('phonopy.phonopy')
 
 
 class PhonopyWorkChain(WorkChain):
-    """Phonopy workchain
+    """Phonopy workchain.
 
     inputs
     ------
@@ -54,6 +54,9 @@ class PhonopyWorkChain(WorkChain):
             False.
         displacement_dataset : dict
             Atomic displacement dataset that phonopy can understand.
+        fc_calculator : str
+            With this being 'alm', ALM is used to calculate force constants in
+            the remote phonopy calculation.
         options : dict
             AiiDA calculation options for phonon calculation used when both of
             run_phonopy and remote_phonopy are True.
@@ -82,6 +85,7 @@ class PhonopyWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
+        """Define inputs, outputs, and outline."""
         super().define(spec)
         spec.input('structure', valid_type=StructureData)
         spec.input('phonon_settings', valid_type=Dict)
@@ -101,18 +105,21 @@ class PhonopyWorkChain(WorkChain):
         spec.input('code_string', valid_type=Str, required=False)
 
         spec.outline(
-            cls.initialize,
+            cls.initialize_structures,
+            cls.initialize_postprocess_settings,
             if_(cls.import_calculations)(
                 if_(cls.import_calculations_from_files)(
                     while_(cls.continue_import)(
                         cls.read_force_calculations_from_files,
                     ),
-                    cls.read_nac_calculations_from_files,
+                    if_(cls.is_nac)(
+                        cls.read_nac_calculations_from_files,
+                    ),
                 ),
                 if_(cls.import_calculations_from_nodes)(
                     cls.read_calculation_data_from_nodes,
                 ),
-                cls.check_imported_structures,
+                cls.validate_imported_structures,
             ).else_(
                 cls.run_force_and_nac_calculations,
             ),
@@ -120,14 +127,14 @@ class PhonopyWorkChain(WorkChain):
                 cls.postprocess_of_dry_run,
             ).else_(
                 cls.create_force_sets,
-                if_(cls.is_nac)(cls.create_nac_params),
+                if_(cls.is_nac)(cls.attach_nac_params),
                 if_(cls.run_phonopy)(
                     if_(cls.remote_phonopy)(
                         cls.run_phonopy_remote,
                         cls.collect_data,
                     ).else_(
                         cls.create_force_constants,
-                        cls.run_phonopy_in_workchain,
+                        cls.run_phonopy_locally,
                     ),
                 ),
             ),
@@ -144,30 +151,38 @@ class PhonopyWorkChain(WorkChain):
         spec.output('band_structure', valid_type=BandsData, required=False)
         spec.output('dos', valid_type=XyData, required=False)
         spec.output('pdos', valid_type=XyData, required=False)
+        spec.output('qpoint_mesh', valid_type=Dict, required=False)
         spec.output('phonon_setting_info', valid_type=Dict)
 
     def dry_run(self):
+        """Return boolen for outline."""
         return self.inputs.dry_run
 
     def remote_phonopy(self):
+        """Return boolen for outline."""
         return self.inputs.remote_phonopy
 
     def run_phonopy(self):
+        """Return boolen for outline."""
         return self.inputs.run_phonopy
 
     def is_nac(self):
+        """Return boolen for outline."""
         if 'is_nac' in self.inputs.phonon_settings.dict:
             return self.inputs.phonon_settings['is_nac']
         else:
             False
 
     def import_calculations_from_files(self):
+        """Return boolen for outline."""
         return 'immigrant_calculation_folders' in self.inputs
 
     def import_calculations_from_nodes(self):
+        """Return boolen for outline."""
         return 'calculation_nodes' in self.inputs
 
     def import_calculations(self):
+        """Return boolen for outline."""
         if 'immigrant_calculation_folders' in self.inputs:
             self.ctx.num_imported = 0
             self.ctx.num_supercell_forces = len(
@@ -178,12 +193,12 @@ class PhonopyWorkChain(WorkChain):
         return False
 
     def continue_import(self):
+        """Return boolen for outline."""
         return self.ctx.num_imported < self.ctx.num_supercell_forces
 
-    def initialize(self):
-        """Set default settings and create supercells and primitive cell"""
-
-        self.report('initialize')
+    def initialize_structures(self):
+        """Set default settings and create supercells and primitive cell."""
+        self.report('initialize_structures')
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
             if 'code_string' not in self.inputs:
@@ -213,19 +228,31 @@ class PhonopyWorkChain(WorkChain):
             label = "supercell_%s" % "0".zfill(digits)
             self.ctx.supercells[label] = return_vals['supercell']
 
+    def initialize_postprocess_settings(self):
+        """Set default settings and create supercells and primitive cell."""
+        self.report('initialize_postprocess_settings')
+
+        if 'mesh' in self.inputs.phonon_settings.dict:
+            mesh = self.inputs.phonon_settings['mesh']
+        else:
+            mesh = 100.0
+        self.ctx.qpoint_mesh = Dict(dict={'mesh': mesh})
+
     def run_force_and_nac_calculations(self):
+        """Run supercell force and NAC params calculations.
+
+        Supercell force calculations and NAC params calculation
+        are submitted in this method to make them run in parallel.
+
+        """
         self._run_force_calculations()
         if self.is_nac():
-            builder = NacParamsWorkChain.get_builder()
-            builder.structure = self.ctx.primitive
-            builder.calculator_settings = Dict(dict=self.inputs.calculator_settings['nac'])
-            future = self.submit(builder)
-            self.report('nac_params: {}'.format(future.pk))
-            self.to_context(**{'nac_params_calc': future})
+            self._run_nac_params_calculation()
 
     def _run_force_calculations(self):
-        """Force calculation"""
+        """Run supercell force calculations."""
         self.report('run force calculations')
+
         builder_inputs = get_force_calcjob_inputs(
             self.inputs.calculator_settings, self.ctx.supercell)
         for key in self.ctx.supercells:
@@ -239,7 +266,19 @@ class PhonopyWorkChain(WorkChain):
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
+    def _run_nac_params_calculation(self):
+        """Run nac params calculation."""
+        self.report('run nac params calculation')
+        builder = NacParamsWorkChain.get_builder()
+        builder.structure = self.ctx.primitive
+        calculator_settings = self.inputs.calculator_settings['nac']
+        builder.calculator_settings = Dict(dict=calculator_settings)
+        future = self.submit(builder)
+        self.report('nac_params: {}'.format(future.pk))
+        self.to_context(**{'nac_params_calc': future})
+
     def read_force_calculations_from_files(self):
+        """Import supercell forces using immigrant."""
         self.report('import supercell force calculation data in files.')
         num_batch = 50
         self.report('%d calculations per batch.' % num_batch)
@@ -264,19 +303,21 @@ class PhonopyWorkChain(WorkChain):
                 break
 
     def read_nac_calculations_from_files(self):
-        if self.is_nac():  # NAC the last one
-            self.report('import NAC calculation data in files')
-            calc_folders_Dict = self.inputs.immigrant_calculation_folders
-            label = 'nac_params_calc'
-            builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
-                                            self.inputs.calculator_settings,
-                                            calc_type='nac')
-            builder.metadata.label = label
-            future = self.submit(builder)
-            self.report('{} pk = {}'.format(label, future.pk))
-            self.to_context(**{label: future})
+        """Import NAC params using immigrant."""
+        self.report('import NAC calculation data in files')
+
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        label = 'nac_params_calc'
+        builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
+                                        self.inputs.calculator_settings,
+                                        calc_type='nac')
+        builder.metadata.label = label
+        future = self.submit(builder)
+        self.report('{} pk = {}'.format(label, future.pk))
+        self.to_context(**{label: future})
 
     def read_calculation_data_from_nodes(self):
+        """Read forces and NAC params from data nodes."""
         self.report('import calculation data from nodes')
 
         calc_nodes_Dict = self.inputs.calculation_nodes
@@ -294,7 +335,8 @@ class PhonopyWorkChain(WorkChain):
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
 
-    def check_imported_structures(self):
+    def validate_imported_structures(self):
+        """Validate imported supercell structures."""
         self.report('check imported supercell structures')
 
         msg = ("Immigrant failed because of inconsistency of supercell"
@@ -315,11 +357,11 @@ class PhonopyWorkChain(WorkChain):
                 raise RuntimeError(msg)
 
     def postprocess_of_dry_run(self):
+        """Show message."""
         self.report('Finish here because of dry-run setting')
 
     def create_force_sets(self):
-        """Build datasets from forces of supercells with displacments"""
-
+        """Build datasets from forces of supercells with displacments."""
         self.report('create force sets')
 
         forces_dict = collect_vasp_forces_and_energies(
@@ -328,31 +370,23 @@ class PhonopyWorkChain(WorkChain):
             self.ctx[key] = val
             self.out(key, self.ctx[key])
 
-    def create_nac_params(self):
-        """Attach nac_params to outpus"""
+    def attach_nac_params(self):
+        """Attach nac_params ArrayData to outputs."""
         self.report('create nac params')
 
-        if self.import_calculations():
-            kwargs['primitive'] = self.ctx.primitive
-            self.ctx.nac_params = get_nac_params(
-                calc_dict['born_charges'],
-                calc_dict['dielectrics'],
-                structure,
-                self.inputs.symmetry_tolerance,
-                **kwargs)
-        else:
-            self.ctx.nac_params = self.ctx.nac_params_calc.outputs.nac_params
+        self.ctx.nac_params = self.ctx.nac_params_calc.outputs.nac_params
         self.out('nac_params', self.ctx.nac_params)
 
     def run_phonopy_remote(self):
-        """Run phonopy at remote computer"""
-
+        """Run phonopy at remote computer."""
         self.report('remote phonopy calculation')
 
         code_string = self.inputs.code_string.value
         builder = Code.get_from_string(code_string).get_builder()
         builder.structure = self.inputs.structure
         builder.settings = self.ctx.phonon_setting_info
+        builder.symmetry_tolerance = self.inputs.symmetry_tolerance
+        builder.qpoint_mesh = self.ctx.qpoint_mesh
         builder.metadata.label = self.inputs.metadata.label
         builder.metadata.options.update(self.inputs.phonon_settings['options'])
         builder.force_sets = self.ctx.force_sets
@@ -366,6 +400,7 @@ class PhonopyWorkChain(WorkChain):
         # return ToContext(phonon_properties=future)
 
     def collect_data(self):
+        """Collect phonon data from remove phonopy calculation."""
         self.report('collect data')
         ph_props = ('thermal_properties',
                     'dos',
@@ -376,33 +411,41 @@ class PhonopyWorkChain(WorkChain):
         for prop in ph_props:
             if prop in self.ctx.phonon_properties.outputs:
                 self.out(prop, self.ctx.phonon_properties.outputs[prop])
+        self.out('qpoint_mesh', self.ctx.qpoint_mesh)
 
         self.report('finish phonon')
 
     def create_force_constants(self):
+        """Create force constants for run_phonopy_locally."""
         self.report('create force constants')
 
         self.ctx.force_constants = get_force_constants(
             self.inputs.structure,
             self.ctx.phonon_setting_info,
-            self.ctx.force_sets)
+            self.ctx.force_sets,
+            self.inputs.symmetry_tolerance)
         self.out('force_constants', self.ctx.force_constants)
 
-    def run_phonopy_in_workchain(self):
+    def run_phonopy_locally(self):
+        """Run phonopy calculation locally."""
         self.report('phonopy calculation in workchain')
 
         params = {}
         if 'nac_params' in self.ctx:
             params['nac_params'] = self.ctx.nac_params
-        result = get_phonon(self.inputs.structure,
-                            self.ctx.phonon_setting_info,
-                            self.ctx.force_constants,
-                            **params)
+        result = get_phonon_properties(self.inputs.structure,
+                                       self.ctx.phonon_setting_info,
+                                       self.ctx.force_constants,
+                                       self.ctx.qpoint_mesh,
+                                       self.inputs.symmetry_tolerance,
+                                       **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])
         self.out('band_structure', result['band_structure'])
+        self.out('qpoint_mesh', self.ctx.qpoint_mesh)
 
         self.report('finish phonon')
 
     def finalize(self):
+        """Show final message."""
         self.report('phonopy calculation has been done.')

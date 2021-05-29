@@ -1,40 +1,38 @@
+"""Base class of PhonopyCalculation and Phono3pyCalculation."""
+
 from aiida.engine import CalcJob
 from aiida.common import CalcInfo, CodeInfo
 from aiida.plugins import DataFactory
-from aiida.orm import Bool
 from aiida_phonopy.common.file_generators import get_BORN_txt
 
 Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 ArrayData = DataFactory('array')
+Float = DataFactory('float')
+Bool = DataFactory('bool')
 
 
 class BasePhonopyCalculation(CalcJob):
-    """
-    A basic plugin for calculating force constants using Phonopy.
+    """A basic plugin for calculating force constants using Phonopy.
+
     Requirement: the node should be able to import phonopy if NAC is used
+
     """
 
     _INPUT_NAC = 'BORN'
 
     @classmethod
     def define(cls, spec):
-        """
-
-        dataset : Dict, ArrayData, optional
-            In Dict, this is similar to phonopy.dataset. This can be either
-            type-I or type-II. In ArrayData, this can contain arrays of forces
-            and displacements like type-II phonopy dataset, for which the array
-            names are 'forces' and 'displacements'.
-
-        """
-
+        """Define inputs, outputs, and outline."""
         super().define(spec)
-
         spec.input('settings', valid_type=Dict,
                    help='Phonopy parameters')
         spec.input('structure', valid_type=StructureData,
                    help='Unit cell structure')
+        spec.input('qpoint_mesh', valid_type=Dict,
+                   help='Q-point sampling mesh information')
+        spec.input('symmetry_tolerance', valid_type=Float,
+                   default=lambda: Float(1e-5))
         spec.input('fc_only', valid_type=Bool,
                    help='Only force constants are calculated.',
                    default=lambda: Bool(False))
@@ -50,12 +48,7 @@ class BasePhonopyCalculation(CalcJob):
                    help='Displacements and forces dataset')
 
     def prepare_for_submission(self, folder):
-        """Create the input files from the input nodes passed to this instance of the `CalcJob`.
-
-        :param folder: an `aiida.common.folders.Folder` to temporarily write files on disk
-        :return: `aiida.common.datastructures.CalcInfo` instance
-        """
-
+        """Prepare calcinfo."""
         self.logger.info("prepare_for_submission")
 
         # These three lists are updated in self._create_additional_files(folder)
@@ -70,11 +63,11 @@ class BasePhonopyCalculation(CalcJob):
         if (not self.inputs.fc_only and
             'nac_params' in self.inputs and
             'primitive' in self.inputs and
-            'symmetry_tolerance' in self.inputs.settings.attributes):
+            'symmetry_tolerance' in self.inputs):
             born_txt = get_BORN_txt(
                 self.inputs.nac_params,
                 self.inputs.primitive,
-                self.inputs.settings['symmetry_tolerance'])
+                self.inputs.symmetry_tolerance)
             with folder.open(self._INPUT_NAC, 'w', encoding='utf8') as handle:
                 handle.write(born_txt)
             for params in self._additional_cmd_params:

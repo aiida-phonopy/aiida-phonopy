@@ -8,32 +8,33 @@ Dict = DataFactory('dict')
 StructureData = DataFactory('structure')
 PotcarData = DataFactory('vasp.potcar')
 
+
 @calcfunction
 def get_calcjob_inputs(calculator_settings, cell):
-    """Return builder inputs of a calculation"""
+    """Return builder inputs of a calculation."""
     return _get_calcjob_inputs(calculator_settings, cell)
 
 
 @calcfunction
 def get_force_calcjob_inputs(calculator_settings, supercell):
-    """Return builder inputs of force calculations"""
+    """Return builder inputs of force calculations."""
     return _get_calcjob_inputs(calculator_settings, supercell, 'forces')
 
 
 @calcfunction
 def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
-    """Return builder inputs of force calculations for phono3py fc2"""
+    """Return builder inputs of force calculations for phono3py fc2."""
     return _get_calcjob_inputs(calculator_settings, supercell, 'phonon_forces')
 
 
 @calcfunction
 def get_nac_calcjob_inputs(calculator_settings, unitcell):
-    """Return builder inputs of an NAC params calculation"""
+    """Return builder inputs of an NAC params calculation."""
     return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
 
 
 def _get_calcjob_inputs(calculator_settings, supercell, calc_type=None):
-    """Return builder inputs of a calculation"""
+    """Return builder inputs of a calculation."""
     if calc_type is None:
         settings = calculator_settings.get_dict()
     else:
@@ -44,17 +45,23 @@ def _get_calcjob_inputs(calculator_settings, supercell, calc_type=None):
                           'parameters': _get_vasp_parameters(settings),
                           'settings': _get_vasp_settings(settings),
                           'kpoints': _get_vasp_kpoints(settings, supercell)}
+        potential_family = Str(settings['potential_family'])
+        potential_mapping = Dict(dict=settings['potential_mapping'])
+        builder_inputs.update({'potential_family': potential_family,
+                               'potential_mapping': potential_mapping})
     else:
         raise RuntimeError("Code could not be found.")
 
-    potential_family = Str(settings['potential_family'])
-    potential_mapping = Dict(dict=settings['potential_mapping'])
-    builder_inputs.update({'potential_family': potential_family,
-                           'potential_mapping': potential_mapping})
     return builder_inputs
 
 
 def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
+    """Return process builder.
+
+    This method supposes createing a process builder of a force calculator
+    (VASP, QE, etc.).
+
+    """
     code = Code.get_from_string(code_string)
     if code.get_input_plugin_name() == 'vasp.vasp':
         VaspWorkflow = WorkflowFactory('vasp.vasp')
@@ -150,32 +157,3 @@ def _get_vasp_kpoints(settings_dict, structure):
             'Define either kpoints_density or kpoints_mesh')
 
     return kpoints
-
-
-def _get_vasp_builder(structure, settings_dict, label=None):
-    """
-    Generate the input paramemeters needed to run a calculation for VASP
-
-    :param structure:  StructureData object containing the crystal structure
-    :param settings:  dict object containing a dictionary with the
-        INCAR parameters
-    :return: Calculation process object, input dictionary
-    """
-
-    code_string = settings_dict['code_string']
-    VaspWorkflow = WorkflowFactory('vasp.vasp')
-    builder = VaspWorkflow.get_builder()
-    if label:
-        builder.metadata.label = label
-    builder.code = Code.get_from_string(code_string)
-    builder.structure = structure
-    builder.options = _get_vasp_options(settings_dict)
-    builder.clean_workdir = Bool(False)
-    builder.settings = _get_vasp_settings(settings_dict)
-    builder.parameters = _get_vasp_parameters(settings_dict)
-    builder.potential_family = Str(settings_dict['potential_family'])
-    builder.potential_mapping = Dict(
-        dict=settings_dict['potential_mapping'])
-    builder.kpoints = _get_vasp_kpoints(settings_dict, structure)
-
-    return builder

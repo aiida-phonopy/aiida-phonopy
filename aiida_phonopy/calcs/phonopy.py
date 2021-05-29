@@ -27,6 +27,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
 
     @classmethod
     def define(cls, spec):
+        """Define inputs, outputs, and outline."""
         super().define(spec)
 
         spec.input('projected_dos_filename', valid_type=Str,
@@ -55,6 +56,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
                     help='Calculated phonon band structure')
 
     def prepare_for_submission(self, folder):
+        """Prepare calcinfo."""
         return super().prepare_for_submission(folder)
 
     def _create_additional_files(self, folder):
@@ -63,7 +65,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
         self._create_phonopy_yaml(folder)
         self._create_FORCE_SETS(folder)
         mesh_opts, fc_opts = get_phonopy_options(
-            self.inputs.settings.get_dict())
+            self.inputs.settings.get_dict(), self.inputs.qpoint_mesh.get_dict())
 
         self._internal_retrieve_list = [self._INOUT_FORCE_CONSTANTS, ]
         self._additional_cmd_params = [['--writefc', ] + fc_opts, ]

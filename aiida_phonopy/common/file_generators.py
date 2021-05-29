@@ -25,7 +25,7 @@ def get_BORN_txt(nac_data, structure, symmetry_tolerance):
     epsilon = nac_data.get_array('epsilon')
     pcell = phonopy_atoms_from_structure(structure)
     lines = get_BORN_lines(pcell, born_charges, epsilon,
-                           symprec=symmetry_tolerance)
+                           symprec=symmetry_tolerance.value)
 
     return "\n".join(lines)
 
@@ -68,10 +68,11 @@ def get_phonopy_yaml_txt(structure,
     return str(phpy_yaml)
 
 
-def get_phonopy_options(settings):
+def get_phonopy_options(settings, qpoint_mesh):
+    """Return phonopy command option strings."""
     mesh_opts = []
-    if 'mesh' in settings:
-        mesh = settings['mesh']
+    if 'mesh' in qpoint_mesh:
+        mesh = qpoint_mesh['mesh']
         try:
             length = float(mesh)
             mesh_opts.append('--mesh=%f' % length)

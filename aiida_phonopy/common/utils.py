@@ -22,15 +22,68 @@ def generate_phonopy_cells(phonon_settings,
                            dataset=None):
     """Generate supercells and primitive cell.
 
+    Valid keys in phonon_settings_info are
+        ('supercell_matrix',
+         'phonon_supercell_matrix',
+         'distance',
+         'symmetry_tolerance',
+         'fc_calculator',
+         'number_of_snapshots',
+         'random_seed',
+         'is_plusminus',
+         'is_diagonal',
+         'is_trigonal').
+
     Returns
     -------
+    dict
+        'supercell' : StructureData
+            Perfect supercell.
+        'supercell_001', 'supercell_002', ... : StructureData
+            Supercells with displacements
+        'primitive' : StructureData
+            Primitive cell.
+        'phonon_supercell' : StructureData
+            For phono3py. Perfect supercell for harmonic phonon calculation.
+        'phonon_supercell_001', 'phonon_supercell_002', ... : StructureData
+            For phono3py. Supercells with displacements for harmonic phonon
+            calculation.
+        'phonon_setting_info' : Dict
+            Phonopy setting parameters including those generated in the
+            process of displacements creation, e.g., primitive and  sueprcell
+            matrix and symmetry information.
 
-
+    phonon_setting_info contains the following entries:
+        'supercell_matrix' : array_like
+            3x3 integer matrix to generate supercell matrix.
+        'phonon_supercell_matrix' : array_like
+            3x3 integer matrix to generate fc2 supercell matrix for Phono3py.
+        'distance' : float
+            Displacement distance.
+        'symmetry_tolerance' : float
+            Tolerance length used for symmetry finding.
+        'displacement_dataset' : dict
+            Phonopy.dataset or Phono3py.dataset.
+        'primitive_matrix' : array_like
+            Phonopy.primitive_matrix.
+        'symmetry' : dict
+            'number' : Space group number.
+            'international' : Space group type.
+        'phonon_displacement_dataset' : dict
+            Phono3py.phonon_dataset.
+         'fc_calculator' : str
+         'number_of_snapshots' : int
+         'random_seed' : int
+         'is_plusminus' : bool
+         'is_diagonal' : bool
+         'is_trigonal' : bool
 
     """
-    ph_settings = _get_setting_info(phonon_settings, symmetry_tolerance)
+    ph_settings = _get_setting_info(phonon_settings)
 
-    ph = _get_phonopy_instance(structure, ph_settings, {})
+    ph = _get_phonopy_instance(structure,
+                               ph_settings,
+                               symmetry_tolerance=symmetry_tolerance.value)
     if dataset is None:
         supported_keys = (
             'distance', 'is_plusminus', 'is_diagonal', 'is_trigonal',
@@ -54,8 +107,8 @@ def generate_phono3py_cells(phonon_settings,
                             structure,
                             symmetry_tolerance,
                             dataset=None):
-    ph_settings = _get_setting_info(phonon_settings,
-                                    symmetry_tolerance)
+    """Generate supercells and primitive cell."""
+    ph_settings = _get_setting_info(phonon_settings, code_name='phono3py')
 
     ph = _get_phono3py_instance(structure, ph_settings, {})
     if dataset is None:
@@ -73,6 +126,7 @@ def generate_phono3py_cells(phonon_settings,
 
 @calcfunction
 def get_vasp_force_sets_dict(**forces_dict):
+    """Create force sets from supercell forces."""
     forces = []
     energies = []
     forces_0 = None
@@ -126,9 +180,14 @@ def get_vasp_force_sets_dict(**forces_dict):
 
 
 @calcfunction
-def get_force_constants(structure, phonon_settings, force_sets):
-    params = {}
-    phonon = _get_phonopy_instance(structure, phonon_settings, params)
+def get_force_constants(structure,
+                        phonon_settings,
+                        force_sets,
+                        symmetry_tolerance):
+    """Calculate force constants."""
+    phonon = _get_phonopy_instance(structure,
+                                   phonon_settings,
+                                   symmetry_tolerance=symmetry_tolerance.value)
     phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
     phonon.produce_force_constants()
@@ -141,11 +200,20 @@ def get_force_constants(structure, phonon_settings, force_sets):
 
 
 @calcfunction
-def get_phonon(structure, phonon_settings, force_constants, **params):
+def get_phonon_properties(structure,
+                          phonon_settings,
+                          force_constants,
+                          qpoint_mesh,
+                          symmetry_tolerance,
+                          nac_params=None):
+    """Calculate phonon properties."""
     phonon_settings_dict = phonon_settings.get_dict()
-    ph = _get_phonopy_instance(structure, phonon_settings_dict, params)
+    ph = _get_phonopy_instance(structure,
+                               phonon_settings_dict,
+                               symmetry_tolerance=symmetry_tolerance.value,
+                               nac_params=nac_params)
     ph.force_constants = force_constants.get_array('force_constants')
-    mesh = phonon_settings_dict['mesh']
+    mesh = qpoint_mesh['mesh']
 
     # Mesh
     total_dos, pdos, thermal_properties = get_mesh_property_data(ph, mesh)
@@ -161,6 +229,7 @@ def get_phonon(structure, phonon_settings, force_constants, **params):
 
 @calcfunction
 def get_data_from_node_id(node_id):
+    """Collect VASP output from node_id."""
     n = load_node(node_id.value)
     if 'structure' in n.inputs:
         cell = phonopy_atoms_from_structure(n.inputs.structure)
@@ -189,6 +258,7 @@ def get_data_from_node_id(node_id):
 
 
 def compare_structures(cell_ref, cell_calc, symmetry_tolerance):
+    """Compare two PhonopyAtoms instances."""
     symprec = symmetry_tolerance.value
     cell_diff = np.subtract(cell_ref.cell, cell_calc.cell)
     if (np.abs(cell_diff) > symprec).any():
@@ -212,6 +282,7 @@ def compare_structures(cell_ref, cell_calc, symmetry_tolerance):
 
 
 def get_mesh_property_data(ph, mesh):
+    """Return total DOS, PDOS, thermal properties."""
     ph.set_mesh(mesh)
     ph.run_total_dos()
 
@@ -228,6 +299,7 @@ def get_mesh_property_data(ph, mesh):
 
 
 def get_total_dos(total_dos):
+    """Return XyData of total DOS."""
     dos = XyData()
     dos.set_x(total_dos['frequency_points'], 'Frequency', 'THz')
     dos.set_y(total_dos['total_dos'], 'Total DOS', '1/THz')
@@ -236,6 +308,7 @@ def get_total_dos(total_dos):
 
 
 def get_projected_dos(projected_dos):
+    """Return XyData of PDOS."""
     pdos = XyData()
     pdos_list = [pd for pd in projected_dos['projected_dos']]
     pdos.set_x(projected_dos['frequency_points'], 'Frequency', 'THz')
@@ -247,6 +320,7 @@ def get_projected_dos(projected_dos):
 
 
 def get_thermal_properties(thermal_properties):
+    """Return XyData of thermal properties."""
     tprops = XyData()
     tprops.set_x(thermal_properties['temperatures'], 'Temperature', 'K')
     tprops.set_y([thermal_properties['free_energy'],
@@ -273,6 +347,7 @@ def get_bands_data(ph):
 
 
 def get_bands(qpoints, frequencies, labels, path_connections, label=None):
+    """Return BandsData."""
     qpoints_list = list(qpoints[0])
     frequencies_list = list(frequencies[0])
     labels_list = [(0, labels[0]), ]
@@ -311,26 +386,29 @@ def get_bands(qpoints, frequencies, labels, path_connections, label=None):
     return bs
 
 
-def _get_phonopy_instance(structure, phonon_settings_dict, params):
-    """Create Phonopy instance"""
+def _get_phonopy_instance(structure,
+                          phonon_settings_dict,
+                          symmetry_tolerance=1e-5,
+                          nac_params=None):
+    """Create Phonopy instance."""
     phonon = Phonopy(
         phonopy_atoms_from_structure(structure),
         supercell_matrix=phonon_settings_dict['supercell_matrix'],
         primitive_matrix='auto',
-        symprec=phonon_settings_dict['symmetry_tolerance'])
-    if 'nac_params' in params:
+        symprec=symmetry_tolerance)
+    if nac_params:
         units = get_default_physical_units('vasp')
         factor = units['nac_factor']
-        nac_params = {'born': params['nac_params'].get_array('born_charges'),
-                      'dielectric': params['nac_params'].get_array('epsilon'),
-                      'factor': factor}
-        phonon.nac_params = nac_params
+        _nac_params = {'born': nac_params.get_array('born_charges'),
+                       'dielectric': nac_params.get_array('epsilon'),
+                       'factor': factor}
+        phonon.nac_params = _nac_params
 
     return phonon
 
 
 def _get_phono3py_instance(structure, phonon_settings_dict, params):
-    """Create Phono3py instance"""
+    """Create Phono3py instance."""
     from phono3py import Phono3py
     if 'phonon_supercell_matrix' in phonon_settings_dict:
         ph_smat = phonon_settings_dict['phonon_supercell_matrix']
@@ -355,7 +433,7 @@ def _get_phono3py_instance(structure, phonon_settings_dict, params):
 
 
 def phonopy_atoms_to_structure(cell):
-    """Convert PhonopyAtoms to StructureData"""
+    """Convert PhonopyAtoms to StructureData."""
     symbols = cell.symbols
     positions = cell.positions
     structure = StructureData(cell=cell.cell)
@@ -365,7 +443,7 @@ def phonopy_atoms_to_structure(cell):
 
 
 def phonopy_atoms_from_structure(structure):
-    """Convert StructureData to PhonopyAtoms"""
+    """Convert StructureData to PhonopyAtoms."""
     cell = PhonopyAtoms(symbols=[site.kind_name for site in structure.sites],
                         positions=[site.position for site in structure.sites],
                         cell=structure.cell)
@@ -373,7 +451,7 @@ def phonopy_atoms_from_structure(structure):
 
 
 def from_node_id_to_aiida_node_id(node_id):
-    """Convert PK or UUID to an AiiDA data type"""
+    """Convert PK or UUID to an AiiDA data type."""
     if type(node_id) is int:
         return Int(node_id)
     elif type(node_id) is str:
@@ -385,7 +463,6 @@ def from_node_id_to_aiida_node_id(node_id):
 
 def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
     """Collect forces and energies from calculation outputs.
-
 
     Parameters
     ----------
@@ -402,7 +479,6 @@ def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
         Forces and energies.
 
     """
-
     forces_dict = {}
     for key in ctx_supercells:
         # key: e.g. "supercell_001", "phonon_supercell_001"
@@ -426,10 +502,8 @@ def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
     return forces_dict
 
 
-def _get_setting_info(phonon_settings,
-                      symmetry_tolerance,
-                      code_name='phonopy'):
-    """Convert AiiDA inputs to a dict
+def _get_setting_info(phonon_settings, code_name='phonopy'):
+    """Convert AiiDA inputs to a dict.
 
     code_name : 'phonopy' or 'phono3py'
 
@@ -437,18 +511,41 @@ def _get_setting_info(phonon_settings,
     ----
     Designed to be shared by phonopy and phono3py.
 
-    """
+    Returns
+    -------
+    dict
+        'supercell_matrix' : ndarray
+            3x3 integer matrix to generate supercell matrix.
+        'phonon_supercell_matrix' : ndarray
+            3x3 integer matrix to generate fc2 supercell matrix for Phono3py.
+        'mesh' : list or float
+            Mesh numbers or a distance to represent mesh numbers.
+        'distance' : float
+            Displacement distance.
+        'symmetry_tolerance' : float
+            Tolerance length used for symmetry finding.
 
+    """
     ph_settings = {}
-    ph_settings.update(phonon_settings.get_dict())
+    valid_keys = ('supercell_matrix',
+                  'phonon_supercell_matrix',
+                  'distance',
+                  'symmetry_tolerance',
+                  'fc_calculator',
+                  'number_of_snapshots',
+                  'random_seed',
+                  'is_plusminus',
+                  'is_diagonal',
+                  'is_trigonal')
+    for key, value in phonon_settings.get_dict().items():
+        if key in valid_keys:
+            ph_settings[key] = value
     dim = ph_settings['supercell_matrix']
     ph_settings['supercell_matrix'] = _get_supercell_matrix(dim)
     if 'phonon_supercell_matrix' in ph_settings:
         dim_fc2 = ph_settings['phonon_supercell_matrix']
         ph_settings['phonon_supercell_matrix'] = _get_supercell_matrix(
             dim_fc2, smat_type='phonon_supercell_matrix')
-    if 'mesh' not in ph_settings:
-        ph_settings['mesh'] = 100.0
     if 'distance' not in ph_settings:
         if code_name == 'phono3py':
             from phono3py.interface.calculator import (
@@ -457,7 +554,6 @@ def _get_setting_info(phonon_settings,
         else:
             distance = get_default_displacement_distance('vasp')
         ph_settings['distance'] = distance
-    ph_settings['symmetry_tolerance'] = symmetry_tolerance.value
 
     return ph_settings
 
@@ -474,12 +570,27 @@ def _get_supercell_matrix(dim, smat_type='supercell_matrix'):
 
 
 def _update_structure_info(ph_settings, ph):
-    """Update a dict
+    """Update a phonon_settings dict.
 
-    Note
-    ----
-    Designed to be shared by phonopy and phono3py.
-    ph is either an instance of Phonopy or Phono3py.
+    Parameters
+    ----------
+    ph_settings : Dict
+         Phonopy setting information.
+    ph : Phonopy or Phono3py
+         A Phonopy or Phono3py instance.
+
+    Returns
+    -------
+    dict
+        'displacement_dataset' : dict
+            Phonopy.dataset or Phono3py.dataset.
+        'primitive_matrix' : ndarray
+            Phonopy.primitive_matrix.
+        'symmetry' : dict
+            'number' : Space group number.
+            'international' : Space group type.
+        'phonon_displacement_dataset' : dict
+            Phono3py.phonon_dataset.
 
     """
     ph_settings['displacement_dataset'] = ph.dataset
@@ -496,7 +607,7 @@ def _update_structure_info(ph_settings, ph):
 
 
 def _generate_phonon_structures(ph):
-    """Generate AiiDA structures of phonon related cells
+    """Generate AiiDA structures of phonon related cells.
 
     Note
     ----
@@ -519,7 +630,6 @@ def _generate_phonon_structures(ph):
             calculation.
 
     """
-
     structures_dict = {}
 
     digits = len(str(len(ph.supercells_with_displacements)))
