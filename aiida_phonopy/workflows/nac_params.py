@@ -2,7 +2,8 @@
 
 from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import DataFactory
-from aiida_phonopy.common.builders import get_calcjob_builder, get_calcjob_inputs
+from aiida_phonopy.common.builders import (
+    get_calcjob_builder, get_calcjob_inputs, get_calculator_process)
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
 
@@ -62,7 +63,7 @@ class NacParamsWorkChain(WorkChain):
 
         spec.outline(
             cls.run_calculation,
-            cls.create_nac_params
+            cls.finalize
         )
 
         spec.output('nac_params', valid_type=ArrayData, required=True)
@@ -79,19 +80,23 @@ class NacParamsWorkChain(WorkChain):
     def run_calculation(self):
         """Born charges and dielectric constant calculation."""
         self.report('Calculate born charges and dielectric constant')
-        builder_inputs = get_calcjob_inputs(
-            self.inputs.calculator_settings, self.inputs.structure)
-        builder = get_calcjob_builder(
-            self.inputs.structure,
-            self.inputs.calculator_settings['code_string'],
-            builder_inputs,
-            label='born_and_epsilon')
-        future = self.submit(builder)
+        process_inputs = get_calcjob_inputs(self.inputs.calculator_settings,
+                                            self.inputs.structure,
+                                            label=self.metadata.label)
+        # builder = get_calcjob_builder(
+        #     self.inputs.structure,
+        #     self.inputs.calculator_settings['code_string'],
+        #     builder_inputs,
+        #     label='born_and_epsilon')
+        # future = self.submit(builder)
+        CalculatorProcess = get_calculator_process(
+            self.inputs.calculator_settings['code_string'])
+        future = self.submit(CalculatorProcess, **process_inputs)
         self.report('born_and_epsilon: {}'.format(future.pk))
         self.to_context(**{'calc': future})
 
-    def create_nac_params(self):
-        """Create NAC params ArrayData."""
+    def finalize(self):
+        """Finalize NAC params calculation."""
         self.report('Create nac params data')
 
         calc = self.ctx.calc

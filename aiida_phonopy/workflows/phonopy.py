@@ -1,15 +1,17 @@
+"""WorkChan to run phonon calculation by phonopy and force calculators."""
+
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import Float, Bool, Str, Code
 from aiida.engine import if_, while_
-from aiida_phonopy.common.builders import (
-    get_calcjob_builder, get_force_calcjob_inputs, get_immigrant_builder)
+from aiida_phonopy.common.builders import get_immigrant_builder
 from aiida_phonopy.common.utils import (
     get_force_constants, get_phonon_properties,
     generate_phonopy_cells, compare_structures,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
-    get_vasp_force_sets_dict, collect_vasp_forces_and_energies)
+    get_force_sets, collect_forces_and_energies)
 from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
+from aiida_phonopy.workflows.forces import ForcesWorkChain
 
 
 # Should be improved by some kind of WorkChainFactory
@@ -253,14 +255,12 @@ class PhonopyWorkChain(WorkChain):
         """Run supercell force calculations."""
         self.report('run force calculations')
 
-        builder_inputs = get_force_calcjob_inputs(
-            self.inputs.calculator_settings, self.ctx.supercell)
-        for key in self.ctx.supercells:
-            builder = get_calcjob_builder(
-                self.ctx.supercells[key],
-                self.inputs.calculator_settings['forces']['code_string'],
-                builder_inputs,
-                label=key)
+        for key, supercell in self.ctx.supercells.items():
+            builder = ForcesWorkChain.get_builder()
+            builder.metadata.label = key
+            builder.structure = supercell
+            calculator_settings = self.inputs.calculator_settings['forces']
+            builder.calculator_settings = Dict(dict=calculator_settings)
             future = self.submit(builder)
             label = "force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
@@ -269,7 +269,9 @@ class PhonopyWorkChain(WorkChain):
     def _run_nac_params_calculation(self):
         """Run nac params calculation."""
         self.report('run nac params calculation')
+
         builder = NacParamsWorkChain.get_builder()
+        builder.metadata.label = 'nac_params'
         builder.structure = self.ctx.primitive
         calculator_settings = self.inputs.calculator_settings['nac']
         builder.calculator_settings = Dict(dict=calculator_settings)
@@ -364,9 +366,9 @@ class PhonopyWorkChain(WorkChain):
         """Build datasets from forces of supercells with displacments."""
         self.report('create force sets')
 
-        forces_dict = collect_vasp_forces_and_energies(
+        forces_dict = collect_forces_and_energies(
             self.ctx, self.ctx.supercells)
-        for key, val in get_vasp_force_sets_dict(**forces_dict).items():
+        for key, val in get_force_sets(**forces_dict).items():
             self.ctx[key] = val
             self.out(key, self.ctx[key])
 

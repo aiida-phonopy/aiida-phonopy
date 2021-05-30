@@ -125,61 +125,6 @@ def generate_phono3py_cells(phonon_settings,
 
 
 @calcfunction
-def get_vasp_force_sets_dict(**forces_dict):
-    """Create force sets from supercell forces."""
-    forces = []
-    energies = []
-    forces_0 = None
-    energy_0 = None
-
-    for key in forces_dict:
-        num = int(key.split('_')[-1])
-        if num == 0:
-            continue
-        if 'forces' in key:
-            forces.append(None)
-        elif 'misc' in key:
-            energies.append(None)
-
-    for key in forces_dict:
-        num = int(key.split('_')[-1])  # e.g. "001" --> 1
-        if 'forces' in key:
-            forces_ndarray = forces_dict[key].get_array('final')
-            if num == 0:
-                forces_0 = forces_ndarray
-            else:
-                forces[num - 1] = forces_ndarray
-        elif 'misc' in key:
-            for energy_key in ('energy_extrapolated', ):
-                if energy_key in forces_dict[key]['total_energies']:
-                    energy = forces_dict[key]['total_energies'][energy_key]
-                if num == 0:
-                    energy_0 = energy
-                else:
-                    energies[num - 1] = energy
-                break
-
-    if forces_0 is not None:
-        for forces_ndarray in forces:
-            forces_ndarray -= forces_0
-
-    force_sets = ArrayData()
-    force_sets.set_array('force_sets', np.array(forces))
-    if energies:
-        force_sets.set_array('energies', np.array(energies))
-    force_sets.label = 'force_sets'
-    ret_dict = {'force_sets': force_sets}
-    if forces_0 is not None:
-        forces_0_array = ArrayData()
-        forces_0_array.set_array('forces', forces_0)
-        ret_dict['supercell_forces'] = forces_0_array
-    if energy_0 is not None:
-        ret_dict['supercell_energy'] = Float(energy_0)
-
-    return ret_dict
-
-
-@calcfunction
 def get_force_constants(structure,
                         phonon_settings,
                         force_sets,
@@ -461,6 +406,118 @@ def from_node_id_to_aiida_node_id(node_id):
                            % type(node_id))
 
 
+def collect_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
+    """Collect forces and energies from calculation outputs.
+
+    Parameters
+    ----------
+    ctx : AttributeDict-like
+        AiiDA workchain context.
+    ctx_supercells : dict of StructDict
+        Supercells. For phono3py, this can be phonon_supercells.
+    prefix : str
+        Prefix string of dictionary keys of ctx.
+
+    Returns
+    -------
+    dict
+        Forces and energies.
+
+    """
+    forces_dict = {}
+    for key in ctx_supercells:
+        # key: e.g. "supercell_001", "phonon_supercell_001"
+        num = key.split('_')[-1]  # e.g. "001"
+        calc = ctx["%s_%s" % (prefix, num)]
+        if type(calc) is dict:
+            calc_dict = calc
+        else:
+            calc_dict = calc.outputs
+        forces_dict["forces_%s" % num] = calc_dict['forces']
+        forces_dict["energy_%s" % num] = calc_dict['energy']
+
+    return forces_dict
+
+
+@calcfunction
+def get_force_sets(**forces_dict):
+    """Create force sets from supercell forces.
+
+    Parameters
+    ----------
+    forces_dict : dict
+        'forces_001', 'forces_002', ... have to exist.
+        'energy_001', 'energy_002', ... are optional.
+        'forces_000' and 'energy_000' for perfect supercell are optional.
+        The zero-padding length of the numbers can change depending on total
+        number of supercell calculations.
+
+    """
+    (force_sets,
+     energies,
+     forces_0_key,
+     energy_0_key) = _get_force_set(**forces_dict)
+
+    force_sets_data = ArrayData()
+    force_sets_data.set_array('force_sets', force_sets)
+    if energies is not None:
+        force_sets_data.set_array('energies', energies)
+    force_sets_data.label = 'force_sets'
+    ret_dict = {'force_sets': force_sets_data}
+    if forces_0_key is not None:
+        ret_dict['supercell_forces'] = forces_dict[forces_0_key]
+    if energy_0_key is not None:
+        ret_dict['supercell_energy'] = forces_dict[energy_0_key]
+
+    return ret_dict
+
+
+def _get_force_set(**forces_dict):
+    num_forces = 0
+    num_energies = 0
+    forces_0_key = None
+    energy_0_key = None
+    shape = None
+    for key in forces_dict:
+        value = forces_dict[key]
+        if int(key.split('_')[-1]) != 0:
+            if 'forces' in key:
+                num_forces += 1
+                if shape is None:
+                    shape = value.get_array('forces').shape
+            elif 'energy' in key:
+                num_energies += 1
+        else:
+            if 'forces' in key:
+                forces_0_key = key
+            elif 'energy' in key:
+                energy_0_key = key
+
+    force_sets = np.zeros((num_forces, ) + shape, dtype=float)
+    if num_energies > 0:
+        energies = np.zeros(num_energies, dtype=float)
+    else:
+        energies = None
+    if forces_0_key is None:
+        forces_0 = None
+    else:
+        forces_0 = forces_dict[forces_0_key].get_array('forces')
+
+    for key in forces_dict:
+        value = forces_dict[key]
+        num = int(key.split('_')[-1])  # e.g. "001" --> 1
+        if 'forces' in key:
+            forces = value.get_array('forces')
+            if forces_0 is None:
+                force_sets[num - 1] = forces
+            else:
+                force_sets[num - 1] = forces - forces_0
+        elif 'energy' in key:
+            energies[num - 1] = value.get_array('energy')
+
+    return force_sets, energies, forces_0_key, energy_0_key
+
+
 def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
     """Collect forces and energies from calculation outputs.
 
@@ -500,6 +557,61 @@ def collect_vasp_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
             forces_dict["misc_%s" % num] = calc_dict['misc']
 
     return forces_dict
+
+
+@calcfunction
+def get_vasp_force_sets_dict(**forces_dict):
+    """Create force sets from supercell forces."""
+    forces = []
+    energies = []
+    forces_0 = None
+    energy_0 = None
+
+    for key in forces_dict:
+        num = int(key.split('_')[-1])
+        if num == 0:
+            continue
+        if 'forces' in key:
+            forces.append(None)
+        elif 'misc' in key:
+            energies.append(None)
+
+    for key in forces_dict:
+        num = int(key.split('_')[-1])  # e.g. "001" --> 1
+        if 'forces' in key:
+            forces_ndarray = forces_dict[key].get_array('final')
+            if num == 0:
+                forces_0 = forces_ndarray
+            else:
+                forces[num - 1] = forces_ndarray
+        elif 'misc' in key:
+            for energy_key in ('energy_extrapolated', ):
+                if energy_key in forces_dict[key]['total_energies']:
+                    energy = forces_dict[key]['total_energies'][energy_key]
+                if num == 0:
+                    energy_0 = energy
+                else:
+                    energies[num - 1] = energy
+                break
+
+    if forces_0 is not None:
+        for forces_ndarray in forces:
+            forces_ndarray -= forces_0
+
+    force_sets = ArrayData()
+    force_sets.set_array('force_sets', np.array(forces))
+    if energies:
+        force_sets.set_array('energies', np.array(energies))
+    force_sets.label = 'force_sets'
+    ret_dict = {'force_sets': force_sets}
+    if forces_0 is not None:
+        forces_0_array = ArrayData()
+        forces_0_array.set_array('forces', forces_0)
+        ret_dict['supercell_forces'] = forces_0_array
+    if energy_0 is not None:
+        ret_dict['supercell_energy'] = Float(energy_0)
+
+    return ret_dict
 
 
 def _get_setting_info(phonon_settings, code_name='phonopy'):

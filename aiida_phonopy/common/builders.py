@@ -1,7 +1,7 @@
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory, WorkflowFactory, CalculationFactory
 from aiida.common import InputValidationError
-from aiida.orm import Str, Bool, Code
+from aiida.orm import Str, Bool, Code, load_group
 
 KpointsData = DataFactory("array.kpoints")
 Dict = DataFactory('dict')
@@ -9,22 +9,23 @@ StructureData = DataFactory('structure')
 PotcarData = DataFactory('vasp.potcar')
 
 
-@calcfunction
-def get_calcjob_inputs(calculator_settings, cell):
+def get_calcjob_inputs(calculator_settings, structure, label=None):
     """Return builder inputs of a calculation."""
-    return _get_calcjob_inputs(calculator_settings, cell)
+    return _get_calcjob_inputs(calculator_settings, structure, label=label)
 
 
 @calcfunction
 def get_force_calcjob_inputs(calculator_settings, supercell):
     """Return builder inputs of force calculations."""
-    return _get_calcjob_inputs(calculator_settings, supercell, 'forces')
+    return _get_calcjob_inputs(calculator_settings, supercell,
+                               calc_type='forces')
 
 
 @calcfunction
 def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
     """Return builder inputs of force calculations for phono3py fc2."""
-    return _get_calcjob_inputs(calculator_settings, supercell, 'phonon_forces')
+    return _get_calcjob_inputs(calculator_settings, supercell,
+                               calc_type='phonon_forces')
 
 
 @calcfunction
@@ -33,26 +34,56 @@ def get_nac_calcjob_inputs(calculator_settings, unitcell):
     return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
 
 
-def _get_calcjob_inputs(calculator_settings, supercell, calc_type=None):
+def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
+                        label=None):
     """Return builder inputs of a calculation."""
     if calc_type is None:
-        settings = calculator_settings.get_dict()
+        settings = calculator_settings
     else:
-        settings = calculator_settings[calc_type]
+        settings = Dict(dict=calculator_settings[calc_type])
     code = Code.get_from_string(settings['code_string'])
-    if code.get_input_plugin_name() == 'vasp.vasp':
+    plugin_name = code.get_input_plugin_name()
+    if plugin_name == 'vasp.vasp':
         builder_inputs = {'options': _get_vasp_options(settings),
-                          'parameters': _get_vasp_parameters(settings),
-                          'settings': _get_vasp_settings(settings),
-                          'kpoints': _get_vasp_kpoints(settings, supercell)}
+                          'parameters': _get_parameters(settings),
+                          'settings': get_vasp_settings(settings),
+                          'kpoints': _get_kpoints(settings, structure),
+                          'clean_workdir': Bool(False),
+                          'structure': structure,
+                          'code': code}
+        if label:
+            builder_inputs.update({'metadata': {'label': label}})
         potential_family = Str(settings['potential_family'])
         potential_mapping = Dict(dict=settings['potential_mapping'])
         builder_inputs.update({'potential_family': potential_family,
                                'potential_mapping': potential_mapping})
+    elif plugin_name == 'quantumespresso.pw':
+        family = load_group(settings['pseudo_family_string'])
+        pseudos = family.get_pseudos(structure=structure)
+        pw = {'metadata': {'options': _get_options(settings),
+                           'label': label},
+              'parameters': _get_parameters(settings),
+              'structure': structure,
+              'pseudos': pseudos,
+              'code': code}
+        builder_inputs = {'kpoints': _get_kpoints(settings, structure),
+                          'pw': pw}
     else:
         raise RuntimeError("Code could not be found.")
 
     return builder_inputs
+
+
+def get_calculator_process(code_string):
+    """Return WorkChain or CalcJob."""
+    code = Code.get_from_string(code_string)
+    plugin_name = code.get_input_plugin_name()
+    if plugin_name == 'vasp.vasp':
+        return WorkflowFactory(plugin_name)
+    elif plugin_name == 'quantumespresso.pw':
+        return WorkflowFactory(plugin_name + ".base")
+    else:
+        raise RuntimeError("Code could not be found.")
 
 
 def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
@@ -115,22 +146,24 @@ def get_immigrant_builder(calculation_folder,
     return builder
 
 
-def _get_vasp_options(settings_dict):
-    return Dict(dict=settings_dict['options'])
+def _get_options(settings_dict):
+    return settings_dict['options']
 
 
-def _get_vasp_parameters(settings_dict):
-    parameters = settings_dict['parameters']
-    incar = parameters['incar']
-    keys_lower = [key.lower() for key in incar]
-    if 'ediff' not in keys_lower:
-        incar.update({'EDIFF': 1.0E-8})
+def _get_vasp_options(settings):
+    return Dict(dict=settings['options'])
+
+
+def _get_parameters(settings):
+    parameters = settings['parameters']
     return Dict(dict=parameters)
 
 
-def _get_vasp_settings(settings_dict):
-    if 'parser_settings' in settings_dict:
-        parser_settings_dict = settings_dict['parser_settings']
+@calcfunction
+def get_vasp_settings(settings):
+    """Update VASP settings."""
+    if 'parser_settings' in settings.dict:
+        parser_settings_dict = settings['parser_settings']
     else:
         parser_settings_dict = {}
     if 'add_forces' not in parser_settings_dict:
@@ -138,18 +171,18 @@ def _get_vasp_settings(settings_dict):
     return Dict(dict={'parser_settings': parser_settings_dict})
 
 
-def _get_vasp_kpoints(settings_dict, structure):
+def _get_kpoints(settings, structure):
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
-    if 'kpoints_density' in settings_dict:
-        kpoints.set_kpoints_mesh_from_density(settings_dict['kpoints_density'])
-    elif 'kpoints_mesh' in settings_dict:
-        if 'kpoints_offset' in settings_dict:
-            kpoints_offset = settings_dict['kpoints_offset']
+    if 'kpoints_density' in settings.dict:
+        kpoints.set_kpoints_mesh_from_density(settings['kpoints_density'])
+    elif 'kpoints_mesh' in settings.dict:
+        if 'kpoints_offset' in settings.dict:
+            kpoints_offset = settings['kpoints_offset']
         else:
             kpoints_offset = [0.0, 0.0, 0.0]
 
-        kpoints.set_kpoints_mesh(settings_dict['kpoints_mesh'],
+        kpoints.set_kpoints_mesh(settings['kpoints_mesh'],
                                  offset=kpoints_offset)
     else:
         raise InputValidationError(
