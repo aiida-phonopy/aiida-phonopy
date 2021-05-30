@@ -1,6 +1,6 @@
 """Workflow to calculate NAC params."""
 
-from aiida.engine import WorkChain, calcfunction
+from aiida.engine import WorkChain, calcfunction, if_, while_
 from aiida.plugins import DataFactory
 from aiida_phonopy.common.builders import (
     get_calcjob_builder, get_calcjob_inputs, get_calculator_process)
@@ -62,8 +62,11 @@ class NacParamsWorkChain(WorkChain):
                    default=lambda: Float(1e-5))
 
         spec.outline(
-            cls.run_calculation,
-            cls.finalize
+            cls.initialize,
+            while_(cls.continue_calculation)(
+                cls.run_calculation,
+            ),
+            cls.finalize,
         )
 
         spec.output('nac_params', valid_type=ArrayData, required=True)
@@ -77,35 +80,50 @@ class NacParamsWorkChain(WorkChain):
             message=('dielectric constant could not be retrieved '
                      'from calculaton.'))
 
+    def continue_calculation(self):
+        """Return boolen for outline."""
+        if self.ctx.iteration >= self.ctx.max_iteration:
+            return False
+        self.ctx.iteration += 1
+        return True
+
+    def initialize(self):
+        """Initialize outline control parameters."""
+        self.report('initialization')
+        self.ctx.iteration = 0
+        if 'sequence' in self.inputs.calculator_settings.keys():
+            self.ctx.max_iteration = len(
+                self.inputs.calculator_settings['sequence'])
+        else:
+            self.ctx.max_iteration = 1
+
     def run_calculation(self):
-        """Born charges and dielectric constant calculation."""
-        self.report('Calculate born charges and dielectric constant')
+        """Run NAC params calculation."""
+        self.report('calculation iteration %d/%d'
+                    % (self.ctx.iteration, self.ctx.max_iteration))
+        label = "nac_params_%d" % self.ctx.iteration
         process_inputs = get_calcjob_inputs(self.inputs.calculator_settings,
                                             self.inputs.structure,
-                                            label=self.metadata.label)
-        # builder = get_calcjob_builder(
-        #     self.inputs.structure,
-        #     self.inputs.calculator_settings['code_string'],
-        #     builder_inputs,
-        #     label='born_and_epsilon')
-        # future = self.submit(builder)
-        CalculatorProcess = get_calculator_process(
-            self.inputs.calculator_settings['code_string'])
+                                            ctx=self.ctx,
+                                            label=label)
+        if 'sequence' in self.inputs.calculator_settings.keys():
+            i = self.ctx.iteration - 1
+            key = self.inputs.calculator_settings['sequence'][i]
+            code_string = self.inputs.calculator_settings[key]['code_string']
+        else:
+            code_string = self.inputs.calculator_settings['code_string']
+        CalculatorProcess = get_calculator_process(code_string)
         future = self.submit(CalculatorProcess, **process_inputs)
-        self.report('born_and_epsilon: {}'.format(future.pk))
-        self.to_context(**{'calc': future})
+        self.report('nac_params: {}'.format(future.pk))
+        self.to_context(**{label: future})
 
     def finalize(self):
         """Finalize NAC params calculation."""
-        self.report('Create nac params data')
+        self.report('finalization')
 
-        calc = self.ctx.calc
-        if type(calc) is dict:
-            calc_dict = calc
-            structure = calc['structure']
-        else:
-            calc_dict = calc.outputs
-            structure = calc.inputs.structure
+        calc = self.ctx['nac_params_1']
+        calc_dict = calc.outputs
+        structure = calc.inputs.structure
 
         if 'born_charges' not in calc_dict:
             return self.exit_codes.ERROR_NO_BORN_EFFECTIVE_CHARGES

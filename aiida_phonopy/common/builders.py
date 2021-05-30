@@ -9,9 +9,11 @@ StructureData = DataFactory('structure')
 PotcarData = DataFactory('vasp.potcar')
 
 
-def get_calcjob_inputs(calculator_settings, structure, label=None):
+def get_calcjob_inputs(calculator_settings, structure,
+                       calc_type=None, label=None, ctx=None):
     """Return builder inputs of a calculation."""
-    return _get_calcjob_inputs(calculator_settings, structure, label=label)
+    return _get_calcjob_inputs(calculator_settings, structure,
+                               calc_type=calc_type, label=label, ctx=ctx)
 
 
 @calcfunction
@@ -35,12 +37,17 @@ def get_nac_calcjob_inputs(calculator_settings, unitcell):
 
 
 def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
-                        label=None):
+                        label=None, ctx=None):
     """Return builder inputs of a calculation."""
     if calc_type is None:
-        settings = calculator_settings
+        if 'sequence' in calculator_settings.keys():
+            key = calculator_settings['sequence'][ctx.iteration - 1]
+            settings = calculator_settings[key]
+        else:
+            settings = calculator_settings
     else:
         settings = Dict(dict=calculator_settings[calc_type])
+
     code = Code.get_from_string(settings['code_string'])
     plugin_name = code.get_input_plugin_name()
     if plugin_name == 'vasp.vasp':
@@ -68,6 +75,16 @@ def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
               'code': code}
         builder_inputs = {'kpoints': _get_kpoints(settings, structure),
                           'pw': pw}
+    elif plugin_name == 'quantumespresso.ph':
+        qpoints = KpointsData()
+        qpoints.set_kpoints_mesh([1, 1, 1], offset=[0, 0, 0])
+        ph = {'metadata': {'options': _get_options(settings),
+                           'label': label},
+              'qpoints': qpoints,
+              'parameters': _get_parameters(settings),
+              'parent_folder': ctx['nac_params_1'].outputs.remote_folder,
+              'code': code}
+        builder_inputs = {'ph': ph}
     else:
         raise RuntimeError("Code could not be found.")
 
@@ -80,7 +97,7 @@ def get_calculator_process(code_string):
     plugin_name = code.get_input_plugin_name()
     if plugin_name == 'vasp.vasp':
         return WorkflowFactory(plugin_name)
-    elif plugin_name == 'quantumespresso.pw':
+    elif plugin_name in ('quantumespresso.pw', 'quantumespresso.ph'):
         return WorkflowFactory(plugin_name + ".base")
     else:
         raise RuntimeError("Code could not be found.")
@@ -162,7 +179,7 @@ def _get_parameters(settings):
 @calcfunction
 def get_vasp_settings(settings):
     """Update VASP settings."""
-    if 'parser_settings' in settings.dict:
+    if 'parser_settings' in settings.keys():
         parser_settings_dict = settings['parser_settings']
     else:
         parser_settings_dict = {}
@@ -174,10 +191,10 @@ def get_vasp_settings(settings):
 def _get_kpoints(settings, structure):
     kpoints = KpointsData()
     kpoints.set_cell_from_structure(structure)
-    if 'kpoints_density' in settings.dict:
+    if 'kpoints_density' in settings.keys():
         kpoints.set_kpoints_mesh_from_density(settings['kpoints_density'])
-    elif 'kpoints_mesh' in settings.dict:
-        if 'kpoints_offset' in settings.dict:
+    elif 'kpoints_mesh' in settings.keys():
+        if 'kpoints_offset' in settings.keys():
             kpoints_offset = settings['kpoints_offset']
         else:
             kpoints_offset = [0.0, 0.0, 0.0]

@@ -170,7 +170,7 @@ class PhonopyWorkChain(WorkChain):
 
     def is_nac(self):
         """Return boolen for outline."""
-        if 'is_nac' in self.inputs.phonon_settings.dict:
+        if 'is_nac' in self.inputs.phonon_settings.keys():
             return self.inputs.phonon_settings['is_nac']
         else:
             False
@@ -206,7 +206,7 @@ class PhonopyWorkChain(WorkChain):
             if 'code_string' not in self.inputs:
                 raise RuntimeError("code_string has to be specified.")
 
-        if 'supercell_matrix' not in self.inputs.phonon_settings.dict:
+        if 'supercell_matrix' not in self.inputs.phonon_settings.keys():
             raise RuntimeError(
                 "supercell_matrix was not found in phonon_settings.")
 
@@ -234,7 +234,7 @@ class PhonopyWorkChain(WorkChain):
         """Set default settings and create supercells and primitive cell."""
         self.report('initialize_postprocess_settings')
 
-        if 'mesh' in self.inputs.phonon_settings.dict:
+        if 'mesh' in self.inputs.phonon_settings.keys():
             mesh = self.inputs.phonon_settings['mesh']
         else:
             mesh = 100.0

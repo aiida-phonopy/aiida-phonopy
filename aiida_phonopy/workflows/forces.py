@@ -62,7 +62,7 @@ def _get_energy(outputs, code_string):
             return None
     elif plugin_name == 'quantumespresso.pw':
         if ('output_parameters' in outputs and
-            'energy' in outputs.output_parameters.dict):
+            'energy' in outputs.output_parameters.keys()):
             energy_data = get_qe_energy(outputs.output_parameters)
     return energy_data
 
@@ -83,7 +83,7 @@ def get_qe_energy(output_parameters):
     """Return VASP energy ArrayData."""
     energy_data = ArrayData()
     energy_data.set_array('energy', np.array(
-        [output_parameters.dict.energy, ], dtype=float))
+        [output_parameters['energy'], ], dtype=float))
     energy_data.label = 'energy'
     return energy_data
 
