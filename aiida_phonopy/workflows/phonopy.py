@@ -1,8 +1,8 @@
 """WorkChan to run phonon calculation by phonopy and force calculators."""
 
-from aiida.engine import WorkChain
+from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import Float, Bool, Str, Code
+from aiida.orm import Code
 from aiida.engine import if_, while_
 from aiida_phonopy.common.builders import get_immigrant_builder
 from aiida_phonopy.common.utils import (
@@ -17,12 +17,29 @@ from aiida_phonopy.workflows.forces import ForcesWorkChain
 # Should be improved by some kind of WorkChainFactory
 # For now all workchains should be copied to aiida/workflows
 
+Float = DataFactory('float')
+Bool = DataFactory('bool')
+Str = DataFactory('str')
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 XyData = DataFactory('array.xy')
 StructureData = DataFactory('structure')
 BandsData = DataFactory('array.bands')
 PhonopyCalculation = CalculationFactory('phonopy.phonopy')
+
+
+@calcfunction
+def get_postprocess_parameters(phonon_settings):
+    """Return phonopy postprocess parameters."""
+    valid_keys = ('mesh', 'fc_calculator')
+    params = {}
+    for key in valid_keys:
+        if key in phonon_settings.keys():
+            params[key] = phonon_settings[key]
+
+    if 'mesh' not in phonon_settings.keys():
+        params['mesh'] = 100.0
+    return Dict(dict=params)
 
 
 class PhonopyWorkChain(WorkChain):
@@ -108,7 +125,9 @@ class PhonopyWorkChain(WorkChain):
 
         spec.outline(
             cls.initialize_structures,
-            cls.initialize_postprocess_settings,
+            if_(cls.run_phonopy)(
+                cls.initialize_postprocess_settings,
+            ),
             if_(cls.import_calculations)(
                 if_(cls.import_calculations_from_files)(
                     while_(cls.continue_import)(
@@ -153,7 +172,7 @@ class PhonopyWorkChain(WorkChain):
         spec.output('band_structure', valid_type=BandsData, required=False)
         spec.output('dos', valid_type=XyData, required=False)
         spec.output('pdos', valid_type=XyData, required=False)
-        spec.output('qpoint_mesh', valid_type=Dict, required=False)
+        spec.output('postprocess_parameters', valid_type=Dict, required=False)
         spec.output('phonon_setting_info', valid_type=Dict)
 
     def dry_run(self):
@@ -234,11 +253,8 @@ class PhonopyWorkChain(WorkChain):
         """Set default settings and create supercells and primitive cell."""
         self.report('initialize_postprocess_settings')
 
-        if 'mesh' in self.inputs.phonon_settings.keys():
-            mesh = self.inputs.phonon_settings['mesh']
-        else:
-            mesh = 100.0
-        self.ctx.qpoint_mesh = Dict(dict={'mesh': mesh})
+        params = get_postprocess_parameters(self.inputs.phonon_settings)
+        self.ctx.postprocess_parameters = params
 
     def run_force_and_nac_calculations(self):
         """Run supercell force and NAC params calculations.
@@ -388,7 +404,7 @@ class PhonopyWorkChain(WorkChain):
         builder.structure = self.inputs.structure
         builder.settings = self.ctx.phonon_setting_info
         builder.symmetry_tolerance = self.inputs.symmetry_tolerance
-        builder.qpoint_mesh = self.ctx.qpoint_mesh
+        builder.postprocess_parameters = self.ctx.postprocess_parameters
         builder.metadata.label = self.inputs.metadata.label
         builder.metadata.options.update(self.inputs.phonon_settings['options'])
         builder.force_sets = self.ctx.force_sets
@@ -413,7 +429,7 @@ class PhonopyWorkChain(WorkChain):
         for prop in ph_props:
             if prop in self.ctx.phonon_properties.outputs:
                 self.out(prop, self.ctx.phonon_properties.outputs[prop])
-        self.out('qpoint_mesh', self.ctx.qpoint_mesh)
+        self.out('postprocess_parameters', self.ctx.postprocess_parameters)
 
         self.report('finish phonon')
 
@@ -424,6 +440,7 @@ class PhonopyWorkChain(WorkChain):
         self.ctx.force_constants = get_force_constants(
             self.inputs.structure,
             self.ctx.phonon_setting_info,
+            self.ctx.postprocess_parameters,
             self.ctx.force_sets,
             self.inputs.symmetry_tolerance)
         self.out('force_constants', self.ctx.force_constants)
@@ -438,13 +455,13 @@ class PhonopyWorkChain(WorkChain):
         result = get_phonon_properties(self.inputs.structure,
                                        self.ctx.phonon_setting_info,
                                        self.ctx.force_constants,
-                                       self.ctx.qpoint_mesh,
+                                       self.ctx.postprocess_parameters,
                                        self.inputs.symmetry_tolerance,
                                        **params)
         self.out('thermal_properties', result['thermal_properties'])
         self.out('dos', result['dos'])
         self.out('band_structure', result['band_structure'])
-        self.out('qpoint_mesh', self.ctx.qpoint_mesh)
+        self.out('postprocess_parameters', self.ctx.postprocess_parameters)
 
         self.report('finish phonon')
 

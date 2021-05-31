@@ -29,7 +29,6 @@ def generate_phonopy_cells(phonon_settings,
          'phonon_supercell_matrix',
          'distance',
          'symmetry_tolerance',
-         'fc_calculator',
          'number_of_snapshots',
          'random_seed',
          'is_plusminus',
@@ -73,7 +72,6 @@ def generate_phonopy_cells(phonon_settings,
             'international' : Space group type.
         'phonon_displacement_dataset' : dict
             Phono3py.phonon_dataset.
-         'fc_calculator' : str
          'number_of_snapshots' : int
          'random_seed' : int
          'is_plusminus' : bool
@@ -129,6 +127,7 @@ def generate_phono3py_cells(phonon_settings,
 @calcfunction
 def get_force_constants(structure,
                         phonon_settings,
+                        postprocess_parameters,
                         force_sets,
                         symmetry_tolerance):
     """Calculate force constants."""
@@ -137,7 +136,11 @@ def get_force_constants(structure,
                                    symmetry_tolerance=symmetry_tolerance.value)
     phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
-    phonon.produce_force_constants()
+    if 'fc_calculator' in postprocess_parameters.keys():
+        if postprocess_parameters['fc_calculator'].lower().strip() == 'alm':
+            phonon.produce_force_constants(fc_calculator='alm')
+    else:
+        phonon.produce_force_constants()
     force_constants = ArrayData()
     force_constants.set_array('force_constants', phonon.force_constants)
     force_constants.set_array('p2s_map', phonon.primitive.p2s_map)
@@ -645,7 +648,6 @@ def _get_setting_info(phonon_settings, code_name='phonopy'):
                   'phonon_supercell_matrix',
                   'distance',
                   'symmetry_tolerance',
-                  'fc_calculator',
                   'number_of_snapshots',
                   'random_seed',
                   'is_plusminus',

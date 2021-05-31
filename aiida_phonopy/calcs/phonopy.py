@@ -65,7 +65,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
         self._create_phonopy_yaml(folder)
         self._create_FORCE_SETS(folder)
         mesh_opts, fc_opts = get_phonopy_options(
-            self.inputs.settings.get_dict(), self.inputs.qpoint_mesh.get_dict())
+            self.inputs.postprocess_parameters)
 
         self._internal_retrieve_list = [self._INOUT_FORCE_CONSTANTS, ]
         self._additional_cmd_params = [['--writefc', ] + fc_opts, ]
@@ -90,7 +90,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
     def _create_phonopy_yaml(self, folder):
         phpy_yaml_txt = get_phonopy_yaml_txt(
             self.inputs.structure,
-            self.inputs.settings.get_dict())
+            supercell_matrix=self.inputs.settings['supercell_matrix'])
         with folder.open(self._INPUT_CELL, 'w', encoding='utf8') as handle:
             handle.write(phpy_yaml_txt)
 
@@ -99,9 +99,9 @@ class PhonopyCalculation(BasePhonopyCalculation):
             force_sets = self.inputs.force_sets
         else:
             force_sets = None
-        if 'displacement_dataset' in self.inputs.settings.attributes:
+        if 'displacement_dataset' in self.inputs.settings.keys():
             dataset = self.inputs.settings['displacement_dataset']
-        elif 'dataset' in self.inputs.settings.attributes:
+        elif 'dataset' in self.inputs.settings.keys():
             dataset = self.inputs.settings['dataset']
         elif ('dataset' in self.inputs and
               'displacements' in self.inputs.dataset.get_arraynames()):

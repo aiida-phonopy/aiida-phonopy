@@ -53,13 +53,12 @@ def get_FORCE_CONSTANTS_txt(force_constants_object):
 
 
 def get_phonopy_yaml_txt(structure,
-                         settings,
                          supercell_matrix=None,
                          primitive_matrix=None,
                          calculator=None):
     unitcell = phonopy_atoms_from_structure(structure)
     ph = Phonopy(unitcell,
-                 supercell_matrix=settings['supercell_matrix'],
+                 supercell_matrix=supercell_matrix,
                  primitive_matrix='auto',
                  calculator=calculator)
     phpy_yaml = PhonopyYaml()
@@ -68,11 +67,11 @@ def get_phonopy_yaml_txt(structure,
     return str(phpy_yaml)
 
 
-def get_phonopy_options(settings, qpoint_mesh):
+def get_phonopy_options(postprocess_parameters):
     """Return phonopy command option strings."""
     mesh_opts = []
-    if 'mesh' in qpoint_mesh:
-        mesh = qpoint_mesh['mesh']
+    if 'mesh' in postprocess_parameters.keys():
+        mesh = postprocess_parameters['mesh']
         try:
             length = float(mesh)
             mesh_opts.append('--mesh=%f' % length)
@@ -81,8 +80,8 @@ def get_phonopy_options(settings, qpoint_mesh):
         mesh_opts.append('--nowritemesh')
 
     fc_opts = []
-    if 'fc_calculator' in settings:
-        if settings['fc_calculator'].lower().strip() == 'alm':
+    if 'fc_calculator' in postprocess_parameters.keys():
+        if postprocess_parameters['fc_calculator'].lower().strip() == 'alm':
             fc_opts.append('--alm')
     return mesh_opts, fc_opts
 
