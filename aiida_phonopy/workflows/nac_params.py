@@ -1,9 +1,9 @@
 """Workflow to calculate NAC params."""
 
-from aiida.engine import WorkChain, calcfunction, if_, while_
+from aiida.engine import WorkChain, calcfunction, while_, append_
 from aiida.plugins import DataFactory
 from aiida_phonopy.common.builders import (
-    get_calcjob_builder, get_calcjob_inputs, get_calculator_process)
+    get_calcjob_inputs, get_calculator_process, get_plugin_names)
 from aiida_phonopy.common.utils import phonopy_atoms_from_structure
 from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
 
@@ -13,9 +13,7 @@ ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
 
-@calcfunction
-def get_nac_params(born_charges, epsilon, nac_structure, symmetry_tolerance,
-                   primitive=None):
+def _get_nac_params(ctx, symmetry_tolerance):
     """Obtain Born effective charges and dielectric constants in primitive cell.
 
     When Born effective charges and dielectric constants are calculated within
@@ -25,27 +23,74 @@ def get_nac_params(born_charges, epsilon, nac_structure, symmetry_tolerance,
     needs information of the structure where those values were calcualted and
     the target primitive cell structure.
 
-    Two kargs parameters
-    primitive : StructureData
-    symmetry_tolerance : Float
-
     """
-    borns = born_charges.get_array('born_charges')
-    eps = epsilon.get_array('epsilon')
+    if ctx.plugin_names[0] == 'vasp.vasp':
+        calc = ctx.nac_params_calcs[0]
+        nac_params = get_vasp_nac_params(calc.outputs.born_charges,
+                                         calc.outputs.dielectrics,
+                                         calc.inputs.structure,
+                                         symmetry_tolerance)
+    elif ctx.plugin_names[0] == 'quantumespresso.pw':
+        pw_calc = ctx.nac_params_calcs[0]
+        ph_calc = ctx.nac_params_calcs[1]
+        nac_params = get_qe_nac_params(ph_calc.outputs.output_parameters,
+                                       pw_calc.inputs.pw.structure,
+                                       symmetry_tolerance)
+    else:
+        nac_params = None
+    return nac_params
 
-    nac_cell = phonopy_atoms_from_structure(nac_structure)
-    kwargs = {}
-    kwargs['symprec'] = symmetry_tolerance.value
+
+@calcfunction
+def get_qe_nac_params(output_parameters,
+                      structure,
+                      symmetry_tolerance,
+                      primitive=None):
+    """Return NAC params ArrayData created from QE results."""
+    nac_params = _get_nac_params_array(
+        output_parameters['effective_charges_eu'],
+        output_parameters['dielectric_constant'],
+        structure,
+        symmetry_tolerance.value,
+        primitive=primitive)
+    return nac_params
+
+
+@calcfunction
+def get_vasp_nac_params(born_charges,
+                        epsilon,
+                        structure,
+                        symmetry_tolerance,
+                        primitive=None):
+    """Return NAC params ArrayData created from VASP results."""
+    nac_params = _get_nac_params_array(born_charges.get_array('born_charges'),
+                                       epsilon.get_array('epsilon'),
+                                       structure,
+                                       symmetry_tolerance.value,
+                                       primitive=primitive)
+    return nac_params
+
+
+def _get_nac_params_array(born_charges,
+                          epsilon,
+                          structure,
+                          symmetry_tolerance,
+                          primitive=None):
+    phonopy_cell = phonopy_atoms_from_structure(structure)
     if primitive is not None:
-        kwargs['primitive'] = phonopy_atoms_from_structure(primitive)
+        phonopy_primitive = phonopy_atoms_from_structure(primitive)
+    else:
+        phonopy_primitive = None
     borns_, epsilon_ = symmetrize_borns_and_epsilon(
-        borns, eps, nac_cell, **kwargs)
-
+        born_charges,
+        epsilon,
+        phonopy_cell,
+        symprec=symmetry_tolerance,
+        primitive=phonopy_primitive)
     nac_params = ArrayData()
     nac_params.set_array('born_charges', borns_)
     nac_params.set_array('epsilon', epsilon_)
     nac_params.label = 'born_charges & epsilon'
-
     return nac_params
 
 
@@ -72,13 +117,8 @@ class NacParamsWorkChain(WorkChain):
         spec.output('nac_params', valid_type=ArrayData, required=True)
 
         spec.exit_code(
-            1001, 'ERROR_NO_BORN_EFFECTIVE_CHARGES',
-            message=('Born effecti charges could not be retrieved '
-                     'from calculaton.'))
-        spec.exit_code(
-            1002, 'ERROR_NO_DIELECTRIC_CONSTANT',
-            message=('dielectric constant could not be retrieved '
-                     'from calculaton.'))
+            1001, 'ERROR_NO_NAC_PARAMS',
+            message=('NAC params could not be retrieved from calculaton.'))
 
     def continue_calculation(self):
         """Return boolen for outline."""
@@ -97,6 +137,9 @@ class NacParamsWorkChain(WorkChain):
         else:
             self.ctx.max_iteration = 1
 
+        self.ctx.plugin_names = get_plugin_names(
+            self.inputs.calculator_settings)
+
     def run_calculation(self):
         """Run NAC params calculation."""
         self.report('calculation iteration %d/%d'
@@ -106,33 +149,19 @@ class NacParamsWorkChain(WorkChain):
                                             self.inputs.structure,
                                             ctx=self.ctx,
                                             label=label)
-        if 'sequence' in self.inputs.calculator_settings.keys():
-            i = self.ctx.iteration - 1
-            key = self.inputs.calculator_settings['sequence'][i]
-            code_string = self.inputs.calculator_settings[key]['code_string']
-        else:
-            code_string = self.inputs.calculator_settings['code_string']
-        CalculatorProcess = get_calculator_process(code_string)
+        i = self.ctx.iteration - 1
+        CalculatorProcess = get_calculator_process(
+            plugin_name=self.ctx.plugin_names[i])
         future = self.submit(CalculatorProcess, **process_inputs)
         self.report('nac_params: {}'.format(future.pk))
-        self.to_context(**{label: future})
+        self.to_context(nac_params_calcs=append_(future))
 
     def finalize(self):
         """Finalize NAC params calculation."""
         self.report('finalization')
 
-        calc = self.ctx['nac_params_1']
-        calc_dict = calc.outputs
-        structure = calc.inputs.structure
+        nac_params = _get_nac_params(self.ctx, self.inputs.symmetry_tolerance)
+        if nac_params is None:
+            return self.exit_codes.ERROR_NO_NAC_PARAMS
 
-        if 'born_charges' not in calc_dict:
-            return self.exit_codes.ERROR_NO_BORN_EFFECTIVE_CHARGES
-
-        if 'dielectrics' not in calc_dict:
-            return self.exit_codes.ERROR_NO_DIELECTRIC_CONSTANT
-
-        nac_params = get_nac_params(calc_dict['born_charges'],
-                                    calc_dict['dielectrics'],
-                                    structure,
-                                    self.inputs.symmetry_tolerance)
         self.out('nac_params', nac_params)

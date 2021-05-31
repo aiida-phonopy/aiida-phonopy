@@ -1,3 +1,5 @@
+"""General utilities."""
+
 import numpy as np
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
@@ -164,7 +166,7 @@ def get_phonon_properties(structure,
     total_dos, pdos, thermal_properties = get_mesh_property_data(ph, mesh)
 
     # Band structure
-    bs = get_bands_data(ph)
+    bs = _get_bands_data(ph)
 
     return {'dos': total_dos,
             'pdos': pdos,
@@ -277,7 +279,7 @@ def get_thermal_properties(thermal_properties):
     return tprops
 
 
-def get_bands_data(ph):
+def _get_bands_data(ph):
     ph.auto_band_structure()
     labels = [x.replace('$', '').replace('\\', '').replace('mathrm{', '').replace('}', '').upper()
               for x in ph.band_structure.labels]

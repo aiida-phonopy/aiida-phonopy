@@ -1,3 +1,5 @@
+"""Utilities related to process builder or inputs dist."""
+
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory, WorkflowFactory, CalculationFactory
 from aiida.common import InputValidationError
@@ -34,6 +36,23 @@ def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
 def get_nac_calcjob_inputs(calculator_settings, unitcell):
     """Return builder inputs of an NAC params calculation."""
     return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
+
+
+def get_plugin_names(calculator_settings):
+    """Return plugin names of calculators."""
+    code_strings = []
+    if 'sequence' in calculator_settings.keys():
+        for key in calculator_settings['sequence']:
+            code_strings.append(calculator_settings[key]['code_string'])
+    else:
+        code_strings.append(calculator_settings['code_string'])
+
+    plugin_names = []
+    for code_string in code_strings:
+        code = Code.get_from_string(code_string)
+        plugin_names.append(code.get_input_plugin_name())
+
+    return plugin_names
 
 
 def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
@@ -82,7 +101,7 @@ def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
                            'label': label},
               'qpoints': qpoints,
               'parameters': _get_parameters(settings),
-              'parent_folder': ctx['nac_params_1'].outputs.remote_folder,
+              'parent_folder': ctx.nac_params_calcs[0].outputs.remote_folder,
               'code': code}
         builder_inputs = {'ph': ph}
     else:
@@ -91,14 +110,17 @@ def _get_calcjob_inputs(calculator_settings, structure, calc_type=None,
     return builder_inputs
 
 
-def get_calculator_process(code_string):
+def get_calculator_process(code_string=None, plugin_name=None):
     """Return WorkChain or CalcJob."""
-    code = Code.get_from_string(code_string)
-    plugin_name = code.get_input_plugin_name()
-    if plugin_name == 'vasp.vasp':
-        return WorkflowFactory(plugin_name)
-    elif plugin_name in ('quantumespresso.pw', 'quantumespresso.ph'):
-        return WorkflowFactory(plugin_name + ".base")
+    if plugin_name is None:
+        code = Code.get_from_string(code_string)
+        _plugin_name = code.get_input_plugin_name()
+    else:
+        _plugin_name = plugin_name
+    if _plugin_name == 'vasp.vasp':
+        return WorkflowFactory(_plugin_name)
+    elif _plugin_name in ('quantumespresso.pw', 'quantumespresso.ph'):
+        return WorkflowFactory(_plugin_name + ".base")
     else:
         raise RuntimeError("Code could not be found.")
 
@@ -134,6 +156,7 @@ def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
 def get_immigrant_builder(calculation_folder,
                           calculator_settings,
                           calc_type=None):
+    """Return VASP immigrant builder."""
     if calc_type:
         code = Code.get_from_string(
             calculator_settings[calc_type]['code_string'])

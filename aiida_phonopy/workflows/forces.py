@@ -25,7 +25,7 @@ def _get_forces(outputs, code_string):
             return None
     elif plugin_name == 'quantumespresso.pw':
         if ('output_trajectory' in outputs and
-            'forces' in outputs.output_trajectory.get_arraynames()):
+            'forces' in outputs.output_trajectory.get_arraynames()):  # noqa: E129 E501
             forces_data = get_qe_forces(outputs.output_trajectory)
         else:
             return None
@@ -62,7 +62,7 @@ def _get_energy(outputs, code_string):
             return None
     elif plugin_name == 'quantumespresso.pw':
         if ('output_parameters' in outputs and
-            'energy' in outputs.output_parameters.keys()):
+            'energy' in outputs.output_parameters.keys()):  # noqa: E129
             energy_data = get_qe_energy(outputs.output_parameters)
     return energy_data
 
