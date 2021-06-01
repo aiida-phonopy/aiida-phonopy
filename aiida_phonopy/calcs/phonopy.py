@@ -1,6 +1,7 @@
+"""CalcJob to run phonopy at a remote host."""
+
 from aiida.plugins import DataFactory
 from aiida_phonopy.calcs.base import BasePhonopyCalculation
-from aiida.orm import Str
 from aiida.common import InputValidationError
 from aiida_phonopy.common.file_generators import (
     get_FORCE_SETS_txt, get_phonopy_options, get_phonopy_yaml_txt)
@@ -10,18 +11,17 @@ BandsData = DataFactory('array.bands')
 ArrayData = DataFactory('array')
 XyData = DataFactory('array.xy')
 Dict = DataFactory('dict')
+Str = DataFactory('str')
 
 
 class PhonopyCalculation(BasePhonopyCalculation):
-    """
-    A basic plugin for calculating phonon properties using Phonopy.
-    """
+    """Phonopy calculation."""
 
     _OUTPUT_PROJECTED_DOS = 'projected_dos.dat'
     _OUTPUT_TOTAL_DOS = 'total_dos.dat'
     _OUTPUT_THERMAL_PROPERTIES = 'thermal_properties.yaml'
     _OUTPUT_BAND_STRUCTURE = 'band.yaml'
-    _INOUT_FORCE_CONSTANTS = 'FORCE_CONSTANTS'
+    _INOUT_FORCE_CONSTANTS = 'force_constants.hdf5'
     _INPUT_CELL = 'phonopy_cells.yaml'
     _INPUT_FORCE_SETS = 'FORCE_SETS'
 
@@ -42,7 +42,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
                    default=lambda: Str(cls._INOUT_FORCE_CONSTANTS))
         # parser_name has to be set to invoke parsing.
         spec.inputs['metadata']['options']['parser_name'].default = 'phonopy'
-        spec.inputs['metadata']['options']['output_filename'].default = 'phonopy.out'
+        spec.inputs['metadata']['options']['output_filename'].default = 'phonopy.yaml'
 
         spec.output('force_constants', valid_type=ArrayData, required=False,
                     help='Calculated force constants')
@@ -54,6 +54,8 @@ class PhonopyCalculation(BasePhonopyCalculation):
                     help='Calculated thermal properties')
         spec.output('band_structure', valid_type=BandsData, required=False,
                     help='Calculated phonon band structure')
+        spec.output('version', valid_type=Str, required=False,
+                    help='Version number')
 
     def prepare_for_submission(self, folder):
         """Prepare calcinfo."""
@@ -67,25 +69,28 @@ class PhonopyCalculation(BasePhonopyCalculation):
         mesh_opts, fc_opts = get_phonopy_options(
             self.inputs.settings['postprocess_parameters'])
 
-        self._internal_retrieve_list = [self._INOUT_FORCE_CONSTANTS, ]
-        self._additional_cmd_params = [['--writefc', ] + fc_opts, ]
-        self._calculation_cmd = [['-c', self._INPUT_CELL], ]
+        self._internal_retrieve_list = [
+            self._INOUT_FORCE_CONSTANTS,
+            self.inputs.metadata.options.output_filename]
+        self._additional_cmd_params = [
+            ['--writefc', '--writefc-format=hdf5'] + fc_opts,
+            ['--readfc', '--readfc-format=hdf5'],
+            ['--readfc', '--readfc-format=hdf5']]
 
         # First run with --writefc, and with --readfc for remaining runs
-        if not self.inputs.fc_only:
-
+        if self.inputs.fc_only:
+            self._calculation_cmd = [['-c', self._INPUT_CELL], ]
+        else:
             self._calculation_cmd = [
                 ['-c', self._INPUT_CELL, '--pdos=auto'] + mesh_opts,
                 ['-c', self._INPUT_CELL, '-t', '--dos'] + mesh_opts,
                 ['-c', self._INPUT_CELL, '--band=auto', '--band-points=101',
-                 '--band-const-interval']
-            ]
-            N = len(self._calculation_cmd) - 1
-            self._additional_cmd_params += [['--readfc', ] for i in range(N)]
-            self._internal_retrieve_list += [self._OUTPUT_TOTAL_DOS,
-                                             self._OUTPUT_PROJECTED_DOS,
-                                             self._OUTPUT_THERMAL_PROPERTIES,
-                                             self._OUTPUT_BAND_STRUCTURE]
+                 '--band-const-interval']]
+            self._internal_retrieve_list += [
+                self._OUTPUT_TOTAL_DOS,
+                self._OUTPUT_PROJECTED_DOS,
+                self._OUTPUT_THERMAL_PROPERTIES,
+                self._OUTPUT_BAND_STRUCTURE]
 
     def _create_phonopy_yaml(self, folder):
         phpy_yaml_txt = get_phonopy_yaml_txt(

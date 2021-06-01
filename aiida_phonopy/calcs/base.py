@@ -61,7 +61,7 @@ class BasePhonopyCalculation(CalcJob):
         if (not self.inputs.fc_only and
             'nac_params' in self.inputs and
             'primitive' in self.inputs and
-            'symmetry_tolerance' in self.inputs):
+            'symmetry_tolerance' in self.inputs):  # noqa: E129
             born_txt = get_BORN_txt(
                 self.inputs.nac_params,
                 self.inputs.primitive,
@@ -88,10 +88,9 @@ class BasePhonopyCalculation(CalcJob):
         for i, (default_params, additional_params) in enumerate(zip(
                 self._calculation_cmd, self._additional_cmd_params)):
             codeinfo = CodeInfo()
-            codeinfo.cmdline_params = default_params + additional_params
+            cmdline_params = default_params + additional_params
+            codeinfo.cmdline_params = cmdline_params
             codeinfo.code_uuid = self.inputs.code.uuid
-            codeinfo.stdout_name = "%s%d" % (
-                self.options.output_filename, i + 1)
             codeinfo.withmpi = False
             calcinfo.codes_info.append(codeinfo)
 

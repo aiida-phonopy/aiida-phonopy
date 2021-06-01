@@ -7,9 +7,9 @@
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Physics",
         "Topic :: Scientific/Engineering :: Chemistry",
         "Development Status :: 5 - Production/Stable",
@@ -17,10 +17,10 @@
     ],
     "license": "MIT license",
     "install_requires": [
-        "phonopy>=2.8.1",
+        "phonopy>=2.9.3",
         "numpy",
         "seekpath",
-        "aiida-core>=1.2.1,<2.0.0",
+        "aiida-core>=1.6.3,<2.0.0",
         "aiida-vasp>=2.0.0"
     ],
     "setup_requires": [
