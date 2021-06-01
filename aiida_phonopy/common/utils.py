@@ -58,6 +58,8 @@ def setup_phonopy_calculation(phonon_settings,
             matrix and symmetry information.
 
     phonon_setting_info contains the following entries:
+        'version' : str
+            Phonopy version number.
         'supercell_matrix' : array_like
             3x3 integer matrix to generate supercell matrix.
         'phonon_supercell_matrix' : array_like
@@ -75,17 +77,17 @@ def setup_phonopy_calculation(phonon_settings,
             'international' : Space group type.
         'phonon_displacement_dataset' : dict
             Phono3py.phonon_dataset.
-         'number_of_snapshots' : int
-         'random_seed' : int
-         'is_plusminus' : bool
-         'is_diagonal' : bool
-         'is_trigonal' : bool
-         'postprocess_parameters' : dict
-             This is given when run_phonopy=True.
-             'mesh' : float or list
-                 Mesh numbers or distance measure of q-point sampling mesh.
-             'fc_calculator' : str
-                 External force constants calculator.
+        'number_of_snapshots' : int
+        'random_seed' : int
+        'is_plusminus' : bool
+        'is_diagonal' : bool
+        'is_trigonal' : bool
+        'postprocess_parameters' : dict
+            This is given when run_phonopy=True.
+            'mesh' : float or list
+                Mesh numbers or distance measure of q-point sampling mesh.
+            'fc_calculator' : str
+                External force constants calculator.
 
     """
     ph_settings = _get_setting_info(phonon_settings)
@@ -96,6 +98,8 @@ def setup_phonopy_calculation(phonon_settings,
     ph = _get_phonopy_instance(structure,
                                ph_settings,
                                symmetry_tolerance=symmetry_tolerance.value)
+    ph_settings['version'] = ph.version
+
     if dataset is None:
         supported_keys = (
             'distance', 'is_plusminus', 'is_diagonal', 'is_trigonal',
@@ -132,7 +136,49 @@ def generate_phono3py_cells(phonon_settings,
                             structure,
                             symmetry_tolerance,
                             dataset=None):
-    """Generate supercells and primitive cell."""
+    """Set up phono3py calculation.
+
+    Returns
+    -------
+    dict
+        'supercell' : StructureData
+            Perfect supercell.
+        'supercell_001', 'supercell_002', ... : StructureData
+            Supercells with displacements
+        'primitive' : StructureData
+            Primitive cell.
+        'phonon_supercell' : StructureData
+            For phono3py. Perfect supercell for harmonic phonon calculation.
+        'phonon_supercell_001', 'phonon_supercell_002', ... : StructureData
+            For phono3py. Supercells with displacements for harmonic phonon
+            calculation.
+        'phonon_setting_info' : Dict
+            Phonopy setting parameters including those generated in the
+            process of displacements creation, e.g., primitive and  sueprcell
+            matrix and symmetry information.
+
+    phonon_setting_info contains the following entries:
+        'supercell_matrix' : array_like
+            3x3 integer matrix to generate supercell matrix.
+        'phonon_supercell_matrix' : array_like
+            3x3 integer matrix to generate fc2 supercell matrix for Phono3py.
+        'distance' : float
+            Displacement distance.
+        'symmetry_tolerance' : float
+            Tolerance length used for symmetry finding.
+        'displacement_dataset' : dict
+            Phonopy.dataset or Phono3py.dataset.
+        'primitive_matrix' : array_like
+            Phonopy.primitive_matrix.
+        'symmetry' : dict
+            'number' : Space group number.
+            'international' : Space group type.
+        'phonon_displacement_dataset' : dict
+            Phono3py.phonon_dataset.
+        'is_plusminus' : bool
+        'is_diagonal' : bool
+
+    """
     ph_settings = _get_setting_info(phonon_settings, code_name='phono3py')
 
     ph = _get_phono3py_instance(structure, ph_settings, {})
