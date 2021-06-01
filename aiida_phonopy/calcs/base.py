@@ -29,8 +29,6 @@ class BasePhonopyCalculation(CalcJob):
                    help='Phonopy parameters')
         spec.input('structure', valid_type=StructureData,
                    help='Unit cell structure')
-        spec.input('postprocess_parameters', valid_type=Dict,
-                   help='Parameters to run phonopy')
         spec.input('symmetry_tolerance', valid_type=Float,
                    default=lambda: Float(1e-5))
         spec.input('fc_only', valid_type=Bool,

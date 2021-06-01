@@ -18,11 +18,12 @@ BandsData = DataFactory('array.bands')
 
 
 @calcfunction
-def generate_phonopy_cells(phonon_settings,
-                           structure,
-                           symmetry_tolerance,
-                           dataset=None):
-    """Generate supercells and primitive cell.
+def setup_phonopy_calculation(phonon_settings,
+                              structure,
+                              symmetry_tolerance,
+                              run_phonopy,
+                              dataset=None):
+    """Set up phonopy calculation.
 
     Valid keys in phonon_settings_info are
         ('supercell_matrix',
@@ -33,7 +34,9 @@ def generate_phonopy_cells(phonon_settings,
          'random_seed',
          'is_plusminus',
          'is_diagonal',
-         'is_trigonal').
+         'is_trigonal',
+         'mesh',
+         'fc_calculator').
 
     Returns
     -------
@@ -77,9 +80,18 @@ def generate_phonopy_cells(phonon_settings,
          'is_plusminus' : bool
          'is_diagonal' : bool
          'is_trigonal' : bool
+         'postprocess_parameters' : dict
+             This is given when run_phonopy=True.
+             'mesh' : float or list
+                 Mesh numbers or distance measure of q-point sampling mesh.
+             'fc_calculator' : str
+                 External force constants calculator.
 
     """
     ph_settings = _get_setting_info(phonon_settings)
+    if run_phonopy:
+        params = _get_phonopy_postprocess_info(phonon_settings)
+        ph_settings['postprocess_parameters'] = params
 
     ph = _get_phonopy_instance(structure,
                                ph_settings,
@@ -100,6 +112,19 @@ def generate_phonopy_cells(phonon_settings,
     return_vals.update(structures_dict)
 
     return return_vals
+
+
+def _get_phonopy_postprocess_info(phonon_settings):
+    """Return phonopy postprocess parameters."""
+    valid_keys = ('mesh', 'fc_calculator')
+    params = {}
+    for key in valid_keys:
+        if key in phonon_settings.keys():
+            params[key] = phonon_settings[key]
+
+    if 'mesh' not in phonon_settings.keys():
+        params['mesh'] = 100.0
+    return params
 
 
 @calcfunction
@@ -127,7 +152,6 @@ def generate_phono3py_cells(phonon_settings,
 @calcfunction
 def get_force_constants(structure,
                         phonon_settings,
-                        postprocess_parameters,
                         force_sets,
                         symmetry_tolerance):
     """Calculate force constants."""
@@ -136,7 +160,9 @@ def get_force_constants(structure,
                                    symmetry_tolerance=symmetry_tolerance.value)
     phonon.dataset = phonon_settings['displacement_dataset']
     phonon.forces = force_sets.get_array('force_sets')
-    if 'fc_calculator' in postprocess_parameters.keys():
+
+    if 'fc_calculator' in phonon_settings['postprocess_parameters']:
+        postprocess_parameters = phonon_settings['postprocess_parameters']
         if postprocess_parameters['fc_calculator'].lower().strip() == 'alm':
             phonon.produce_force_constants(fc_calculator='alm')
     else:
@@ -153,7 +179,6 @@ def get_force_constants(structure,
 def get_phonon_properties(structure,
                           phonon_settings,
                           force_constants,
-                          qpoint_mesh,
                           symmetry_tolerance,
                           nac_params=None):
     """Calculate phonon properties."""
@@ -163,7 +188,7 @@ def get_phonon_properties(structure,
                                symmetry_tolerance=symmetry_tolerance.value,
                                nac_params=nac_params)
     ph.force_constants = force_constants.get_array('force_constants')
-    mesh = qpoint_mesh['mesh']
+    mesh = phonon_settings['postprocess_parameters']['mesh']
 
     # Mesh
     total_dos, pdos, thermal_properties = get_mesh_property_data(ph, mesh)

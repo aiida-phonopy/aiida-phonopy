@@ -70,7 +70,7 @@ def get_phonopy_yaml_txt(structure,
 def get_phonopy_options(postprocess_parameters):
     """Return phonopy command option strings."""
     mesh_opts = []
-    if 'mesh' in postprocess_parameters.keys():
+    if 'mesh' in postprocess_parameters:
         mesh = postprocess_parameters['mesh']
         try:
             length = float(mesh)
@@ -80,7 +80,7 @@ def get_phonopy_options(postprocess_parameters):
         mesh_opts.append('--nowritemesh')
 
     fc_opts = []
-    if 'fc_calculator' in postprocess_parameters.keys():
+    if 'fc_calculator' in postprocess_parameters:
         if postprocess_parameters['fc_calculator'].lower().strip() == 'alm':
             fc_opts.append('--alm')
     return mesh_opts, fc_opts

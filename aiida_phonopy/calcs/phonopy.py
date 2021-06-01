@@ -65,7 +65,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
         self._create_phonopy_yaml(folder)
         self._create_FORCE_SETS(folder)
         mesh_opts, fc_opts = get_phonopy_options(
-            self.inputs.postprocess_parameters)
+            self.inputs.settings['postprocess_parameters'])
 
         self._internal_retrieve_list = [self._INOUT_FORCE_CONSTANTS, ]
         self._additional_cmd_params = [['--writefc', ] + fc_opts, ]
