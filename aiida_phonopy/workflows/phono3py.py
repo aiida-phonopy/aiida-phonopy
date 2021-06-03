@@ -1,10 +1,11 @@
-from aiida.engine import WorkChain
+"""WorkChan to run ph-ph calculation by phono3py and force calculators."""
+
+from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Bool
+from aiida.orm import Float, Bool, Code
 from aiida.engine import if_
 from aiida_phonopy.common.builders import (
-    get_force_calcjob_inputs, get_phonon_force_calcjob_inputs,
-    get_nac_calcjob_inputs, get_calcjob_builder, get_immigrant_builder)
+    get_immigrant_builder, get_calcjob_inputs)
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
@@ -18,13 +19,60 @@ ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
 
-class Phono3pyWorkChain(WorkChain):
-    """Phono3py workchain
+def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
+    """Return process builder.
 
+    This method supposes createing a process builder of a force calculator
+    (VASP, QE, etc.).
 
     """
+    code = Code.get_from_string(code_string)
+    if code.get_input_plugin_name() == 'vasp.vasp':
+        VaspWorkflow = WorkflowFactory('vasp.vasp')
+        builder = VaspWorkflow.get_builder()
+        if label:
+            builder.metadata.label = label
+        builder.code = Code.get_from_string(code_string)
+        builder.structure = structure
+        builder.settings = builder_inputs['settings']
+        builder.parameters = builder_inputs['parameters']
+        builder.kpoints = builder_inputs['kpoints']
+        builder.potential_family = builder_inputs['potential_family']
+        builder.potential_mapping = builder_inputs['potential_mapping']
+        builder.options = builder_inputs['options']
+        builder.clean_workdir = Bool(False)
+    else:
+        raise RuntimeError("Code could not be found.")
+
+    return builder
+
+
+@calcfunction
+def get_force_calcjob_inputs(calculator_settings, supercell):
+    """Return builder inputs of force calculations."""
+    return get_calcjob_inputs(calculator_settings, supercell,
+                              calc_type='forces')
+
+
+@calcfunction
+def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
+    """Return builder inputs of force calculations for phono3py fc2."""
+    return get_calcjob_inputs(calculator_settings, supercell,
+                              calc_type='phonon_forces')
+
+
+@calcfunction
+def get_nac_calcjob_inputs(calculator_settings, unitcell):
+    """Return builder inputs of an NAC params calculation."""
+    return get_calcjob_inputs(calculator_settings, unitcell, 'nac')
+
+
+class Phono3pyWorkChain(WorkChain):
+    """Phono3py workchain."""
+
     @classmethod
     def define(cls, spec):
+        """Define inputs, outputs, and outline."""
         super().define(spec)
         spec.expose_inputs(PhonopyWorkChain,
                            exclude=['calculation_nodes',

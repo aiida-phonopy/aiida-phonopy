@@ -18,26 +18,6 @@ def get_calcjob_inputs(calculator_settings, structure,
                                calc_type=calc_type, label=label, ctx=ctx)
 
 
-@calcfunction
-def get_force_calcjob_inputs(calculator_settings, supercell):
-    """Return builder inputs of force calculations."""
-    return _get_calcjob_inputs(calculator_settings, supercell,
-                               calc_type='forces')
-
-
-@calcfunction
-def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
-    """Return builder inputs of force calculations for phono3py fc2."""
-    return _get_calcjob_inputs(calculator_settings, supercell,
-                               calc_type='phonon_forces')
-
-
-@calcfunction
-def get_nac_calcjob_inputs(calculator_settings, unitcell):
-    """Return builder inputs of an NAC params calculation."""
-    return _get_calcjob_inputs(calculator_settings, unitcell, 'nac')
-
-
 def get_plugin_names(calculator_settings):
     """Return plugin names of calculators."""
     code_strings = []
@@ -125,65 +105,39 @@ def get_calculator_process(code_string=None, plugin_name=None):
         raise RuntimeError("Code could not be found.")
 
 
-def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
-    """Return process builder.
+def get_vasp_immigrant_inputs(folder_path, calculator_settings, label=None):
+    """Return VASP immigrant inputs.
 
-    This method supposes createing a process builder of a force calculator
-    (VASP, QE, etc.).
+    folder_path : str
+        VASP directory path.
+    calculator_settings : dict
+        aiida-phonopy calculator settings for forces or nac params.
 
     """
-    code = Code.get_from_string(code_string)
-    if code.get_input_plugin_name() == 'vasp.vasp':
-        VaspWorkflow = WorkflowFactory('vasp.vasp')
-        builder = VaspWorkflow.get_builder()
-        if label:
-            builder.metadata.label = label
-        builder.code = Code.get_from_string(code_string)
-        builder.structure = structure
-        builder.settings = builder_inputs['settings']
-        builder.parameters = builder_inputs['parameters']
-        builder.kpoints = builder_inputs['kpoints']
-        builder.potential_family = builder_inputs['potential_family']
-        builder.potential_mapping = builder_inputs['potential_mapping']
-        builder.options = builder_inputs['options']
-        builder.clean_workdir = Bool(False)
-    else:
-        raise RuntimeError("Code could not be found.")
+    code = Code.get_from_string(calculator_settings['code_string'])
 
-    return builder
-
-
-def get_immigrant_builder(calculation_folder,
-                          calculator_settings,
-                          calc_type=None):
-    """Return VASP immigrant builder."""
-    if calc_type:
-        code = Code.get_from_string(
-            calculator_settings[calc_type]['code_string'])
-    else:
-        code = Code.get_from_string(
-            calculator_settings['code_string'])
-
-    if code.get_input_plugin_name() == 'vasp.vasp':
-        if calc_type is None:
-            settings_dict = calculator_settings.get_dict()
+    if code.get_input_plugin_name() == 'vasp.immigrant':
+        inputs = {}
+        inputs['code'] = code
+        inputs['folder_path'] = Str(folder_path)
+        if 'options' in calculator_settings:
+            inputs['options'] = Dict(dict={calculator_settings['options']})
+        if 'metadata' in calculator_settings:
+            inputs['metadata'] = calculator_settings['metadata']
+            if label:
+                inputs['metadata']['label'] = label
         else:
-            settings_dict = calculator_settings[calc_type]
-
-        calc_cls = CalculationFactory('vasp.vasp')
-        params = {'metadata': {'options': settings_dict['options']},
-                  'settings': settings_dict}
-        if 'potential_family' in settings_dict:
-            params['potential_family'] = settings_dict['potential_family']
-        if 'potential_mapping' in settings_dict:
-            params['potential_mapping'] = settings_dict['potential_mapping']
-
-        _, builder = calc_cls.immigrant(code, calculation_folder, **params)
-        builder.metadata['options']['parser_name'] = 'vasp.vasp'
+            inputs['metadata'] = {'metadata': {'label': label}}
+        if 'potential_family' in calculator_settings:
+            inputs['potential_family'] = Str(
+                calculator_settings['potential_family'])
+        if 'potential_mapping' in calculator_settings:
+            inputs['potential_mapping'] = Str(
+                calculator_settings['potential_mapping'])
     else:
         raise RuntimeError("Code could not be found.")
 
-    return builder
+    return inputs
 
 
 def _get_options(settings_dict):

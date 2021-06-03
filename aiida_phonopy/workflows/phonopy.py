@@ -1,10 +1,10 @@
 """WorkChan to run phonon calculation by phonopy and force calculators."""
 
 from aiida.engine import WorkChain
-from aiida.plugins import DataFactory, CalculationFactory
+from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Code
 from aiida.engine import if_, while_
-from aiida_phonopy.common.builders import get_immigrant_builder
+from aiida_phonopy.common.builders import get_vasp_immigrant_inputs
 from aiida_phonopy.common.utils import (
     get_force_constants, get_phonon_properties,
     compare_structures, setup_phonopy_calculation,
@@ -25,7 +25,6 @@ ArrayData = DataFactory('array')
 XyData = DataFactory('array.xy')
 StructureData = DataFactory('structure')
 BandsData = DataFactory('array.bands')
-PhonopyCalculation = CalculationFactory('phonopy.phonopy')
 
 
 class PhonopyWorkChain(WorkChain):
@@ -113,6 +112,7 @@ class PhonopyWorkChain(WorkChain):
             cls.initialize,
             if_(cls.import_calculations)(
                 if_(cls.import_calculations_from_files)(
+                    cls.initialize_immigrant,
                     while_(cls.continue_import)(
                         cls.read_force_calculations_from_files,
                     ),
@@ -194,9 +194,6 @@ class PhonopyWorkChain(WorkChain):
     def import_calculations(self):
         """Return boolen for outline."""
         if 'immigrant_calculation_folders' in self.inputs:
-            self.ctx.num_imported = 0
-            self.ctx.num_supercell_forces = len(
-                self.inputs.immigrant_calculation_folders['forces'])
             return True
         if 'calculation_nodes' in self.inputs:
             return True
@@ -237,6 +234,12 @@ class PhonopyWorkChain(WorkChain):
             digits = len(str(len(self.ctx.supercells)))
             label = "supercell_%s" % "0".zfill(digits)
             self.ctx.supercells[label] = return_vals['supercell']
+
+    def initialize_immigrant(self):
+        """Initialize immigrant numbers."""
+        self.ctx.num_imported = 0
+        self.ctx.num_supercell_forces = len(
+            self.inputs.immigrant_calculation_folders['forces'])
 
     def run_force_and_nac_calculations(self):
         """Run supercell force and NAC params calculations.
@@ -287,14 +290,13 @@ class PhonopyWorkChain(WorkChain):
         for i in range(initial_count, initial_count + num_batch):
             calc_folders_Dict = self.inputs.immigrant_calculation_folders
             digits = len(str(self.ctx.num_supercell_forces))
-
             force_folder = calc_folders_Dict['forces'][i]
             label = "force_calc_%s" % str(i + 1).zfill(digits)
-            builder = get_immigrant_builder(force_folder,
-                                            self.inputs.calculator_settings,
-                                            calc_type='forces')
-            builder.metadata.label = label
-            future = self.submit(builder)
+            inputs = get_vasp_immigrant_inputs(
+                force_folder, self.inputs.calculator_settings['forces'],
+                label=label)
+            VaspImmigrant = WorkflowFactory('vasp.immigrant')
+            future = self.submit(VaspImmigrant, **inputs)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
@@ -308,11 +310,12 @@ class PhonopyWorkChain(WorkChain):
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
         label = 'nac_params_calc'
-        builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
-                                        self.inputs.calculator_settings,
-                                        calc_type='nac')
-        builder.metadata.label = label
-        future = self.submit(builder)
+        nac_folder = calc_folders_Dict['nac']
+        inputs = get_vasp_immigrant_inputs(
+            nac_folder, self.inputs.calculator_settings['nac'],
+            label=label)
+        VaspImmigrant = WorkflowFactory('vasp.immigrant')
+        future = self.submit(VaspImmigrant, **inputs)
         self.report('{} pk = {}'.format(label, future.pk))
         self.to_context(**{label: future})
 
