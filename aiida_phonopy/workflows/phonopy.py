@@ -1,13 +1,11 @@
 """WorkChan to run phonon calculation by phonopy and force calculators."""
 
-from aiida.engine import WorkChain
-from aiida.plugins import DataFactory, WorkflowFactory
+from aiida.engine import WorkChain, if_, while_
+from aiida.plugins import DataFactory
 from aiida.orm import Code
-from aiida.engine import if_, while_
-from aiida_phonopy.common.builders import get_vasp_immigrant_inputs
 from aiida_phonopy.common.utils import (
     get_force_constants, get_phonon_properties,
-    compare_structures, setup_phonopy_calculation,
+    setup_phonopy_calculation,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
     get_force_sets, collect_forces_and_energies)
 from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
@@ -91,8 +89,8 @@ class PhonopyWorkChain(WorkChain):
     def define(cls, spec):
         """Define inputs, outputs, and outline."""
         super().define(spec)
-        spec.input('structure', valid_type=StructureData)
-        spec.input('phonon_settings', valid_type=Dict)
+        spec.input('structure', valid_type=StructureData, required=True)
+        spec.input('phonon_settings', valid_type=Dict, required=True)
         spec.input('symmetry_tolerance', valid_type=Float,
                    default=lambda: Float(1e-5))
         spec.input('dry_run', valid_type=Bool, default=lambda: Bool(False))
@@ -123,7 +121,6 @@ class PhonopyWorkChain(WorkChain):
                 if_(cls.import_calculations_from_nodes)(
                     cls.read_calculation_data_from_nodes,
                 ),
-                cls.validate_imported_structures,
             ).else_(
                 cls.run_force_and_nac_calculations,
             ),
@@ -163,6 +160,10 @@ class PhonopyWorkChain(WorkChain):
         spec.exit_code(
             1002, 'ERROR_NO_SUPERCELL_MATRIX',
             message=("supercell_matrix was not found."))
+        spec.exit_code(
+            1003, 'ERROR_INCONSISTENT_IMMIGRANT_FORCES_FOLDERS',
+            message=("Number of supercell folders is different from number "
+                     "of expected supercells."))
 
     def dry_run(self):
         """Return boolen for outline."""
@@ -204,7 +205,15 @@ class PhonopyWorkChain(WorkChain):
         return self.ctx.num_imported < self.ctx.num_supercell_forces
 
     def initialize(self):
-        """Set default settings and create supercells and primitive cell."""
+        """Set default settings and create supercells and primitive cell.
+
+        self.ctx.supercells contains supercells as a dict.
+        The keys are like 'spercell_000', 'supercell_001', ...,
+        where the number of digits depends on the number of supercells.
+        'spercell_000' is only available when
+            self.inputs.subtract_residual_forces = True.
+
+        """
         self.report('initialization')
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
@@ -227,19 +236,23 @@ class PhonopyWorkChain(WorkChain):
             self.ctx[key] = return_vals[key]
             self.out(key, self.ctx[key])
         self.ctx.supercells = {}
+        if self.inputs.subtract_residual_forces:
+            digits = len(str(len(self.ctx.supercells)))
+            key = "supercell_%s" % "0".zfill(digits)
+            self.ctx.supercells[key] = return_vals['supercell']
         for key in return_vals:
             if "supercell_" in key:
                 self.ctx.supercells[key] = return_vals[key]
-        if self.inputs.subtract_residual_forces:
-            digits = len(str(len(self.ctx.supercells)))
-            label = "supercell_%s" % "0".zfill(digits)
-            self.ctx.supercells[label] = return_vals['supercell']
 
     def initialize_immigrant(self):
         """Initialize immigrant numbers."""
         self.ctx.num_imported = 0
         self.ctx.num_supercell_forces = len(
             self.inputs.immigrant_calculation_folders['forces'])
+        self.ctx.supercell_keys_done = []
+
+        if len(self.ctx.supercells) != self.ctx.num_supercell_forces:
+            return self.exit_codes.ERROR_INCONSISTENT_IMMIGRANT_FOLDERS
 
     def run_force_and_nac_calculations(self):
         """Run supercell force and NAC params calculations.
@@ -257,13 +270,13 @@ class PhonopyWorkChain(WorkChain):
         self.report('run force calculations')
 
         for key, supercell in self.ctx.supercells.items():
+            label = "force_calc_%s" % key.split('_')[-1]
             builder = ForcesWorkChain.get_builder()
-            builder.metadata.label = key
+            builder.metadata.label = label
             builder.structure = supercell
             calculator_settings = self.inputs.calculator_settings['forces']
             builder.calculator_settings = Dict(dict=calculator_settings)
             future = self.submit(builder)
-            label = "force_calc_%s" % key.split('_')[-1]
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
@@ -286,36 +299,47 @@ class PhonopyWorkChain(WorkChain):
         num_batch = 50
         self.report('%d calculations per batch.' % num_batch)
 
-        initial_count = self.ctx.num_imported
-        for i in range(initial_count, initial_count + num_batch):
-            calc_folders_Dict = self.inputs.immigrant_calculation_folders
-            digits = len(str(self.ctx.num_supercell_forces))
-            force_folder = calc_folders_Dict['forces'][i]
-            label = "force_calc_%s" % str(i + 1).zfill(digits)
-            inputs = get_vasp_immigrant_inputs(
-                force_folder, self.inputs.calculator_settings['forces'],
-                label=label)
-            VaspImmigrant = WorkflowFactory('vasp.immigrant')
-            future = self.submit(VaspImmigrant, **inputs)
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        local_count = 0
+        for key, supercell in self.ctx.supercells.items():
+            if key in self.ctx.supercell_keys_done:
+                continue
+            else:
+                self.ctx.supercell_keys_done.append(key)
+            label = "force_calc_%s" % key.split('_')[-1]
+            number = int(key.split('_')[-1])
+            if not self.inputs.subtract_residual_forces:
+                number -= 1
+            force_folder = calc_folders_Dict['forces'][number]
+            builder = ForcesWorkChain.get_builder()
+            builder.metadata.label = label
+            builder.structure = supercell
+            calculator_settings = self.inputs.calculator_settings['forces']
+            builder.calculator_settings = Dict(dict=calculator_settings)
+            builder.immigrant_calculation_folder = Str(force_folder)
+            future = self.submit(builder)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
-
             self.ctx.num_imported += 1
             if not self.continue_import():
+                break
+            local_count += 1
+            if local_count == num_batch:
                 break
 
     def read_nac_calculations_from_files(self):
         """Import NAC params using immigrant."""
         self.report('import NAC calculation data in files')
-
-        calc_folders_Dict = self.inputs.immigrant_calculation_folders
         label = 'nac_params_calc'
-        nac_folder = calc_folders_Dict['nac']
-        inputs = get_vasp_immigrant_inputs(
-            nac_folder, self.inputs.calculator_settings['nac'],
-            label=label)
-        VaspImmigrant = WorkflowFactory('vasp.immigrant')
-        future = self.submit(VaspImmigrant, **inputs)
+        calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        nac_folder = calc_folders_Dict['nac'][0]
+        builder = NacParamsWorkChain.get_builder()
+        builder.metadata.label = label
+        builder.structure = self.ctx.primitive
+        calculator_settings = self.inputs.calculator_settings['nac']
+        builder.calculator_settings = Dict(dict=calculator_settings)
+        builder.immigrant_calculation_folder = Str(nac_folder)
+        future = self.submit(builder)
         self.report('{} pk = {}'.format(label, future.pk))
         self.to_context(**{label: future})
 
@@ -325,8 +349,8 @@ class PhonopyWorkChain(WorkChain):
 
         calc_nodes_Dict = self.inputs.calculation_nodes
 
-        digits = len(str(len(calc_nodes_Dict['force'])))
-        for i, node_id in enumerate(calc_nodes_Dict['force']):
+        digits = len(str(len(calc_nodes_Dict['forces'])))
+        for i, node_id in enumerate(calc_nodes_Dict['forces']):
             label = "force_calc_%s" % str(i + 1).zfill(digits)
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
             # self.ctx[label]['forces'] -> ArrayData()('final')
@@ -337,27 +361,6 @@ class PhonopyWorkChain(WorkChain):
             node_id = calc_nodes_Dict['nac'][0]
             aiida_node_id = from_node_id_to_aiida_node_id(node_id)
             self.ctx[label] = get_data_from_node_id(aiida_node_id)
-
-    def validate_imported_structures(self):
-        """Validate imported supercell structures."""
-        self.report('check imported supercell structures')
-
-        msg = ("Immigrant failed because of inconsistency of supercell"
-               "structure")
-
-        for key in self.ctx.supercells:
-            num = key.split('_')[-1]
-            calc = self.ctx["force_calc_%s" % num]
-            if type(calc) is dict:
-                calc_dict = calc
-            else:
-                calc_dict = calc.inputs
-            supercell_ref = self.ctx.supercells["supercell_%s" % num]
-            supercell_calc = calc_dict['structure']
-            if not compare_structures(supercell_ref,
-                                      supercell_calc,
-                                      self.inputs.symmetry_tolerance):
-                raise RuntimeError(msg)
 
     def postprocess_of_dry_run(self):
         """Show message."""

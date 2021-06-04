@@ -302,6 +302,15 @@ def compare_structures(cell_ref, cell_calc, symmetry_tolerance):
     return succeeded
 
 
+def get_structure_from_vasp_immigrant(calc_node):
+    """Get structure from VASP immigrant workchain."""
+    for lt in calc_node.get_outgoing():
+        if 'iteration_' in lt.link_label:
+            structure = lt.node.inputs.structure
+            return structure
+    return None
+
+
 def get_mesh_property_data(ph, mesh):
     """Return total DOS, PDOS, thermal properties."""
     ph.set_mesh(mesh)

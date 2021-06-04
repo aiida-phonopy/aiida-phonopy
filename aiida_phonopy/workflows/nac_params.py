@@ -1,13 +1,16 @@
 """Workflow to calculate NAC params."""
 
-from aiida.engine import WorkChain, calcfunction, while_, append_
-from aiida.plugins import DataFactory
+from aiida.engine import WorkChain, calcfunction, while_, append_, if_
+from aiida.plugins import DataFactory, WorkflowFactory
 from aiida_phonopy.common.builders import (
-    get_calcjob_inputs, get_calculator_process, get_plugin_names)
-from aiida_phonopy.common.utils import phonopy_atoms_from_structure
+    get_calcjob_inputs, get_calculator_process, get_plugin_names,
+    get_vasp_immigrant_inputs)
+from aiida_phonopy.common.utils import (
+    phonopy_atoms_from_structure, get_structure_from_vasp_immigrant)
 from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
 
 Float = DataFactory('float')
+Str = DataFactory('str')
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
@@ -23,12 +26,20 @@ def _get_nac_params(ctx, symmetry_tolerance):
     needs information of the structure where those values were calcualted and
     the target primitive cell structure.
 
+    When using immigrant, structure is in the immigrant calculation but not
+    the workchain. 'structure' should be accessible in the vasp immigrant
+    workchain level, and this should be fixed in aiida-vasp.
+
     """
     if ctx.plugin_names[0] == 'vasp.vasp':
         calc = ctx.nac_params_calcs[0]
+        if 'structure' in calc.inputs:
+            structure = calc.inputs.structure
+        else:
+            structure = get_structure_from_vasp_immigrant(calc)
         nac_params = get_vasp_nac_params(calc.outputs.born_charges,
                                          calc.outputs.dielectrics,
-                                         calc.inputs.structure,
+                                         structure,
                                          symmetry_tolerance)
     elif ctx.plugin_names[0] == 'quantumespresso.pw':
         pw_calc = ctx.nac_params_calcs[0]
@@ -105,11 +116,17 @@ class NacParamsWorkChain(WorkChain):
         spec.input('calculator_settings', valid_type=Dict, required=True)
         spec.input('symmetry_tolerance', valid_type=Float,
                    default=lambda: Float(1e-5))
+        spec.input('immigrant_calculation_folder', valid_type=Str,
+                   required=False)
 
         spec.outline(
             cls.initialize,
             while_(cls.continue_calculation)(
-                cls.run_calculation,
+                if_(cls.import_calculation_from_files)(
+                    cls.read_calculation_from_folder,
+                ).else_(
+                    cls.run_calculation,
+                ),
             ),
             cls.finalize,
         )
@@ -126,6 +143,10 @@ class NacParamsWorkChain(WorkChain):
             return False
         self.ctx.iteration += 1
         return True
+
+    def import_calculation_from_files(self):
+        """Return boolen for outline."""
+        return 'immigrant_calculation_folder' in self.inputs
 
     def initialize(self):
         """Initialize outline control parameters."""
@@ -153,6 +174,20 @@ class NacParamsWorkChain(WorkChain):
         CalculatorProcess = get_calculator_process(
             plugin_name=self.ctx.plugin_names[i])
         future = self.submit(CalculatorProcess, **process_inputs)
+        self.report('nac_params: {}'.format(future.pk))
+        self.to_context(nac_params_calcs=append_(future))
+
+    def read_calculation_from_folder(self):
+        """Import supercell force calculation using immigrant."""
+        self.report('import calculation data in files %d/%d'
+                    % (self.ctx.iteration, self.ctx.max_iteration))
+        label = "nac_params_%d" % self.ctx.iteration
+        force_folder = self.inputs.immigrant_calculation_folder
+        inputs = get_vasp_immigrant_inputs(
+            force_folder.value, self.inputs.calculator_settings.dict,
+            label=label)
+        VaspImmigrant = WorkflowFactory('vasp.immigrant')
+        future = self.submit(VaspImmigrant, **inputs)
         self.report('nac_params: {}'.format(future.pk))
         self.to_context(nac_params_calcs=append_(future))
 

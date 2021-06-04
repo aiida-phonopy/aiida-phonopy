@@ -1,15 +1,17 @@
 """Workflow to calculate supercell forces."""
 
 import numpy as np
-from aiida.engine import WorkChain, calcfunction
-from aiida.plugins import DataFactory
+from aiida.engine import WorkChain, calcfunction, if_
+from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Code
 from aiida_phonopy.common.builders import (
-    get_calcjob_inputs, get_calculator_process)
-
+    get_calcjob_inputs, get_calculator_process, get_vasp_immigrant_inputs)
+from aiida_phonopy.common.utils import (
+    compare_structures, get_structure_from_vasp_immigrant)
 
 Float = DataFactory('float')
 Dict = DataFactory('dict')
+Str = DataFactory('str')
 ArrayData = DataFactory('array')
 StructureData = DataFactory('structure')
 
@@ -97,10 +99,18 @@ class ForcesWorkChain(WorkChain):
         super().define(spec)
         spec.input('structure', valid_type=StructureData, required=True)
         spec.input('calculator_settings', valid_type=Dict, required=True)
-
+        spec.input('symmetry_tolerance', valid_type=Float,
+                   default=lambda: Float(1e-5))
+        spec.input('immigrant_calculation_folder', valid_type=Str,
+                   required=False)
         spec.outline(
-            cls.run_calculation,
-            cls.finalize
+            if_(cls.import_calculation_from_files)(
+                cls.read_calculation_from_folder,
+                cls.validate_imported_structure,
+            ).else_(
+                cls.run_calculation,
+            ),
+            cls.finalize,
         )
 
         spec.output('forces', valid_type=ArrayData, required=True)
@@ -112,6 +122,13 @@ class ForcesWorkChain(WorkChain):
         spec.exit_code(
             1002, 'ERROR_NO_ENERGY',
             message='energy could not be retrieved from calculaton.')
+        spec.exit_code(
+            1003, 'ERROR_STRUCTURE_VALIDATION',
+            message='input and imported structures are different.')
+
+    def import_calculation_from_files(self):
+        """Return boolen for outline."""
+        return 'immigrant_calculation_folder' in self.inputs
 
     def run_calculation(self):
         """Run supercell force calculation."""
@@ -124,6 +141,28 @@ class ForcesWorkChain(WorkChain):
         future = self.submit(CalculatorProcess, **process_inputs)
         self.report('{} pk = {}'.format(self.metadata.label, future.pk))
         self.to_context(**{'calc': future})
+
+    def read_calculation_from_folder(self):
+        """Import supercell force calculation using immigrant."""
+        self.report('import supercell force calculation data in files.')
+        force_folder = self.inputs.immigrant_calculation_folder
+        inputs = get_vasp_immigrant_inputs(
+            force_folder.value, self.inputs.calculator_settings.dict,
+            label=self.metadata.label)
+        VaspImmigrant = WorkflowFactory('vasp.immigrant')
+        future = self.submit(VaspImmigrant, **inputs)
+        self.report('{} pk = {}'.format(self.metadata.label, future.pk))
+        self.to_context(**{'calc': future})
+
+    def validate_imported_structure(self):
+        """Validate imported supercell structure."""
+        self.report('validate imported supercell structures')
+        supercell_ref = self.inputs.structure
+        supercell_calc = get_structure_from_vasp_immigrant(self.ctx.calc)
+        if not compare_structures(supercell_ref,
+                                  supercell_calc,
+                                  self.inputs.symmetry_tolerance):
+            return self.exit_codes.ERROR_STRUCTURE_VALIDATION
 
     def finalize(self):
         """Finalize force calculation."""

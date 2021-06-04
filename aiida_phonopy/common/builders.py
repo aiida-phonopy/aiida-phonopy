@@ -116,24 +116,27 @@ def get_vasp_immigrant_inputs(folder_path, calculator_settings, label=None):
     """
     code = Code.get_from_string(calculator_settings['code_string'])
 
-    if code.get_input_plugin_name() == 'vasp.immigrant':
+    if code.get_input_plugin_name() == 'vasp.vasp':
         inputs = {}
         inputs['code'] = code
         inputs['folder_path'] = Str(folder_path)
+        if 'parser_settings' in calculator_settings:
+            inputs['settings'] = Dict(
+                dict={'parser_settings': calculator_settings['parser_settings']})
         if 'options' in calculator_settings:
-            inputs['options'] = Dict(dict={calculator_settings['options']})
+            inputs['options'] = Dict(dict=calculator_settings['options'])
         if 'metadata' in calculator_settings:
             inputs['metadata'] = calculator_settings['metadata']
             if label:
                 inputs['metadata']['label'] = label
-        else:
-            inputs['metadata'] = {'metadata': {'label': label}}
+        elif label:
+            inputs['metadata'] = {'label': label}
         if 'potential_family' in calculator_settings:
             inputs['potential_family'] = Str(
                 calculator_settings['potential_family'])
         if 'potential_mapping' in calculator_settings:
-            inputs['potential_mapping'] = Str(
-                calculator_settings['potential_mapping'])
+            inputs['potential_mapping'] = Dict(
+                dict=calculator_settings['potential_mapping'])
     else:
         raise RuntimeError("Code could not be found.")
 
