@@ -598,7 +598,7 @@ def _get_force_set(**forces_dict):
             else:
                 force_sets[num - 1] = forces - forces_0
         elif 'energy' in key:
-            energies[num - 1] = value.get_array('energy')
+            energies[num - 1] = value.get_array('energy')[-1]
 
     return force_sets, energies, forces_0_key, energy_0_key
 

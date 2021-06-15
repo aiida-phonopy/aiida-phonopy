@@ -71,11 +71,19 @@ def _get_energy(outputs, code_string):
 
 @calcfunction
 def get_vasp_energy(energies):
-    """Return VASP energy ArrayData."""
+    """Return VASP energy ArrayData.
+
+    energies is an 1D-array of energies.
+
+    {'electronic_step_energies': True} gives SC energies.
+    {'electronic_step_energies': False} gives last SC energy.
+
+    """
     energy_data = ArrayData()
     ekey = 'energy_extrapolated'
+    energies = energies.get_array(ekey)
     energy_data.set_array('energy', np.array(
-        [energies.get_array(ekey), ], dtype=float))
+        energies, dtype=float))
     energy_data.label = 'energy'
     return energy_data
 
