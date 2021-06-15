@@ -5,12 +5,12 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Float, Bool, Code
 from aiida.engine import if_
 from aiida_phonopy.common.builders import (
-    get_immigrant_builder, get_calcjob_inputs)
+    get_calcjob_inputs, get_vasp_immigrant_inputs)
 from aiida_phonopy.common.utils import (
     generate_phono3py_cells,
     get_vasp_force_sets_dict, collect_vasp_forces_and_energies,
     compare_structures)
-from aiida_phonopy.workflows.nac_params import get_nac_params
+from aiida_phonopy.workflows.nac_params import _get_nac_params as get_nac_params
 
 
 PhonopyWorkChain = WorkflowFactory('phonopy.phonopy')
@@ -270,6 +270,7 @@ class Phono3pyWorkChain(WorkChain):
         self.report('import calculation data in files')
 
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
+        VaspImmigrant = WorkflowFactory('vasp.immigrant')
 
         if 'forces' not in calc_folders_Dict.attributes:
             return self.exit_code.ERROR_NO_FORCES_FOLDERS
@@ -281,11 +282,11 @@ class Phono3pyWorkChain(WorkChain):
         digits = len(str(len(calc_folders_Dict['forces'])))
         for i, force_folder in enumerate(calc_folders_Dict['forces']):
             label = "force_calc_%s" % str(i + 1).zfill(digits)
-            builder = get_immigrant_builder(force_folder,
-                                            self.inputs.calculator_settings,
-                                            calc_type='forces')
-            builder.metadata.label = label
-            future = self.submit(builder)
+            inputs = get_vasp_immigrant_inputs(
+                force_folder,
+                self.inputs.calculator_settings['forces'],
+                label=label)
+            future = self.submit(VaspImmigrant, **inputs)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 
@@ -294,22 +295,21 @@ class Phono3pyWorkChain(WorkChain):
             digits = len(str(len(folders)))
             for i, force_folder in enumerate(folders):
                 label = "force_calc_%s" % str(i + 1).zfill(digits)
-                builder = get_immigrant_builder(
+                inputs = get_vasp_immigrant_inputs(
                     force_folder,
-                    self.inputs.calculator_settings,
-                    calc_type='phonon_forces')
-                builder.metadata.label = label
-                future = self.submit(builder)
+                    self.inputs.calculator_settings['phonon_forces'],
+                    label=label)
+                future = self.submit(VaspImmigrant, **inputs)
                 self.report('{} pk = {}'.format(label, future.pk))
                 self.to_context(**{label: future})
 
         if self.is_nac():  # NAC the last one
             label = 'born_and_epsilon_calc'
-            builder = get_immigrant_builder(calc_folders_Dict['nac'][0],
-                                            self.inputs.calculator_settings,
-                                            calc_type='nac')
-            builder.metadata.label = label
-            future = self.submit(builder)
+            inputs = get_vasp_immigrant_inputs(
+                calc_folders_Dict['nac'][0],
+                self.inputs.calculator_settings['nac'],
+                label=label)
+            future = self.submit(VaspImmigrant, **inputs)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
 

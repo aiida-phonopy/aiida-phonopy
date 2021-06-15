@@ -1,7 +1,7 @@
 """Utilities related to process builder or inputs dist."""
 
 from aiida.engine import calcfunction
-from aiida.plugins import DataFactory, WorkflowFactory, CalculationFactory
+from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.common import InputValidationError
 from aiida.orm import Str, Bool, Code, load_group
 
