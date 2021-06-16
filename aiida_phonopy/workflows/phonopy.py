@@ -5,15 +5,11 @@ from aiida.plugins import DataFactory
 from aiida.orm import Code
 from aiida_phonopy.common.utils import (
     get_force_constants, get_phonon_properties,
-    setup_phonopy_calculation,
+    setup_phonopy_calculation, select_calculator_settings,
     from_node_id_to_aiida_node_id, get_data_from_node_id,
     get_force_sets, collect_forces_and_energies)
 from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
 from aiida_phonopy.workflows.forces import ForcesWorkChain
-
-
-# Should be improved by some kind of WorkChainFactory
-# For now all workchains should be copied to aiida/workflows
 
 Float = DataFactory('float')
 Bool = DataFactory('bool')
@@ -274,8 +270,9 @@ class PhonopyWorkChain(WorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = self.inputs.calculator_settings['forces']
-            builder.calculator_settings = Dict(dict=calculator_settings)
+            calculator_settings = select_calculator_settings(
+                self.inputs.calculator_settings, Str('forces'))
+            builder.calculator_settings = calculator_settings
             future = self.submit(builder)
             self.report('{} pk = {}'.format(label, future.pk))
             self.to_context(**{label: future})
@@ -287,8 +284,9 @@ class PhonopyWorkChain(WorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = 'nac_params'
         builder.structure = self.ctx.primitive
-        calculator_settings = self.inputs.calculator_settings['nac']
-        builder.calculator_settings = Dict(dict=calculator_settings)
+        calculator_settings = select_calculator_settings(
+            self.inputs.calculator_settings, Str('nac'))
+        builder.calculator_settings = calculator_settings
         future = self.submit(builder)
         self.report('nac_params: {}'.format(future.pk))
         self.to_context(**{'nac_params_calc': future})
@@ -314,8 +312,9 @@ class PhonopyWorkChain(WorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = self.inputs.calculator_settings['forces']
-            builder.calculator_settings = Dict(dict=calculator_settings)
+            calculator_settings = select_calculator_settings(
+                self.inputs.calculator_settings, Str('forces'))
+            builder.calculator_settings = calculator_settings
             builder.immigrant_calculation_folder = Str(force_folder)
             future = self.submit(builder)
             self.report('{} pk = {}'.format(label, future.pk))
@@ -336,8 +335,9 @@ class PhonopyWorkChain(WorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = label
         builder.structure = self.ctx.primitive
-        calculator_settings = self.inputs.calculator_settings['nac']
-        builder.calculator_settings = Dict(dict=calculator_settings)
+        calculator_settings = select_calculator_settings(
+            self.inputs.calculator_settings, Str('nac'))
+        builder.calculator_settings = calculator_settings
         builder.immigrant_calculation_folder = Str(nac_folder)
         future = self.submit(builder)
         self.report('{} pk = {}'.format(label, future.pk))

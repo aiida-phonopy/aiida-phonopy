@@ -18,12 +18,29 @@ BandsData = DataFactory('array.bands')
 
 
 @calcfunction
+def select_calculator_settings(calculator_settings, calc_type):
+    """Select calculator settings from string."""
+    return Dict(dict=calculator_settings[calc_type.value])
+
+
+@calcfunction
 def get_remote_fc_calculation_settings(phonon_settings):
-    """Create remote force constants phonopy calculation setting."""
-    ph_settings = _get_setting_info(phonon_settings)
-    params = _get_phonopy_postprocess_info(phonon_settings)
-    ph_settings['postprocess_parameters'] = params
-    return Dict(dict=ph_settings)
+    """Create remote force constants phonopy calculation setting.
+
+    keys condidered:
+        supercell_matrix
+        fc_calculator
+
+    """
+    key = 'supercell_matrix'
+    if key in phonon_settings.dict:
+        fc_settings = {key: phonon_settings[key]}
+    else:
+        return None
+    key = 'fc_calculator'
+    if key in phonon_settings.dict:
+        fc_settings['postprocess_parameters'] = {key: phonon_settings[key]}
+    return Dict(dict=fc_settings)
 
 
 @calcfunction
