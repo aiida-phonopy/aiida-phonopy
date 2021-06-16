@@ -18,6 +18,15 @@ BandsData = DataFactory('array.bands')
 
 
 @calcfunction
+def get_remote_fc_calculation_settings(phonon_settings):
+    """Create remote force constants phonopy calculation setting."""
+    ph_settings = _get_setting_info(phonon_settings)
+    params = _get_phonopy_postprocess_info(phonon_settings)
+    ph_settings['postprocess_parameters'] = params
+    return Dict(dict=ph_settings)
+
+
+@calcfunction
 def setup_phonopy_calculation(phonon_settings,
                               structure,
                               symmetry_tolerance,

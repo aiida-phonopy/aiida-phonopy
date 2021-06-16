@@ -36,8 +36,6 @@ class BasePhonopyCalculation(CalcJob):
                    default=lambda: Bool(False))
         spec.input('force_sets', valid_type=ArrayData, required=False,
                    help='Sets of forces in supercells')
-        spec.input('dataset', valid_type=ArrayData, required=False,
-                   help='Sets of displacements and forces in supercells')
         spec.input('nac_params', valid_type=ArrayData, required=False,
                    help='NAC parameters')
         spec.input('primitive', valid_type=StructureData, required=False,

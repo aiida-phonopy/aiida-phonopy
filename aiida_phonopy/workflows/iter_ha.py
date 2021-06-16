@@ -5,7 +5,8 @@ from aiida.engine import WorkChain
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.orm import Bool, Float, Int, QueryBuilder, Group, load_node, Code
 from aiida.engine import while_, if_, calcfunction
-from aiida_phonopy.common.utils import phonopy_atoms_from_structure
+from aiida_phonopy.common.utils import (
+    phonopy_atoms_from_structure, get_remote_fc_calculation_settings)
 
 Dict = DataFactory('dict')
 ArrayData = DataFactory('array')
@@ -50,7 +51,7 @@ def get_random_displacements(structure,
                              phonon_setting_info,
                              dataset_for_fc,
                              random_seed=None):
-    """Generate supercells with random displacemens
+    """Generate supercells with random displacemens.
 
     The random displacements are generated from phonons and harmonic
     oscillator distribution function of canonical ensemble. The input
@@ -64,7 +65,6 @@ def get_random_displacements(structure,
         Displacement datasets to run force calculations.
 
     """
-
     # Calculate force constants by fitting using ALM
     smat = phonon_setting_info['supercell_matrix']
     ph = Phonopy(phonopy_atoms_from_structure(structure),
@@ -91,7 +91,7 @@ def collect_dataset(number_of_steps_for_fitting,
                     include_ratio,
                     linear_decay,
                     **data):
-    """Collect supercell displacements, forces, and energies
+    """Collect supercell displacements, forces, and energies.
 
     Returns
     -------
@@ -106,7 +106,6 @@ def collect_dataset(number_of_steps_for_fitting,
             indexed by concatenating list of list in step (3).
 
     """
-
     nitems = max([int(key.split('_')[-1])
                   for key in data.keys() if 'forces' in key])
 
@@ -136,6 +135,7 @@ def collect_dataset(number_of_steps_for_fitting,
 
 def create_dataset(displacements, forces, energies,
                    max_items=None, ratio=None, linear_decay=False):
+    """Collect data for force constants calculation."""
     included = _choose_snapshots_by_linear_decay(
         displacements, forces, max_items=max_items, linear_decay=linear_decay)
 
@@ -177,7 +177,7 @@ def _extract_dataset_from_db(forces_in_db, ph_info_in_db):
 def _choose_snapshots_by_linear_decay(displacements, forces,
                                       max_items=None,
                                       linear_decay=False):
-    """Choose snapshots by linear_decay
+    """Choose snapshots by linear_decay.
 
     With linear_decay=True, numbers of snapshots to be taken
     are biased. Older snapshots are taken lesser. The fraction
@@ -191,7 +191,6 @@ def _choose_snapshots_by_linear_decay(displacements, forces,
     included at maximum.
 
     """
-
     assert len(forces) == len(displacements)
 
     nitems = len(forces)
@@ -234,7 +233,7 @@ def _include_snapshots(displacements, forces, energies, included):
 
 
 def _remove_high_energy_snapshots(energies, included, ratio):
-    """Reject high energy snapshots
+    """Reject high energy snapshots.
 
     Parameters
     ----------
@@ -253,7 +252,6 @@ def _remove_high_energy_snapshots(energies, included, ratio):
         Rejected snapshots are turned to False from 'included'.
 
     """
-
     concat_included = np.concatenate(included)
     concat_energies = np.concatenate(energies)
     included_energies = concat_energies[concat_included]
@@ -277,7 +275,7 @@ def _remove_high_energy_snapshots(energies, included, ratio):
 
 
 def _modify_force_constants(ph):
-    """Apply treatment to imaginary modes
+    """Apply treatment to imaginary modes.
 
     This method modifies force constants to make phonon frequencies
     be real from imaginary. This treatment is expected to be finally
@@ -291,7 +289,6 @@ def _modify_force_constants(ph):
        are shifted by |freqs| + 1.
 
     """
-
     # temperature=300 is used just to invoke this feature.
     ph.generate_displacements(number_of_snapshots=1, temperature=300)
     rd = ph.random_displacements
@@ -318,7 +315,7 @@ def _generate_random_displacements(ph,
 
 
 class IterHarmonicApprox(WorkChain):
-    """ Workchain for harmonic force constants by iterative approach
+    """Workchain for harmonic force constants by iterative approach.
 
     By default, the calculation starts with normal phonon calculation,
     i.e., in this context, which corresponds to roughly 0K force constants.
@@ -435,6 +432,9 @@ class IterHarmonicApprox(WorkChain):
         self.report("initialize (%s)" % self.uuid)
         self.ctx.iteration = 0
         self.ctx.prev_nodes = []
+        if self.remote_phonopy():
+            self.ctx.ph_settings = get_remote_fc_calculation_settings(
+                self.inputs.phonon_settings)
 
     def is_loop_finished(self):
         qb = QueryBuilder()
@@ -503,16 +503,15 @@ class IterHarmonicApprox(WorkChain):
         self.ctx.dataset = dataset
 
     def run_force_constants_calculation_remote(self):
-        """Run force constants calculation by PhonopyCalculation"""
-
+        """Run force constants calculation by PhonopyCalculation."""
         self.report('remote force constants calculation %d' %
                     self.ctx.iteration)
 
         code_string = self.inputs.code_string.value
         builder = Code.get_from_string(code_string).get_builder()
         builder.structure = self.inputs.structure
-        builder.settings = self.inputs.phonon_settings
-        builder.metadata.options.update(self.inputs.options)
+        builder.settings = self.ctx.ph_settings
+        builder.metadata.options.update(self.inputs.phonon_settings['options'])
         builder.metadata.label = ("Force constants calculation %d" %
                                   self.ctx.iteration)
         builder.dataset = self.ctx.dataset_for_fc
