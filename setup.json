@@ -1,6 +1,6 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.4",
+    "version": "0.5.2",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "author": "Atsushi Togo",
     "author_email": "atz.togo@gmail.com",
@@ -17,11 +17,11 @@
     ],
     "license": "MIT license",
     "install_requires": [
-        "phonopy>=2.9.3",
+        "phonopy>=2.11.0",
         "numpy",
         "seekpath",
-        "aiida-core>=1.6.3,<2.0.0",
-        "aiida-vasp>=2.0.0"
+        "aiida-core>=1.6.5,<2.0.0",
+        "aiida-vasp>=2.1.1"
     ],
     "setup_requires": [
         "reentry"
