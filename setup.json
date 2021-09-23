@@ -1,27 +1,27 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.3",
+    "version": "0.5.2",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "author": "Atsushi Togo",
     "author_email": "atz.togo@gmail.com",
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Physics",
         "Topic :: Scientific/Engineering :: Chemistry",
-	"Development Status :: 5 - Production/Stable",
+        "Development Status :: 5 - Production/Stable",
         "Framework :: AiiDA"
     ],
     "license": "MIT license",
     "install_requires": [
-        "phonopy>=2.8.1",
+        "phonopy>=2.11.0",
         "numpy",
         "seekpath",
-        "aiida-core>=1.2.1,<2.0.0",
-        "aiida-vasp>=1.0.0"
+        "aiida-core>=1.6.5,<2.0.0",
+        "aiida-vasp>=2.1.1"
     ],
     "setup_requires": [
         "reentry"
@@ -34,8 +34,9 @@
             "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
         ],
         "aiida.workflows": [
-            "phonopy.phonopy = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
-            "phonopy.phono3py = aiida_phonopy.workflows.phono3py: Phono3pyWorkChain",
+            "phonopy.phonopy.base = aiida_phonopy.workflows.phonopy.base: BasePhonopyWorkChain",
+            "phonopy.phonopy = aiida_phonopy.workflows.phonopy.phonopy: PhonopyWorkChain",
+            "phonopy.phono3py = aiida_phonopy.workflows.phono3py.phono3py: Phono3pyWorkChain",
             "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
         ]
     },
