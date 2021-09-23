@@ -80,6 +80,7 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         spec.input("remote_phonopy", valid_type=Bool, default=lambda: Bool(False))
         spec.input("displacement_dataset", valid_type=Dict, required=False)
         spec.input("code_string", valid_type=Str, required=False)
+        spec.input("code", valid_type=Code, required=False)
 
         spec.outline(
             cls.initialize,
@@ -149,7 +150,7 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         if "is_nac" in self.inputs.phonon_settings.keys():
             return self.inputs.phonon_settings["is_nac"]
         else:
-            False
+            return False
 
     def initialize(self):
         """Set default settings and create supercells and primitive cell.
@@ -164,7 +165,7 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         self.report("initialization")
 
         if self.inputs.run_phonopy and self.inputs.remote_phonopy:
-            if "code_string" not in self.inputs:
+            if "code" not in self.inputs and "code_string" not in self.inputs:
                 return self.exit_codes.ERROR_NO_PHONOPY_CODE
 
         if "supercell_matrix" not in self.inputs.phonon_settings.keys():
@@ -238,12 +239,16 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         """Run phonopy at remote computer."""
         self.report("remote phonopy calculation")
 
-        code_string = self.inputs.code_string.value
-        builder = Code.get_from_string(code_string).get_builder()
+        if "code_string" in self.inputs:
+            code = Code.get_from_string(self.inputs.code_string.value)
+        elif "code" in self.inputs:
+            code = self.inputs.code
+        builder = code.get_builder()
         builder.structure = self.inputs.structure
         builder.settings = self.ctx.phonon_setting_info
         builder.symmetry_tolerance = self.inputs.symmetry_tolerance
-        builder.metadata.label = self.inputs.metadata.label
+        if "label" in self.inputs.metadata:
+            builder.metadata.label = self.inputs.metadata.label
         builder.metadata.options.update(self.inputs.phonon_settings["options"])
         builder.force_sets = self.ctx.force_sets
         if "nac_params" in self.ctx:

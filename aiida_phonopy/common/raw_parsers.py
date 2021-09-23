@@ -97,7 +97,7 @@ def parse_band_structure(f, label=None):
                 .replace("\\", "")
                 .replace("mathrm{", "")
                 .replace("}", "")
-                .upper()  # noqa E501
+                .upper()
                 for x in pair
             ]
         )

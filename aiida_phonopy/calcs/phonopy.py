@@ -33,31 +33,6 @@ class PhonopyCalculation(BasePhonopyCalculation):
         """Define inputs, outputs, and outline."""
         super().define(spec)
 
-        spec.input(
-            "projected_dos_filename",
-            valid_type=Str,
-            default=lambda: Str(cls._OUTPUT_PROJECTED_DOS),
-        )
-        spec.input(
-            "total_dos_filename",
-            valid_type=Str,
-            default=lambda: Str(cls._OUTPUT_TOTAL_DOS),
-        )
-        spec.input(
-            "thermal_properties_filename",
-            valid_type=Str,
-            default=lambda: Str(cls._OUTPUT_THERMAL_PROPERTIES),
-        )
-        spec.input(
-            "band_structure_filename",
-            valid_type=Str,
-            default=lambda: Str(cls._OUTPUT_BAND_STRUCTURE),
-        )
-        spec.input(
-            "force_constants_filename",
-            valid_type=Str,
-            default=lambda: Str(cls._INOUT_FORCE_CONSTANTS),
-        )
         # parser_name has to be set to invoke parsing.
         spec.inputs["metadata"]["options"]["parser_name"].default = "phonopy"
         spec.inputs["metadata"]["options"]["output_filename"].default = "phonopy.yaml"
