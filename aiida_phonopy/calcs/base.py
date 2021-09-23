@@ -25,8 +25,8 @@ class BasePhonopyCalculation(CalcJob):
     def define(cls, spec):
         """Define inputs, outputs, and outline."""
         super().define(spec)
-        spec.input("settings", valid_type=Dict, help="Phonopy parameters")
-        spec.input("structure", valid_type=StructureData, help="Unit cell structure")
+        spec.input("settings", valid_type=Dict, help="Phonopy parameters.")
+        spec.input("structure", valid_type=StructureData, help="Unit cell structure.")
         spec.input("symmetry_tolerance", valid_type=Float, default=lambda: Float(1e-5))
         spec.input(
             "fc_only",
@@ -41,19 +41,19 @@ class BasePhonopyCalculation(CalcJob):
             help="Sets of forces in supercells",
         )
         spec.input(
-            "nac_params", valid_type=ArrayData, required=False, help="NAC parameters"
+            "nac_params", valid_type=ArrayData, required=False, help="NAC parameters."
         )
         spec.input(
             "primitive",
             valid_type=StructureData,
             required=False,
-            help="Primitive cell structure",
+            help="Primitive cell structure only necessary NAC is applied.",
         )
         spec.input(
             "dataset",
             valid_type=(Dict, ArrayData),
             required=False,
-            help="Displacements and forces dataset",
+            help="Displacements and forces dataset.",
         )
 
     def prepare_for_submission(self, folder):
@@ -73,8 +73,7 @@ class BasePhonopyCalculation(CalcJob):
             not self.inputs.fc_only
             and "nac_params" in self.inputs
             and "primitive" in self.inputs
-            and "symmetry_tolerance" in self.inputs
-        ):  # noqa: E129
+        ):
             born_txt = get_BORN_txt(
                 self.inputs.nac_params,
                 self.inputs.primitive,

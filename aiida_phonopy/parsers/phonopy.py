@@ -3,6 +3,7 @@
 from aiida.engine import ExitCode
 from aiida.common.exceptions import NotExistent
 from aiida.parsers.parser import Parser
+from aiida.plugins import CalculationFactory
 from aiida_phonopy.common.raw_parsers import (
     parse_thermal_properties,
     parse_FORCE_CONSTANTS,
@@ -15,6 +16,7 @@ from aiida.plugins import DataFactory
 
 
 Str = DataFactory("str")
+PhonopyCalculation = CalculationFactory("phonopy.phonopy")
 
 
 class PhonopyParser(Parser):
@@ -38,27 +40,27 @@ class PhonopyParser(Parser):
         # check what is inside the folder
         list_of_files = output_folder.list_object_names()
 
-        fc_filename = self.node.inputs.force_constants_filename.value
+        fc_filename = PhonopyCalculation._INOUT_FORCE_CONSTANTS
         if fc_filename in list_of_files:
             with output_folder.open(fc_filename, "rb") as f:
                 self.out("force_constants", parse_FORCE_CONSTANTS(f))
 
-        projected_dos_filename = self.node.inputs.projected_dos_filename.value
+        projected_dos_filename = PhonopyCalculation._OUTPUT_PROJECTED_DOS
         if projected_dos_filename in list_of_files:
             with output_folder.open(projected_dos_filename) as f:
                 self.out("pdos", parse_projected_dos(f))
 
-        total_dos_filename = self.node.inputs.projected_dos_filename.value
+        total_dos_filename = PhonopyCalculation._OUTPUT_TOTAL_DOS
         if total_dos_filename in list_of_files:
             with output_folder.open(total_dos_filename) as f:
                 self.out("dos", parse_total_dos(f))
 
-        tp_filename = self.node.inputs.thermal_properties_filename.value
+        tp_filename = PhonopyCalculation._OUTPUT_THERMAL_PROPERTIES
         if tp_filename in list_of_files:
             with output_folder.open(tp_filename) as f:
                 self.out("thermal_properties", parse_thermal_properties(f))
 
-        band_filename = self.node.inputs.band_structure_filename.value
+        band_filename = PhonopyCalculation._OUTPUT_BAND_STRUCTURE
         if band_filename in list_of_files:
             if "symmetry" in self.node.inputs.settings.attributes:
                 sym_dataset = self.node.inputs.settings["symmetry"]

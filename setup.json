@@ -34,9 +34,9 @@
             "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
         ],
         "aiida.workflows": [
-            "phonopy.phonopy = aiida_phonopy.workflows.phonopy: PhonopyWorkChain",
-            "phonopy.forces = aiida_phonopy.workflows.forces: ForcesWorkChain",
-            "phonopy.phono3py = aiida_phonopy.workflows.phono3py: Phono3pyWorkChain",
+            "phonopy.phonopy.base = aiida_phonopy.workflows.phonopy.base: BasePhonopyWorkChain",
+            "phonopy.phonopy = aiida_phonopy.workflows.phonopy.phonopy: PhonopyWorkChain",
+            "phonopy.phono3py = aiida_phonopy.workflows.phono3py.phono3py: Phono3pyWorkChain",
             "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
         ]
     },

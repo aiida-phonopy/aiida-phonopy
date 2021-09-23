@@ -573,7 +573,10 @@ def collect_forces_and_energies(ctx, ctx_supercells, prefix="force_calc"):
         else:
             calc_dict = calc.outputs
         forces_dict["forces_%s" % num] = calc_dict["forces"]
-        forces_dict["energy_%s" % num] = calc_dict["energy"]
+        if "energy" in calc_dict:
+            forces_dict["energy_%s" % num] = calc_dict["energy"]
+        elif "total_energy" in calc_dict:  # For CommonWorkflow
+            forces_dict["energy_%s" % num] = calc_dict["total_energy"]
 
     return forces_dict
 
@@ -649,7 +652,10 @@ def _get_force_set(**forces_dict):
             else:
                 force_sets[num - 1] = forces - forces_0
         elif "energy" in key:
-            energies[num - 1] = value.get_array("energy")[-1]
+            if isinstance(value, Float):  # For CommonWorkflow
+                energies[num - 1] = value.value
+            else:
+                energies[num - 1] = value.get_array("energy")[-1]
 
     return force_sets, energies, forces_0_key, energy_0_key
 
