@@ -787,13 +787,16 @@ def _get_setting_info(phonon_settings, code_name="phonopy"):
     for key, value in phonon_settings.get_dict().items():
         if key in valid_keys:
             ph_settings[key] = value
+            
     dim = ph_settings["supercell_matrix"]
     ph_settings["supercell_matrix"] = _get_supercell_matrix(dim)
+
     if "phonon_supercell_matrix" in ph_settings:
         dim_fc2 = ph_settings["phonon_supercell_matrix"]
         ph_settings["phonon_supercell_matrix"] = _get_supercell_matrix(
             dim_fc2, smat_type="phonon_supercell_matrix"
         )
+
     if "distance" not in ph_settings:
         if code_name == "phono3py":
             from phono3py.interface.calculator import (
