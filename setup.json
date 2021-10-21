@@ -22,8 +22,7 @@
         "phonopy>=2.11.0",
         "numpy",
         "seekpath",
-        "aiida-core>=1.6.5,<2.0.0",
-        "aiida-vasp>=2.1.1"
+        "aiida-core>=1.6.0,<2.0.0"
     ],
     "setup_requires": [
         "reentry"
@@ -37,6 +36,7 @@
         ],
         "aiida.workflows": [
             "phonopy.phonopy.base = aiida_phonopy.workflows.phonopy.base: BasePhonopyWorkChain",
+            "phonopy.phonopy.base = aiida_phonopy.workflows.phonopy.force_set: ForceSetWorkChain",
             "phonopy.phonopy = aiida_phonopy.workflows.phonopy.phonopy: PhonopyWorkChain",
             "phonopy.phono3py = aiida_phonopy.workflows.phono3py.phono3py: Phono3pyWorkChain",
             "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
