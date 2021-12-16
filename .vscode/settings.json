@@ -1,0 +1,31 @@
+{
+    "aiida.database": {
+        "host": "localhost",
+        "port": 5432,
+        "user": "bastonero",
+        "database": "bastonero_bastonero_20998840f8656df4006d97c129700e03",
+        "password": "1234",
+        "timeout_ms": 2000
+    },
+    "aiida.verdi": {
+        "command": "/home/bastonero/.conda/envs/aiida/bin/verdi -p bastonero",
+        "path": "/home/bastonero/.aiida",
+        "profile": "bastonero",
+        "timeout_ms": 2000,
+        "max_buffer_kb": 1024
+    },
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.formatting.provider": "black",
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "python.formatting.yapfArgs": [
+        "\"--line-length\", \"100\""
+    ],
+    "python.formatting.blackArgs": [
+        "\"--line-length\", \"120\""
+    ]
+}

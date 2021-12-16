@@ -2,6 +2,6 @@
 
 # AiiDA Phonopy plugin
 
-This a phonopy plugin for AiiDA. This plugin includes workflows to calculate
-phonons with supercell and finite displacement approaches. Currently VASP and QE
-are supported.
+This the official Phonopy plugin for AiiDA. This plugin includes workflows and post process calculation to compute phonons and related properties through supercells and finite displacements approaches.
+
+The workflows are designed to be used with ``aiida-common-workflows``, where several quantum engines can be chosen as the force calculator. Nevertheless, the implementation allows for the possibility to use such workflows in other plugins. Read the documentation for development for more information.
