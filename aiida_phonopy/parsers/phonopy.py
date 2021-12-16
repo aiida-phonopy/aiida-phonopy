@@ -1,84 +1,86 @@
-"""Parsers of phonopy output files."""
+# -*- coding: utf-8 -*-
+"""Parsers of `PhonopyPpCalculation` output files."""
 
-from aiida.engine import ExitCode
-from aiida.common.exceptions import NotExistent
+import os
+
 from aiida.parsers.parser import Parser
 from aiida.plugins import CalculationFactory
-from aiida_phonopy.common.raw_parsers import (
-    parse_thermal_properties,
-    parse_FORCE_CONSTANTS,
-    parse_projected_dos,
-    parse_total_dos,
-    parse_band_structure,
-    parse_phonopy_yaml,
-)
-from aiida.plugins import DataFactory
+
+from .raw_parsers import parse_FORCE_CONSTANTS, parse_yaml, parse_total_dos, parse_projected_dos
+
+PhonopyPpCalculation = CalculationFactory("phonopy.pp")
 
 
-Str = DataFactory("str")
-PhonopyCalculation = CalculationFactory("phonopy.phonopy")
-
-
-class PhonopyParser(Parser):
-    """Parser the DATA files from phonopy."""
-
-    def __init__(self, calc):
-        """Call Parser.__init__."""
-        super().__init__(calc)
+class PhonopyPpParser(Parser):
+    """Parser the files produced by a phonopy post processing calculation."""
 
     def parse(self, **kwargs):
-        """Parse retrieved files."""
-        self.logger.info("parse retrieved files")
+        """Parse retrieved files from remote folder."""
+        retrieved = self.retrieved
+        retrieve_temporary_list = self.node.get_attribute("retrieve_temporary_list", None)
 
-        # select the folder object
-        # Check that the retrieved folder is there
+        # If temporary files were specified, check that we have them
+        if retrieve_temporary_list:
+            try:
+                retrieved_temporary_folder = kwargs["retrieved_temporary_folder"]
+            except KeyError:
+                return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_TEMPORARY_FOLDER)
+
+        # How to get the output filenames and how to open them, depends on whether they will have been retrieved in the
+        # `retrieved` output node, or in the `retrieved_temporary_folder`. Instead of having a conditional with almost
+        # the same loop logic in each branch, we apply a somewhat dirty trick to define an `opener` which is a callable
+        # that will open a handle to the output file given a certain filename. This works since it is guaranteed that
+        # these output files (excluding the standard output) will all either be in the retrieved, or in the retrieved
+        # temporary folder. (Courtesy: from aiida-quantumespresso parsers)
+        if retrieve_temporary_list:
+            filenames = os.listdir(retrieved_temporary_folder)
+            file_opener = lambda filename: open(os.path.join(retrieved_temporary_folder, filename))
+        else:
+            filenames = retrieved.list_object_names()
+            file_opener = retrieved.open
+
+        # We check first if `force_constants.hdf5` and `phonopy.yaml` are not missing in the retrieved files.
+        # They always must be present, since they are always computed in the post-processing calcualtion.
         try:
-            output_folder = self.retrieved
-        except NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
+            filename = PhonopyPpCalculation._INOUT_FORCE_CONSTANTS
+            filenames.remove(filename)
+        except ValueError:
+            return self.exit_codes.ERROR_NO_FORCE_CONSTANTS
+        # need to read in binary - this might complicate optional retrieve option
+        with open(os.path.join(retrieved_temporary_folder, filename), "rb") as f:
+            self.out("force_constants", parse_FORCE_CONSTANTS(f))
 
-        # check what is inside the folder
-        list_of_files = output_folder.list_object_names()
+        try:
+            filename = PhonopyPpCalculation._DEFAULT_OUTPUT_FILE
+            filenames.remove(filename)
+        except ValueError:
+            return self.exit_codes.ERROR_NO_PHONOPY_YAML
+        with file_opener(filename) as f:  # there should be "rb"
+            self.out("parameters", parse_yaml(f))
 
-        fc_filename = PhonopyCalculation._INOUT_FORCE_CONSTANTS
-        if fc_filename in list_of_files:
-            with output_folder.open(fc_filename, "rb") as f:
-                self.out("force_constants", parse_FORCE_CONSTANTS(f))
+        # self.node.inputs.parameters.get_dict()
+        # can be used to check the if the wanted retrieved files are present in folder
+        # not trivial
 
-        projected_dos_filename = PhonopyCalculation._OUTPUT_PROJECTED_DOS
-        if projected_dos_filename in list_of_files:
-            with output_folder.open(projected_dos_filename) as f:
+        projected_dos_filename = PhonopyPpCalculation._OUTPUTS["pdos"]
+        if projected_dos_filename in filenames:
+            with file_opener(projected_dos_filename) as f:
                 self.out("pdos", parse_projected_dos(f))
 
-        total_dos_filename = PhonopyCalculation._OUTPUT_TOTAL_DOS
-        if total_dos_filename in list_of_files:
-            with output_folder.open(total_dos_filename) as f:
+        total_dos_filename = PhonopyPpCalculation._OUTPUTS["dos"]
+        if total_dos_filename in filenames:
+            with file_opener(total_dos_filename) as f:
                 self.out("dos", parse_total_dos(f))
 
-        tp_filename = PhonopyCalculation._OUTPUT_THERMAL_PROPERTIES
-        if tp_filename in list_of_files:
-            with output_folder.open(tp_filename) as f:
-                self.out("thermal_properties", parse_thermal_properties(f))
+        tp_filename = PhonopyPpCalculation._OUTPUTS["tprop"]
+        if tp_filename in filenames:
+            with file_opener(tp_filename) as f:
+                self.out("thermal_properties", parse_yaml(f))
 
-        band_filename = PhonopyCalculation._OUTPUT_BAND_STRUCTURE
-        if band_filename in list_of_files:
-            if "symmetry" in self.node.inputs.settings.attributes:
-                sym_dataset = self.node.inputs.settings["symmetry"]
-                label = "%s (%d)" % (
-                    sym_dataset["international"],
-                    sym_dataset["number"],
-                )
-            else:
-                label = None
-            with output_folder.open(band_filename) as f:
-                self.out("band_structure", parse_band_structure(f, label=label))
+        band_filename = PhonopyPpCalculation._OUTPUTS["band"]
+        if band_filename in filenames:
+            with file_opener(band_filename) as f:
+                self.out("band", parse_yaml(f))
 
-        options = self.node.get_options()
-        phpy_yaml_filename = options["output_filename"]
-        if phpy_yaml_filename in list_of_files:
-            with output_folder.open(phpy_yaml_filename) as f:
-                yaml_dict = parse_phonopy_yaml(f)
-                self.out("version", Str(yaml_dict["phonopy"]["version"]))
-
-        self.logger.info("Parsing done.")
-        return ExitCode(0)
+        # since most of them are yaml files it will be better to loop the parsing procedure
+        # while exluding eventual dat files (or any of different extension).
