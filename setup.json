@@ -1,6 +1,6 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.5.2",
+    "version": "0.6.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "url": "https://github.com/aiida-phonopy/aiida-phonopy",
     "author": "AiiDA-phonpy team",
