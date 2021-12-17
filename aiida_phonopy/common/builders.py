@@ -1,9 +1,10 @@
 """Utilities related to process builder or inputs dist."""
 import copy
-from aiida.engine import calcfunction
-from aiida.plugins import DataFactory, WorkflowFactory
+
 from aiida.common import InputValidationError
-from aiida.orm import Str, Bool, Code, load_group
+from aiida.engine import calcfunction
+from aiida.orm import Bool, Code, Str, load_group
+from aiida.plugins import DataFactory, WorkflowFactory
 
 KpointsData = DataFactory("array.kpoints")
 Dict = DataFactory("dict")
@@ -11,34 +12,12 @@ StructureData = DataFactory("structure")
 PotcarData = DataFactory("vasp.potcar")
 
 
-def get_plugin_names(calculator_settings):
-    """Return plugin names of calculators."""
-    code_strings = []
-    if "sequence" in calculator_settings.keys():
-        for key in calculator_settings["sequence"]:
-            code_strings.append(calculator_settings[key]["code_string"])
-    else:
-        code_strings.append(calculator_settings["code_string"])
-
-    plugin_names = []
-    for code_string in code_strings:
-        code = Code.get_from_string(code_string)
-        plugin_names.append(code.get_input_plugin_name())
-
-    return plugin_names
-
-
-def get_calcjob_inputs(
-    calculator_settings, structure, calc_type=None, label=None, ctx=None
-):
+def get_workchain_inputs(calculator_inputs, structure, label=None, ctx=None):
     """Return builder inputs of a calculation."""
-    if "sequence" in calculator_settings.keys():
-        key = calculator_settings["sequence"][ctx.iteration - 1]
-        calculator_inputs = calculator_settings[key]
+    if "code" in calculator_inputs.keys():
+        code = calculator_inputs["code"]
     else:
-        calculator_inputs = calculator_settings
-
-    code = Code.get_from_string(calculator_inputs["code_string"])
+        code = Code.get_from_string(calculator_inputs["code_string"])
     plugin_name = code.get_input_plugin_name()
     if plugin_name == "vasp.vasp":
         if isinstance(calculator_inputs["options"], dict):
@@ -53,7 +32,7 @@ def get_calcjob_inputs(
             potential_mapping = Dict(dict=calculator_inputs["potential_mapping"])
         else:
             potential_mapping = calculator_inputs["potential_mapping"]
-        builder_inputs = {
+        workchain_inputs = {
             "options": options,
             "parameters": _get_parameters_Dict(calculator_inputs),
             "settings": _get_vasp_settings(calculator_inputs),
@@ -65,7 +44,7 @@ def get_calcjob_inputs(
             "potential_mapping": potential_mapping,
         }
         if label:
-            builder_inputs["metadata"] = {"label": label}
+            workchain_inputs["metadata"] = {"label": label}
     elif plugin_name == "quantumespresso.pw":
         family = load_group(calculator_inputs["pseudo_family_string"])
         pseudos = family.get_pseudos(structure=structure)
@@ -79,7 +58,7 @@ def get_calcjob_inputs(
             "pseudos": pseudos,
             "code": code,
         }
-        builder_inputs = {
+        workchain_inputs = {
             "kpoints": _get_kpoints(calculator_inputs, structure),
             "pw": pw,
         }
@@ -96,11 +75,11 @@ def get_calcjob_inputs(
             "parent_folder": ctx.nac_params_calcs[0].outputs.remote_folder,
             "code": code,
         }
-        builder_inputs = {"ph": ph}
+        workchain_inputs = {"ph": ph}
     else:
         raise RuntimeError("Code could not be found.")
 
-    return builder_inputs
+    return workchain_inputs
 
 
 def get_calculator_process(code_string=None, plugin_name=None):
