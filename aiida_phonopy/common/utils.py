@@ -2,15 +2,14 @@
 
 import numpy as np
 from aiida.engine import calcfunction
+from aiida.orm import Bool, Float, Int, Str, load_node
 from aiida.plugins import DataFactory
-from aiida.orm import Float, Bool, Str, Int, load_node
-from phonopy.structure.atoms import PhonopyAtoms
+from phonopy import Phonopy
 from phonopy.interface.calculator import (
     get_default_displacement_distance,
     get_default_physical_units,
 )
-from phonopy import Phonopy
-
+from phonopy.structure.atoms import PhonopyAtoms
 
 Dict = DataFactory("dict")
 ArrayData = DataFactory("array")

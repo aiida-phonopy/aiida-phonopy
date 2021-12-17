@@ -2,12 +2,13 @@
 
 import numpy as np
 from aiida.engine import WorkChain, calcfunction, if_
-from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Code
+from aiida.plugins import DataFactory, WorkflowFactory
+
 from aiida_phonopy.common.builders import (
-    get_calcjob_inputs,
     get_calculator_process,
     get_vasp_immigrant_inputs,
+    get_workchain_inputs,
 )
 from aiida_phonopy.common.utils import (
     compare_structures,
@@ -160,7 +161,7 @@ class ForcesWorkChain(WorkChain):
     def run_calculation(self):
         """Run supercell force calculation."""
         self.report("calculate supercell forces")
-        process_inputs = get_calcjob_inputs(
+        process_inputs = get_workchain_inputs(
             self.inputs.calculator_inputs,
             self.inputs.structure,
             label=self.metadata.label,
