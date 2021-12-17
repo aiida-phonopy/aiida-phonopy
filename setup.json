@@ -3,7 +3,7 @@
     "version": "0.7.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "url": "https://github.com/aiida-phonopy/aiida-phonopy",
-    "author": "AiiDA-phonpy team",
+    "author": "AiiDA-phonopy team",
     "author_email": "atz.togo@gmail.com",
     "classifiers": [
         "Intended Audience :: Science/Research",
