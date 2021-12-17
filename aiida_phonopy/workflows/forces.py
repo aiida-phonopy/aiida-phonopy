@@ -2,12 +2,13 @@
 
 import numpy as np
 from aiida.engine import WorkChain, calcfunction, if_
-from aiida.plugins import DataFactory, WorkflowFactory
 from aiida.orm import Code
+from aiida.plugins import DataFactory, WorkflowFactory
+
 from aiida_phonopy.common.builders import (
-    get_calcjob_inputs,
     get_calculator_process,
     get_vasp_immigrant_inputs,
+    get_workchain_inputs,
 )
 from aiida_phonopy.common.utils import (
     compare_structures,
@@ -121,7 +122,7 @@ class ForcesWorkChain(WorkChain):
         """Define inputs, outputs, and outline."""
         super().define(spec)
         spec.input("structure", valid_type=StructureData, required=True)
-        spec.input("calculator_settings", valid_type=Dict, required=True)
+        spec.input("calculator_inputs", valid_type=dict, required=True, non_db=True)
         spec.input("symmetry_tolerance", valid_type=Float, default=lambda: Float(1e-5))
         spec.input("immigrant_calculation_folder", valid_type=Str, required=False)
         spec.outline(
@@ -160,13 +161,13 @@ class ForcesWorkChain(WorkChain):
     def run_calculation(self):
         """Run supercell force calculation."""
         self.report("calculate supercell forces")
-        process_inputs = get_calcjob_inputs(
-            self.inputs.calculator_settings,
+        process_inputs = get_workchain_inputs(
+            self.inputs.calculator_inputs,
             self.inputs.structure,
             label=self.metadata.label,
         )
         CalculatorProcess = get_calculator_process(
-            self.inputs.calculator_settings["code_string"]
+            self.inputs.calculator_inputs["code_string"]
         )
         future = self.submit(CalculatorProcess, **process_inputs)
         self.report("{} pk = {}".format(self.metadata.label, future.pk))
@@ -178,7 +179,7 @@ class ForcesWorkChain(WorkChain):
         force_folder = self.inputs.immigrant_calculation_folder
         inputs = get_vasp_immigrant_inputs(
             force_folder.value,
-            self.inputs.calculator_settings.dict,
+            self.inputs.calculator_inputs.dict,
             label=self.metadata.label,
         )
         VaspImmigrant = WorkflowFactory("vasp.immigrant")
@@ -200,14 +201,14 @@ class ForcesWorkChain(WorkChain):
         """Finalize force calculation."""
         outputs = self.ctx.calc.outputs
         self.report("create forces ArrayData")
-        forces = _get_forces(outputs, self.inputs.calculator_settings["code_string"])
+        forces = _get_forces(outputs, self.inputs.calculator_inputs["code_string"])
         if forces is None:
             return self.exit_codes.ERROR_NO_FORCES
         else:
             self.out("forces", forces)
 
         self.report("create energy ArrayData")
-        energy = _get_energy(outputs, self.inputs.calculator_settings["code_string"])
+        energy = _get_energy(outputs, self.inputs.calculator_inputs["code_string"])
         if energy is None:
             return self.exit_codes.ERROR_NO_ENERGY
         else:

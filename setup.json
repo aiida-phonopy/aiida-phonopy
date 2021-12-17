@@ -1,9 +1,11 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.5.2",
+    "version": "0.6.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
-    "author": "Atsushi Togo",
+    "url": "https://github.com/aiida-phonopy/aiida-phonopy",
+    "author": "AiiDA-phonpy team",
     "author_email": "atz.togo@gmail.com",
+    "python_requires": ">=3.7",
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
@@ -39,6 +41,5 @@
             "phonopy.phono3py = aiida_phonopy.workflows.phono3py.phono3py: Phono3pyWorkChain",
             "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
         ]
-    },
-    "url": "https://github.com/aiida-phonopy/aiida-phonopy"
+    }
 }

@@ -2,12 +2,10 @@
 
 from aiida.engine import if_, while_
 from aiida.plugins import DataFactory
-from aiida_phonopy.workflows.phonopy.base import BasePhonopyWorkChain
-from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
+
 from aiida_phonopy.workflows.forces import ForcesWorkChain
-from aiida_phonopy.common.utils import (
-    select_calculator_settings,
-)
+from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
+from aiida_phonopy.workflows.phonopy.base import BasePhonopyWorkChain
 
 Dict = DataFactory("dict")
 Str = DataFactory("str")
@@ -20,6 +18,7 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
     ------
     See most of inputs at BasePhonopyWorkChain.
     calculator_settings : Dict
+        Deprecated.
         Settings to run force and nac calculations. For example,
             {'forces': force_config,
              'nac': nac_config}
@@ -101,7 +100,11 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
             return self.exit_codes.ERROR_INCONSISTENT_IMMIGRANT_FOLDERS
 
     def read_force_calculations_from_files(self):
-        """Import supercell forces using immigrant."""
+        """Import supercell force calculations.
+
+        Importing backend works only for VASP.
+
+        """
         self.report("import supercell force calculation data in files.")
         num_batch = 50
         self.report("%d calculations per batch." % num_batch)
@@ -121,10 +124,8 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = select_calculator_settings(
-                self.inputs.calculator_settings, Str("forces")
-            )
-            builder.calculator_settings = calculator_settings
+            calculator_settings = self.inputs.calculator_settings
+            builder.calculator_inputs = calculator_settings
             builder.immigrant_calculation_folder = Str(force_folder)
             future = self.submit(builder)
             self.report("{} pk = {}".format(label, future.pk))
@@ -137,7 +138,11 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
                 break
 
     def read_nac_calculations_from_files(self):
-        """Import NAC params using immigrant."""
+        """Import NAC params calculation.
+
+        Importing backend works only for VASP.
+
+        """
         self.report("import NAC calculation data in files")
         label = "nac_params_calc"
         calc_folders_Dict = self.inputs.immigrant_calculation_folders
@@ -145,10 +150,8 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = label
         builder.structure = self.ctx.primitive
-        calculator_settings = select_calculator_settings(
-            self.inputs.calculator_settings, Str("nac")
-        )
-        builder.calculator_settings = calculator_settings
+        calculator_settings = self.inputs.calculator_settings
+        builder.calculator_inputs = calculator_settings
         builder.immigrant_calculation_folder = Str(nac_folder)
         future = self.submit(builder)
         self.report("{} pk = {}".format(label, future.pk))
@@ -163,10 +166,15 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = select_calculator_settings(
-                self.inputs.calculator_settings, Str("forces")
-            )
-            builder.calculator_settings = calculator_settings
+            if "force" in self.inputs.calculator_inputs:
+                calculator_inputs = self.inputs.calculator_inputs.force
+            else:
+                calculator_inputs = self.inputs.calculator_settings["forces"]
+                self.logger.warning(
+                    "Use calculator_inputs.force instead of "
+                    "calculator_settings['forces']."
+                )
+            builder.calculator_inputs = calculator_inputs
             future = self.submit(builder)
             self.report("{} pk = {}".format(label, future.pk))
             self.to_context(**{label: future})
@@ -178,10 +186,15 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = "nac_params"
         builder.structure = self.ctx.primitive
-        calculator_settings = select_calculator_settings(
-            self.inputs.calculator_settings, Str("nac")
-        )
-        builder.calculator_settings = calculator_settings
+        if "nac" in self.inputs.calculator_inputs:
+            calculator_inputs = self.inputs.calculator_inputs.nac
+        else:
+            calculator_inputs = self.inputs.calculator_settings["nac"]
+            self.logger.warning(
+                "Use calculator_inputs.nac instead of calculator_settings['nac']."
+            )
+
+        builder.calculator_inputs = calculator_inputs
         future = self.submit(builder)
         self.report("nac_params: {}".format(future.pk))
         self.to_context(**{"nac_params_calc": future})

@@ -1,18 +1,20 @@
 """WorkChan to run ph-ph calculation by phono3py and force calculators."""
 
-from aiida.engine import WorkChain, calcfunction
-from aiida.plugins import WorkflowFactory, DataFactory
-from aiida.orm import Float, Bool, Code
-from aiida.engine import if_
-from aiida_phonopy.common.builders import get_calcjob_inputs, get_vasp_immigrant_inputs
+from aiida.engine import WorkChain, calcfunction, if_
+from aiida.orm import Bool, Code, Float
+from aiida.plugins import DataFactory, WorkflowFactory
+
+from aiida_phonopy.common.builders import (
+    get_vasp_immigrant_inputs,
+    get_workchain_inputs,
+)
 from aiida_phonopy.common.utils import (
-    generate_phono3py_cells,
-    get_vasp_force_sets_dict,
     collect_vasp_forces_and_energies,
     compare_structures,
+    generate_phono3py_cells,
+    get_vasp_force_sets_dict,
 )
 from aiida_phonopy.workflows.nac_params import _get_nac_params as get_nac_params
-
 
 PhonopyWorkChain = WorkflowFactory("phonopy.phonopy")
 Dict = DataFactory("dict")
@@ -51,19 +53,21 @@ def get_calcjob_builder(structure, code_string, builder_inputs, label=None):
 @calcfunction
 def get_force_calcjob_inputs(calculator_settings, supercell):
     """Return builder inputs of force calculations."""
-    return get_calcjob_inputs(calculator_settings, supercell, calc_type="forces")
+    return get_workchain_inputs(calculator_settings, supercell, calc_type="forces")
 
 
 @calcfunction
 def get_phonon_force_calcjob_inputs(calculator_settings, supercell):
     """Return builder inputs of force calculations for phono3py fc2."""
-    return get_calcjob_inputs(calculator_settings, supercell, calc_type="phonon_forces")
+    return get_workchain_inputs(
+        calculator_settings, supercell, calc_type="phonon_forces"
+    )
 
 
 @calcfunction
 def get_nac_calcjob_inputs(calculator_settings, unitcell):
     """Return builder inputs of an NAC params calculation."""
-    return get_calcjob_inputs(calculator_settings, unitcell, "nac")
+    return get_workchain_inputs(calculator_settings, unitcell, "nac")
 
 
 class Phono3pyWorkChain(WorkChain):
