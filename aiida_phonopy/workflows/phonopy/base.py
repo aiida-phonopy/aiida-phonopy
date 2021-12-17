@@ -1,15 +1,17 @@
 """BasePhonopyWorkChain."""
 
 from abc import ABCMeta, abstractmethod
+
 from aiida.engine import WorkChain, if_
-from aiida.plugins import DataFactory
 from aiida.orm import Code
+from aiida.plugins import DataFactory
+
 from aiida_phonopy.common.utils import (
+    collect_forces_and_energies,
     get_force_constants,
+    get_force_sets,
     get_phonon_properties,
     setup_phonopy_calculation,
-    get_force_sets,
-    collect_forces_and_energies,
 )
 
 Float = DataFactory("float")
@@ -40,16 +42,21 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         distance : float, optional
             Atomic displacement distance. Default is 0.01.
         is_nac : bool, optional
+            Deprecated.
             Whether running non-analytical term correction or not. Default is
             False.
-        displacement_dataset : dict
-            Atomic displacement dataset that phonopy can understand.
         fc_calculator : str
             With this being 'alm', ALM is used to calculate force constants in
             the remote phonopy calculation.
         options : dict
             AiiDA calculation options for phonon calculation used when both of
             run_phonopy and remote_phonopy are True.
+    calculator_inputs.force : dict, optional
+        This is used for supercell force calculation.
+    calculator_inputs.nac : dict, optional
+        This is used for Born effective charges and dielectric constant calculation
+        in primitive cell. The primitive cell is chosen by phonopy
+        automatically.
     subtract_residual_forces : Bool, optional
         Run a perfect supercell force calculation and subtract the residual
         forces from forces in supercells with displacements. Default is False.
@@ -71,6 +78,15 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         super().define(spec)
         spec.input("structure", valid_type=StructureData, required=True)
         spec.input("phonon_settings", valid_type=Dict, required=True)
+        spec.input_namespace(
+            "calculator_inputs", help="Inputs passed to force and NAC calculators."
+        )
+        spec.input(
+            "calculator_inputs.force", valid_type=dict, required=False, non_db=True
+        )
+        spec.input(
+            "calculator_inputs.nac", valid_type=dict, required=False, non_db=True
+        )
         spec.input("symmetry_tolerance", valid_type=Float, default=lambda: Float(1e-5))
         spec.input("dry_run", valid_type=Bool, default=lambda: Bool(False))
         spec.input(
@@ -147,10 +163,12 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
 
     def is_nac(self):
         """Return boolen for outline."""
+        if "nac" in self.inputs.calculator_inputs:
+            return True
         if "is_nac" in self.inputs.phonon_settings.keys():
+            self.logger.warning("Use inputs.phonon_settings['is_nac'] is deprecated.")
             return self.inputs.phonon_settings["is_nac"]
-        else:
-            return False
+        return False
 
     def initialize(self):
         """Set default settings and create supercells and primitive cell.
