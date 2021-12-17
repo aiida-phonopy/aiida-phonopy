@@ -50,6 +50,12 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         options : dict
             AiiDA calculation options for phonon calculation used when both of
             run_phonopy and remote_phonopy are True.
+    calculator_inputs.force : dict, optional
+        This is used for supercell force calculation.
+    calculator_inputs.nac : Dict, optional
+        This is used for Born effective charges and dielectric constant calculation
+        in primitive cell. The primitive cell is chosen by phonopy
+        automatically.
     subtract_residual_forces : Bool, optional
         Run a perfect supercell force calculation and subtract the residual
         forces from forces in supercells with displacements. Default is False.
@@ -71,6 +77,15 @@ class BasePhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         super().define(spec)
         spec.input("structure", valid_type=StructureData, required=True)
         spec.input("phonon_settings", valid_type=Dict, required=True)
+        spec.input_namespace(
+            "calculator_inputs", help="Inputs passed to force and NAC calculators."
+        )
+        spec.input(
+            "calculator_inputs.force", valid_type=dict, required=False, non_db=True
+        )
+        spec.input(
+            "calculator_inputs.nac", valid_type=dict, required=False, non_db=True
+        )
         spec.input("symmetry_tolerance", valid_type=Float, default=lambda: Float(1e-5))
         spec.input("dry_run", valid_type=Bool, default=lambda: Bool(False))
         spec.input(

@@ -5,9 +5,6 @@ from aiida.plugins import DataFactory
 from aiida_phonopy.workflows.phonopy.base import BasePhonopyWorkChain
 from aiida_phonopy.workflows.nac_params import NacParamsWorkChain
 from aiida_phonopy.workflows.forces import ForcesWorkChain
-from aiida_phonopy.common.utils import (
-    select_calculator_settings,
-)
 
 Dict = DataFactory("dict")
 Str = DataFactory("str")
@@ -20,6 +17,7 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
     ------
     See most of inputs at BasePhonopyWorkChain.
     calculator_settings : Dict
+        Deprecated.
         Settings to run force and nac calculations. For example,
             {'forces': force_config,
              'nac': nac_config}
@@ -121,10 +119,8 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = select_calculator_settings(
-                self.inputs.calculator_settings, Str("forces")
-            )
-            builder.calculator_settings = calculator_settings
+            calculator_settings = self.inputs.calculator_settings, Str("forces")
+            builder.calculator_inputs = calculator_settings
             builder.immigrant_calculation_folder = Str(force_folder)
             future = self.submit(builder)
             self.report("{} pk = {}".format(label, future.pk))
@@ -145,10 +141,8 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = label
         builder.structure = self.ctx.primitive
-        calculator_settings = select_calculator_settings(
-            self.inputs.calculator_settings, Str("nac")
-        )
-        builder.calculator_settings = calculator_settings
+        calculator_settings = self.inputs.calculator_settings, Str("nac")
+        builder.calculator_inputs = calculator_settings
         builder.immigrant_calculation_folder = Str(nac_folder)
         future = self.submit(builder)
         self.report("{} pk = {}".format(label, future.pk))
@@ -163,10 +157,15 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
             builder = ForcesWorkChain.get_builder()
             builder.metadata.label = label
             builder.structure = supercell
-            calculator_settings = select_calculator_settings(
-                self.inputs.calculator_settings, Str("forces")
-            )
-            builder.calculator_settings = calculator_settings
+            if "force" in self.inputs.calculator_inputs:
+                calculator_inputs = self.inputs.calculator_inputs.force
+            else:
+                calculator_inputs = self.inputs.calculator_settings["forces"]
+                self.logger.warning(
+                    "Use calculator_inputs.force instead of "
+                    "calculator_settings['forces']."
+                )
+            builder.calculator_inputs = calculator_inputs
             future = self.submit(builder)
             self.report("{} pk = {}".format(label, future.pk))
             self.to_context(**{label: future})
@@ -178,10 +177,15 @@ class PhonopyWorkChain(BasePhonopyWorkChain):
         builder = NacParamsWorkChain.get_builder()
         builder.metadata.label = "nac_params"
         builder.structure = self.ctx.primitive
-        calculator_settings = select_calculator_settings(
-            self.inputs.calculator_settings, Str("nac")
-        )
-        builder.calculator_settings = calculator_settings
+        if "nac" in self.inputs.calculator_inputs:
+            calculator_inputs = self.inputs.calculator_inputs.nac
+        else:
+            calculator_inputs = self.inputs.calculator_settings["nac"]
+            self.logger.warning(
+                "Use calculator_inputs.nac instead of calculator_settings['nac']."
+            )
+
+        builder.calculator_inputs = calculator_inputs
         future = self.submit(builder)
         self.report("nac_params: {}".format(future.pk))
         self.to_context(**{"nac_params_calc": future})

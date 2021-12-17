@@ -119,7 +119,7 @@ class NacParamsWorkChain(WorkChain):
         """Define inputs, outputs, and outline."""
         super().define(spec)
         spec.input("structure", valid_type=StructureData, required=True)
-        spec.input("calculator_settings", valid_type=Dict, required=True)
+        spec.input("calculator_inputs", valid_type=dict, required=True, non_db=True)
         spec.input("symmetry_tolerance", valid_type=Float, default=lambda: Float(1e-5))
         spec.input("immigrant_calculation_folder", valid_type=Str, required=False)
 
@@ -158,12 +158,12 @@ class NacParamsWorkChain(WorkChain):
         """Initialize outline control parameters."""
         self.report("initialization")
         self.ctx.iteration = 0
-        if "sequence" in self.inputs.calculator_settings.keys():
-            self.ctx.max_iteration = len(self.inputs.calculator_settings["sequence"])
+        if "sequence" in self.inputs.calculator_inputs.keys():
+            self.ctx.max_iteration = len(self.inputs.calculator_inputs["sequence"])
         else:
             self.ctx.max_iteration = 1
 
-        self.ctx.plugin_names = get_plugin_names(self.inputs.calculator_settings)
+        self.ctx.plugin_names = get_plugin_names(self.inputs.calculator_inputs)
 
     def run_calculation(self):
         """Run NAC params calculation."""
@@ -172,7 +172,7 @@ class NacParamsWorkChain(WorkChain):
         )
         label = "nac_params_%d" % self.ctx.iteration
         process_inputs = get_calcjob_inputs(
-            self.inputs.calculator_settings,
+            self.inputs.calculator_inputs,
             self.inputs.structure,
             ctx=self.ctx,
             label=label,
@@ -192,7 +192,7 @@ class NacParamsWorkChain(WorkChain):
         label = "nac_params_%d" % self.ctx.iteration
         force_folder = self.inputs.immigrant_calculation_folder
         inputs = get_vasp_immigrant_inputs(
-            force_folder.value, self.inputs.calculator_settings.dict, label=label
+            force_folder.value, self.inputs.calculator_inputs.dict, label=label
         )
         VaspImmigrant = WorkflowFactory("vasp.immigrant")
         future = self.submit(VaspImmigrant, **inputs)
