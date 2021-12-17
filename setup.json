@@ -1,18 +1,8 @@
 {
     "name": "aiida-phonopy",
-<<<<<<< HEAD
-    "version": "0.6.0",
-    "description": "AiiDA plugin for running phonon calculations using phonopy",
-    "url": "https://github.com/aiida-phonopy/aiida-phonopy",
-    "author": "AiiDA-phonpy team",
-    "author_email": "atz.togo@gmail.com",
-    "python_requires": ">=3.7",
-=======
-    "version": "0.7.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
     "author": "Atsushi Togo & Lorenzo Bastonero",
     "author_email": "atz.togo@gmail.com, bastonero.lorenzo@gmail.com",
->>>>>>> New version
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
