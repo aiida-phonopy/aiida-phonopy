@@ -45,13 +45,16 @@ def test_setup_with_mapping(generate_workchain_force_sets):
     process.setup()
 
     # assert 'supercells' not in process.ctx.supercells # need to modify
-    for key in ["cells", "phonopy_cells", "primitive_matrix", "displacement_dataset"]:
+    for key in ["cells", "phonopy_cells", "primitive_matrix", "displacement_dataset", "cells_mapping"]:
         assert key in process.outputs
 
     for key in ["primitive", "supercell", "supercell_1", "supercell_2"]:
         assert key in process.outputs["cells"]
         assert key in process.outputs["phonopy_cells"]
 
+    assert "unitcell" in process.outputs["phonopy_cells"]
+
+    assert "unitcell" not in process.ctx.supercells
     assert "primitive" not in process.ctx.supercells
     assert "supercell" not in process.ctx.supercells
     assert "supercell_1" in process.ctx.supercells

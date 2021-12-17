@@ -45,12 +45,14 @@ def phonopy_preprocess(structure, symmetry_tolerance, displacements, supercell_m
 
     primitive_matrix = orm.List(list=ph.primitive_matrix.tolist())
 
-    return {**structures, "primitive_matrix": primitive_matrix, "displacement_dataset": displacement_dataset}
+    output = {**structures, "primitive_matrix": primitive_matrix, "displacement_dataset": displacement_dataset}
+
+    if mapping is not None:
+        output.update({"cells_mapping": orm.List(list=mapping)})
+
+    return output
 
 
-# !!!
-# SHALL WE MOVE THE BELOW TO, E.G., UTILS OR COMMON ???
-# !!!
 def get_supercell_matrix(supercell_matrix):
     """Return a phonopy readible supercell matrix."""
     if len(np.ravel(supercell_matrix)) == 3:
@@ -195,6 +197,13 @@ def get_phonon_structures(ph, mapping=None):
             "primitive cell",
         )
         structures_dict["phonopy_cells"].update({"primitive": primitive_structure_phonopy})
+
+        unitcell_phonopy = phonopy_atoms_to_structure(ph.unitcell, mapping)
+        unitcell_phonopy.label = "%s %s" % (
+            unitcell_phonopy.get_formula(mode="hill_compact"),
+            "primitive cell",
+        )
+        structures_dict["phonopy_cells"].update({"unitcell": unitcell_phonopy})
 
     return structures_dict
 

@@ -140,6 +140,12 @@ class ForceSetsWorkChain(WorkChain, metaclass=ABCMeta):
             help="The sets of forces needed for the phonopy post-process.",
         )
         spec.output("energies", valid_type=orm.ArrayData, required=False, help="The supercells energies.")
+        spec.output(
+            "cells_mapping",
+            valid_type=orm.List,
+            required=False,
+            help="The mapping between cells for the computation and the `phonopy` cells.",
+        )
 
     @classmethod
     def _validate_displacements(cls, value, _):
