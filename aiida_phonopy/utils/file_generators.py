@@ -1,34 +1,27 @@
+# -*- coding: utf-8 -*-
+"""Methods for writing needed `CalcJob` input files."""
+
 from io import StringIO
 from phonopy import Phonopy
 from phonopy.structure.cells import get_supercell
 from phonopy.structure.dataset import forces_in_dataset
 from phonopy.interface.phonopy_yaml import PhonopyYaml
-from phonopy.file_IO import (
-    get_FORCE_SETS_lines,
-    get_BORN_lines,
-    get_FORCE_CONSTANTS_lines,
-)
-from aiida_phonopy.common.utils import phonopy_atoms_from_structure
+from phonopy.file_IO import get_FORCE_SETS_lines, get_BORN_lines, get_FORCE_CONSTANTS_lines
+
+from aiida_phonopy.calculations.functions.preprocess import phonopy_atoms_from_structure
+from aiida import orm
 
 
-def get_BORN_txt(nac_data, structure, symmetry_tolerance):
-    """Returns a string of BORN file.
-
-    nac_data : ArrayData
-        Born effective charges and dielectric constants
-    structure : StructureData
-        This is assumed to be the primitive cell in workchain.
-    symmetry_tolerance : float
-        Symmetry tolerance.
-
-    """
+def get_BORN_txt(nac_data: orm.ArrayData, structure: orm.StructureData, symmetry_tolerance: orm.Float):
+    """Returns a string of BORN file. Structure is assumed as the primitive one."""
 
     born_charges = nac_data.get_array("born_charges")
     epsilon = nac_data.get_array("epsilon")
+    # in the new implementation we expect to pass the already mapped
+    # StructureData, do we don't have to have the mapping, so we
+    # leave it to the default value, i.e. `False`.
     pcell = phonopy_atoms_from_structure(structure)
-    lines = get_BORN_lines(
-        pcell, born_charges, epsilon, symprec=symmetry_tolerance.value
-    )
+    lines = get_BORN_lines(pcell, born_charges, epsilon, symprec=symmetry_tolerance.value)
 
     return "\n".join(lines)
 
@@ -55,39 +48,19 @@ def get_FORCE_CONSTANTS_txt(force_constants_object):
     return "\n".join(lines)
 
 
-def get_phonopy_yaml_txt(
-    structure, supercell_matrix=None, primitive_matrix=None, calculator=None
-):
-    unitcell = phonopy_atoms_from_structure(structure)
+def get_phonopy_yaml_txt(structure, supercell_matrix=None, primitive_matrix="auto"):
+    from aiida_phonopy.calculations.functions.preprocess import phonopy_atoms_from_structure
+
+    unitcell, _ = phonopy_atoms_from_structure(structure)
     ph = Phonopy(
         unitcell,
         supercell_matrix=supercell_matrix,
-        primitive_matrix="auto",
-        calculator=calculator,
+        primitive_matrix=primitive_matrix,
     )
     phpy_yaml = PhonopyYaml()
     phpy_yaml.set_phonon_info(ph)
 
     return str(phpy_yaml)
-
-
-def get_phonopy_options(postprocess_parameters):
-    """Return phonopy command option strings."""
-    mesh_opts = []
-    if "mesh" in postprocess_parameters:
-        mesh = postprocess_parameters["mesh"]
-        try:
-            length = float(mesh)
-            mesh_opts.append("--mesh=%f" % length)
-        except TypeError:
-            mesh_opts.append('--mesh="%d %d %d"' % tuple(mesh))
-        mesh_opts.append("--nowritemesh")
-
-    fc_opts = []
-    if "fc_calculator" in postprocess_parameters:
-        if postprocess_parameters["fc_calculator"].lower().strip() == "alm":
-            fc_opts.append("--alm")
-    return mesh_opts, fc_opts
 
 
 def get_disp_fc3_txt(structure, parameters_data, force_sets):
@@ -130,10 +103,7 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
         disp_cart1 = disp1["displacement"]
         w.write("- number: %5d\n" % (disp1["number"] + 1))
         w.write("  displacement:\n")
-        w.write(
-            "    [%20.16f,%20.16f,%20.16f ] # %05d\n"
-            % (disp_cart1[0], disp_cart1[1], disp_cart1[2], count1)
-        )
+        w.write("    [%20.16f,%20.16f,%20.16f ] # %05d\n" % (disp_cart1[0], disp_cart1[1], disp_cart1[2], count1))
         w.write("  second_atoms:\n")
         count1 += 1
 
@@ -155,10 +125,7 @@ def get_disp_fc3_txt(structure, parameters_data, force_sets):
                 w.write("    displacements:\n")
 
             disp_cart2 = disp2["displacement"]
-            w.write(
-                "    - [%20.16f,%20.16f,%20.16f ] # %05d\n"
-                % (disp_cart2[0], disp_cart2[1], disp_cart2[2], count2)
-            )
+            w.write("    - [%20.16f,%20.16f,%20.16f ] # %05d\n" % (disp_cart2[0], disp_cart2[1], disp_cart2[2], count2))
             count2 += 1
 
     write_cell_yaml(w, supercell)

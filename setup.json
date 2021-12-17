@@ -1,11 +1,8 @@
 {
     "name": "aiida-phonopy",
-    "version": "0.6.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
-    "url": "https://github.com/aiida-phonopy/aiida-phonopy",
-    "author": "AiiDA-phonpy team",
-    "author_email": "atz.togo@gmail.com",
-    "python_requires": ">=3.7",
+    "author": "Atsushi Togo & Lorenzo Bastonero",
+    "author_email": "atz.togo@gmail.com, bastonero.lorenzo@gmail.com",
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
@@ -20,26 +17,44 @@
     "license": "MIT license",
     "install_requires": [
         "phonopy>=2.11.0",
+        "pyaml>=21",
+        "h5py>=3.6",
         "numpy",
         "seekpath",
-        "aiida-core>=1.6.5,<2.0.0",
-        "aiida-vasp>=2.1.1"
+        "aiida-core>=1.6.0,<2.0.0"
     ],
+    "extras_require": {
+        "pre-commit": [
+            "pre-commit~=2.2",
+            "pylint~=2.6.0",
+            "black",
+            "flake8"
+        ],
+        "tests": [
+            "pgtest~=1.3",
+            "pytest~=6.0",
+            "pytest-regressions~=1.0"
+        ],
+        "docs": [
+            "Sphinx",
+            "docutils",
+            "sphinx-copybutton~=0.3.0",
+            "sphinx-book-theme~=0.1.0",
+            "sphinx-click~=2.7.1"
+        ]
+    },
     "setup_requires": [
         "reentry"
     ],
     "entry_points": {
         "aiida.calculations": [
-            "phonopy.phonopy = aiida_phonopy.calcs.phonopy: PhonopyCalculation"
+            "phonopy.pp = aiida_phonopy.calculations.phonopy: PhonopyPpCalculation"
         ],
         "aiida.parsers": [
-            "phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
+            "phonopy.pp = aiida_phonopy.parsers.phonopy: PhonopyPpParser"
         ],
         "aiida.workflows": [
-            "phonopy.phonopy.base = aiida_phonopy.workflows.phonopy.base: BasePhonopyWorkChain",
-            "phonopy.phonopy = aiida_phonopy.workflows.phonopy.phonopy: PhonopyWorkChain",
-            "phonopy.phono3py = aiida_phonopy.workflows.phono3py.phono3py: Phono3pyWorkChain",
-            "phonopy.iter_ha = aiida_phonopy.workflows.iter_ha: IterHarmonicApprox"
+            "phonopy.force_sets = aiida_phonopy.workflows.force_sets: ForceSetsWorkChain"
         ]
     }
 }

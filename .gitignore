@@ -19,6 +19,8 @@ develop-eggs
 .installed.cfg
 lib
 lib64
+.devcontainer
+.vscode
 
 # Installer logs
 pip-log.txt

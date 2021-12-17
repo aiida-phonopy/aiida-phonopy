@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  aiida-phonopy:
+    image: aiidateam/aiida-core:1.6.5
+    working_dir: /aiida-phonopy
+    volumes:
+      - ./:/aiida-phonopy:rw
