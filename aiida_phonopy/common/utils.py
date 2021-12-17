@@ -20,12 +20,6 @@ BandsData = DataFactory("array.bands")
 
 
 @calcfunction
-def select_calculator_settings(calculator_settings, calc_type):
-    """Select calculator settings from string."""
-    return Dict(dict=calculator_settings[calc_type.value])
-
-
-@calcfunction
 def get_remote_fc_calculation_settings(phonon_settings):
     """Create remote force constants phonopy calculation setting.
 
