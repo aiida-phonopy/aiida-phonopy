@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Parsers of `PhonopyPpCalculation` output files."""
+"""Parsers of `PhonopyCalculation` output files."""
 
 import os
 
@@ -8,10 +8,10 @@ from aiida.plugins import CalculationFactory
 
 from .raw_parsers import parse_FORCE_CONSTANTS, parse_yaml, parse_total_dos, parse_projected_dos
 
-PhonopyPpCalculation = CalculationFactory("phonopy.pp")
+PhonopyCalculation = CalculationFactory("phonopy.phonopy")
 
 
-class PhonopyPpParser(Parser):
+class PhonopyParser(Parser):
     """Parser the files produced by a phonopy post processing calculation."""
 
     def parse(self, **kwargs):
@@ -42,7 +42,7 @@ class PhonopyPpParser(Parser):
         # We check first if `force_constants.hdf5` and `phonopy.yaml` are not missing in the retrieved files.
         # They always must be present, since they are always computed in the post-processing calcualtion.
         try:
-            filename = PhonopyPpCalculation._INOUT_FORCE_CONSTANTS
+            filename = PhonopyCalculation._INOUT_FORCE_CONSTANTS
             filenames.remove(filename)
         except ValueError:
             return self.exit_codes.ERROR_NO_FORCE_CONSTANTS
@@ -51,7 +51,7 @@ class PhonopyPpParser(Parser):
             self.out("force_constants", parse_FORCE_CONSTANTS(f))
 
         try:
-            filename = PhonopyPpCalculation._DEFAULT_OUTPUT_FILE
+            filename = PhonopyCalculation._DEFAULT_OUTPUT_FILE
             filenames.remove(filename)
         except ValueError:
             return self.exit_codes.ERROR_NO_PHONOPY_YAML
@@ -62,22 +62,22 @@ class PhonopyPpParser(Parser):
         # can be used to check the if the wanted retrieved files are present in folder
         # not trivial
 
-        projected_dos_filename = PhonopyPpCalculation._OUTPUTS["pdos"]
+        projected_dos_filename = PhonopyCalculation._OUTPUTS["pdos"]
         if projected_dos_filename in filenames:
             with file_opener(projected_dos_filename) as f:
                 self.out("pdos", parse_projected_dos(f))
 
-        total_dos_filename = PhonopyPpCalculation._OUTPUTS["dos"]
+        total_dos_filename = PhonopyCalculation._OUTPUTS["dos"]
         if total_dos_filename in filenames:
             with file_opener(total_dos_filename) as f:
                 self.out("dos", parse_total_dos(f))
 
-        tp_filename = PhonopyPpCalculation._OUTPUTS["tprop"]
+        tp_filename = PhonopyCalculation._OUTPUTS["tprop"]
         if tp_filename in filenames:
             with file_opener(tp_filename) as f:
                 self.out("thermal_properties", parse_yaml(f))
 
-        band_filename = PhonopyPpCalculation._OUTPUTS["band"]
+        band_filename = PhonopyCalculation._OUTPUTS["band"]
         if band_filename in filenames:
             with file_opener(band_filename) as f:
                 self.out("band", parse_yaml(f))

@@ -48,14 +48,15 @@ def get_FORCE_CONSTANTS_txt(force_constants_object):
     return "\n".join(lines)
 
 
-def get_phonopy_yaml_txt(structure, supercell_matrix=None, primitive_matrix="auto"):
-    from aiida_phonopy.calculations.functions.preprocess import phonopy_atoms_from_structure
+def get_phonopy_yaml_txt(structure, symprec, supercell_matrix=None, primitive_matrix="auto"):
+    from aiida_phonopy.calculations.functions.preprocess import phonopy_atoms_from_structure, if_to_map
 
-    unitcell, _ = phonopy_atoms_from_structure(structure)
+    unitcell, _ = phonopy_atoms_from_structure(structure, to_map=if_to_map(structure))
     ph = Phonopy(
         unitcell,
         supercell_matrix=supercell_matrix,
         primitive_matrix=primitive_matrix,
+        symprec=symprec,
     )
     phpy_yaml = PhonopyYaml()
     phpy_yaml.set_phonon_info(ph)

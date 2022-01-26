@@ -1,8 +1,9 @@
 {
     "name": "aiida-phonopy",
+    "version":"0.7.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
-    "author": "Atsushi Togo & Lorenzo Bastonero",
-    "author_email": "atz.togo@gmail.com, bastonero.lorenzo@gmail.com",
+    "author": "Aiida-phonopy team",
+    "author_email": "atz.togo@gmail.com",
     "classifiers": [
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
@@ -18,8 +19,6 @@
     "install_requires": [
         "phonopy>=2.11.0",
         "pyaml>=21",
-        "h5py>=3.6",
-        "numpy",
         "seekpath",
         "aiida-core>=1.6.0,<2.0.0"
     ],
@@ -48,10 +47,10 @@
     ],
     "entry_points": {
         "aiida.calculations": [
-            "phonopy.pp = aiida_phonopy.calculations.phonopy: PhonopyPpCalculation"
+            "phonopy.phonopy = aiida_phonopy.calculations.phonopy: PhonopyCalculation"
         ],
         "aiida.parsers": [
-            "phonopy.pp = aiida_phonopy.parsers.phonopy: PhonopyPpParser"
+            "phonopy.phonopy = aiida_phonopy.parsers.phonopy: PhonopyParser"
         ],
         "aiida.workflows": [
             "phonopy.force_sets = aiida_phonopy.workflows.force_sets: ForceSetsWorkChain"

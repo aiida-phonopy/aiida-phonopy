@@ -47,7 +47,7 @@ def generate_get_force_sets(force_label="forces", force_index=0):
                 if force_index == 0:
                     force_sets[index - 1] = value.get_array(force_label)
                 else:
-                    force_sets[index - 1] = value.get_array(force_label)[force_label]
+                    force_sets[index - 1] = value.get_array(force_label)[force_index]
             elif key.startswith("forces"):
                 energies[index - 1] = value.value
 

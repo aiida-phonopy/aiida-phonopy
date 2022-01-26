@@ -10,7 +10,7 @@ from aiida_phonopy.utils.file_generators import get_FORCE_SETS_txt, get_phonopy_
 from aiida_phonopy.calculations.base import BasePhonopyCalculation, _uppercase_dict
 
 
-class PhonopyPpCalculation(BasePhonopyCalculation):
+class PhonopyCalculation(BasePhonopyCalculation):
     """`CalcJob` implementation of the Phonopy post-processing calculations."""
 
     # Input/Output keys
@@ -89,7 +89,7 @@ class PhonopyPpCalculation(BasePhonopyCalculation):
         "GROUP_VELOCITY": [bool],
         "GV_DELTA_Q": [int, float],
         # Symmetry
-        "SYMMETRY_TOLERANCE": [int, float],
+        "SYMMETRY_TOLERANCE": [int, float], # !!!! ATTENTION TO INPUTS !!!!
         "SYMMETRY": [bool],
         "MESH_SYMMETRY": [bool],
         "FC_SYMMETRY": [bool],
@@ -110,7 +110,7 @@ class PhonopyPpCalculation(BasePhonopyCalculation):
     _BLOCKED_TAGS = [
         "DIM",
         "ATOM_NAME",
-        "MASS",
+        "MASS", #??? from structure or also from here??
         "MAGMOM",
         "CREATE_DISPLACEMENTS",
         "DISPLACEMENT_DISTANCE",
@@ -139,7 +139,7 @@ class PhonopyPpCalculation(BasePhonopyCalculation):
         spec.input("fc_calculator", valid_type=orm.Str, required=False)
         spec.input("metadata.options.input_filename", valid_type=str, default=cls._DEFAULT_INPUT_FILE)
         spec.input("metadata.options.output_filename", valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
-        spec.input("metadata.options.parser_name", valid_type=str, default="phonopy.pp")
+        spec.input("metadata.options.parser_name", valid_type=str, default="phonopy.phonopy")
 
         spec.output("parameters", valid_type=orm.Dict, required=False, help="Sum up info of phonopy calculation.")
         spec.output("force_constants", valid_type=orm.ArrayData, required=False, help="Calculated force constants")
@@ -182,7 +182,7 @@ class PhonopyPpCalculation(BasePhonopyCalculation):
 
         # =============== prepare the submit and conf file ====================
 
-        cmd_readcell = ["-c", self._DEFAULT_CELL_FILE]  # in front any phonopy cmd line
+        cmd_readcell = ["-c", self._DEFAULT_CELL_FILE, "--tolerance", str(self.inputs.symmetry_tolerance.value)]  # in front any phonopy cmd line
         cmd_writefc = ["--writefc", "--writefc-format=hdf5"]  # first cmd if `parent_folder` is not specified
         cmd_readfc = ["--readfc", "--readfc-format=hdf5"]  # in front any phonopy post-process cmd line
 
@@ -283,7 +283,7 @@ class PhonopyPpCalculation(BasePhonopyCalculation):
 
     def _write_cells_info(self, folder):
         """Write in `folder` the `phonopy_cells.yaml` file."""
-        phpy_yaml_txt = get_phonopy_yaml_txt(self.inputs.structure, supercell_matrix=self.inputs["supercell_matrix"])
+        phpy_yaml_txt = get_phonopy_yaml_txt(self.inputs.structure, symprec=self.inputs.symmetry_tolerance.value, supercell_matrix=self.inputs["supercell_matrix"])
         with folder.open(self._DEFAULT_CELL_FILE, "w", encoding="utf8") as handle:
             handle.write(phpy_yaml_txt)
 
