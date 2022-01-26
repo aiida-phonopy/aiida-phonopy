@@ -1,8 +1,9 @@
 {
     "name": "aiida-phonopy",
-    "version":"0.7.0",
+    "version": "0.7.0",
     "description": "AiiDA plugin for running phonon calculations using phonopy",
-    "author": "Aiida-phonopy team",
+    "url": "https://github.com/aiida-phonopy/aiida-phonopy",
+    "author": "AiiDA-phonopy team",
     "author_email": "atz.togo@gmail.com",
     "classifiers": [
         "Intended Audience :: Science/Research",
@@ -25,7 +26,6 @@
     "extras_require": {
         "pre-commit": [
             "pre-commit~=2.2",
-            "pylint~=2.6.0",
             "black",
             "flake8"
         ],
