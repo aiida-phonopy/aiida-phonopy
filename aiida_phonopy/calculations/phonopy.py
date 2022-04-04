@@ -89,7 +89,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
         "GROUP_VELOCITY": [bool],
         "GV_DELTA_Q": [int, float],
         # Symmetry
-        "SYMMETRY_TOLERANCE": [int, float], # !!!! ATTENTION TO INPUTS !!!!
+        "SYMMETRY_TOLERANCE": [int, float],  # !!!! ATTENTION TO INPUTS !!!!
         "SYMMETRY": [bool],
         "MESH_SYMMETRY": [bool],
         "FC_SYMMETRY": [bool],
@@ -110,7 +110,7 @@ class PhonopyCalculation(BasePhonopyCalculation):
     _BLOCKED_TAGS = [
         "DIM",
         "ATOM_NAME",
-        "MASS", #??? from structure or also from here??
+        "MASS",  # ??? from structure or also from here??
         "MAGMOM",
         "CREATE_DISPLACEMENTS",
         "DISPLACEMENT_DISTANCE",
@@ -182,7 +182,12 @@ class PhonopyCalculation(BasePhonopyCalculation):
 
         # =============== prepare the submit and conf file ====================
 
-        cmd_readcell = ["-c", self._DEFAULT_CELL_FILE, "--tolerance", str(self.inputs.symmetry_tolerance.value)]  # in front any phonopy cmd line
+        cmd_readcell = [
+            "-c",
+            self._DEFAULT_CELL_FILE,
+            "--tolerance",
+            str(self.inputs.symmetry_tolerance.value),
+        ]  # in front any phonopy cmd line
         cmd_writefc = ["--writefc", "--writefc-format=hdf5"]  # first cmd if `parent_folder` is not specified
         cmd_readfc = ["--readfc", "--readfc-format=hdf5"]  # in front any phonopy post-process cmd line
 
@@ -283,7 +288,11 @@ class PhonopyCalculation(BasePhonopyCalculation):
 
     def _write_cells_info(self, folder):
         """Write in `folder` the `phonopy_cells.yaml` file."""
-        phpy_yaml_txt = get_phonopy_yaml_txt(self.inputs.structure, symprec=self.inputs.symmetry_tolerance.value, supercell_matrix=self.inputs["supercell_matrix"])
+        phpy_yaml_txt = get_phonopy_yaml_txt(
+            self.inputs.structure,
+            symprec=self.inputs.symmetry_tolerance.value,
+            supercell_matrix=self.inputs["supercell_matrix"],
+        )
         with folder.open(self._DEFAULT_CELL_FILE, "w", encoding="utf8") as handle:
             handle.write(phpy_yaml_txt)
 

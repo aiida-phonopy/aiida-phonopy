@@ -114,7 +114,7 @@ def phonopy_atoms_from_structure(structure, to_map=False):
 
         kind_names = structure.get_kind_names()
         # The numbers start from 1, otherwise phonopy will complain in the post processing.
-        kinds_to_numbers = {kind_names[i]: i+1 for i in range(len(kind_names))} 
+        kinds_to_numbers = {kind_names[i]: i + 1 for i in range(len(kind_names))}
 
         for site in sites:
             kind = structure.get_kind(site.kind_name)
@@ -136,10 +136,10 @@ def phonopy_atoms_from_structure(structure, to_map=False):
             masses=masses,
             cell=structure.cell,
         )
-        
+
         # Also here we start from 1.
-        numbers_to_kinds = {i+1: kind_names[i] for i in range(len(kind_names))}
-        
+        numbers_to_kinds = {i + 1: kind_names[i] for i in range(len(kind_names))}
+
         return (cell, [numbers_to_kinds, numbers_to_symbols])
 
 
