@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Calcfunctions Utils for aiida-phonopy DataTypes."""
-
 from aiida import orm
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
