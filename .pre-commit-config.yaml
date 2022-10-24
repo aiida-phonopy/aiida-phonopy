@@ -34,5 +34,4 @@ repos:
         name: pylint
         entry: pylint
         types: [python]
-        args: ['-i']
         additional_dependencies: ['toml']
