@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7.0 - 2022-05-0X
+## v0.7.0 - 2022-11-0X
 
 [full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v0.7.0...v0.6.0)
 
@@ -46,5 +46,3 @@ The new CalcJob exploits all the phonopy post processing capabilities. In respec
 any post processing property can be calculated and it is **parsed** in the appropriate format. The hdf5 format
 is always used for having fast calculation and fast retrieval of files. Moreover, the inputs/outputs interface
 is now very user-friendly!
-
-### Improvements
