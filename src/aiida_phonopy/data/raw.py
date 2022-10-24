@@ -429,7 +429,8 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     def dielectric(self):
         """Get the `infinity` dielectric tensor (i.e. in the static field limit) in Cartesian coordinates."""
         try:
-            value = self.get_array('dielectric')
+            value = self.get_attribute('dielectric')
+            value = np.array(value)
         except (KeyError, AttributeError):
             value = None
         return value
@@ -453,7 +454,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         the_dielectric = np.array(dielectric)
 
         if the_dielectric.shape == (3, 3):
-            self.set_array('dielectric', the_dielectric)
+            self.set_attribute('dielectric', the_dielectric.tolist())
         else:
             raise ValueError('the array is not of the correct shape')
 
