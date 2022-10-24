@@ -27,10 +27,11 @@ repos:
         args: ['-i']
         additional_dependencies: ['toml']
 
--   repo: https://github.com/PyCQA/pylint
-    rev: v2.12.2
+-   repo: local
     hooks:
     -   id: pylint
         name: pylint
         entry: pylint
         types: [python]
+        language: system
+        require_serial: true
