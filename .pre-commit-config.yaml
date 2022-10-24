@@ -34,8 +34,3 @@ repos:
         entry: pylint
         types: [python]
         language: system
-        args:
-            [
-            "-rn", # Only display messages
-            "-sn", # Don't display the score
-            ]
