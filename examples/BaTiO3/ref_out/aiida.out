@@ -1,0 +1,46 @@
+        _
+  _ __ | |__   ___  _ __   ___   _ __  _   _
+ | '_ \| '_ \ / _ \| '_ \ / _ \ | '_ \| | | |
+ | |_) | | | | (_) | | | | (_) || |_) | |_| |
+ | .__/|_| |_|\___/|_| |_|\___(_) .__/ \__, |
+ |_|                            |_|    |___/
+                                      2.14.0
+
+Python version 3.8.10
+Spglib version 1.16.3
+
+Phonopy configuration was read from "aiida.in".
+Crystal structure was read from "phonopy.yaml".
+Unit of length: angstrom
+Settings:
+  Supercell: [3 3 3]
+  Primitive matrix:
+    [0. 0. 1.]
+    [1. 0. 0.]
+    [-0.  1.  0.]
+Spacegroup: R3m (160)
+Use -v option to watch primitive cell, unit cell, and supercell structures.
+
+Force sets were not found in "phonopy.yaml".
+Forces and displacements were read from "FORCE_SETS".
+Computing force constants...
+Max drift of force constants: -0.000494 (zz) 0.000170 (yy)
+Force constants are written into "force_constants.hdf5".
+
+----------------------------------------------------------------------------
+ One of the following run modes may be specified for phonon calculations.
+ - Mesh sampling (MESH, --mesh)
+ - Q-points (QPOINTS, --qpoints)
+ - Band structure (BAND, --band)
+ - Animation (ANIME, --anime)
+ - Modulation (MODULATION, --modulation)
+ - Characters of Irreps (IRREPS, --irreps)
+ - Create displacements (CREATE_DISPLACEMENTS, -d)
+----------------------------------------------------------------------------
+
+Summary of calculation was written in "phonopy.yaml".
+                 _
+   ___ _ __   __| |
+  / _ \ '_ \ / _` |
+ |  __/ | | | (_| |
+  \___|_| |_|\__,_|

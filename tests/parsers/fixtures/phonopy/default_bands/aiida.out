@@ -1,0 +1,54 @@
+        _
+  _ __ | |__   ___  _ __   ___   _ __  _   _
+ | '_ \| '_ \ / _ \| '_ \ / _ \ | '_ \| | | |
+ | |_) | | | | (_) | | | | (_) || |_) | |_| |
+ | .__/|_| |_|\___/|_| |_|\___(_) .__/ \__, |
+ |_|                            |_|    |___/
+                                      2.12.0
+
+Python version 3.8.6
+Spglib version 1.16.1
+
+Phonopy configuration was read from "aiida.in".
+Crystal structure was read from "phonopy.yaml".
+Unit of length: angstrom
+Band structure mode (Auto)
+Settings:
+  Non-analytical term correction (NAC): on
+  Force constants symmetrization: on
+  Supercell: [1 1 1]
+  Primitive matrix (Auto):
+    [0.  0.5 0.5]
+    [0.5 0.  0.5]
+    [0.5 0.5 0. ]
+Spacegroup: F-43m (216)
+Use -v option to watch primitive cell, unit cell, and supercell structures.
+
+Force sets were not found in "phonopy.yaml".
+Forces and displacements were read from "FORCE_SETS".
+Computing force constants...
+Max drift of force constants: -0.000206 (xx) -0.000051 (xx)
+Max drift after symmetrization by translation: 0.000000 (yy) 0.000000 (yy)
+
+NAC parameters were not found in "phonopy.yaml".
+NAC parameters were read from "BORN".
+Use NAC by Gonze et al. (no real space sum in current implementation)
+  PRB 50, 13035(R) (1994), PRB 55, 10355 (1997)
+  G-cutoff distance: 1.16, Number of G-points: 307, Lambda: 0.37
+
+SeeK-path is used to generate band paths.
+  About SeeK-path https://seekpath.readthedocs.io/ (citation there-in)
+Reciprocal space paths in reduced coordinates:
+[ 0.000  0.000  0.000] --> [ 0.500  0.000  0.500]
+[ 0.500  0.000  0.500] --> [ 0.625  0.250  0.625]
+[ 0.375  0.375  0.750] --> [ 0.000  0.000  0.000]
+[ 0.000  0.000  0.000] --> [ 0.500  0.500  0.500]
+[ 0.500  0.500  0.500] --> [ 0.500  0.250  0.750]
+[ 0.500  0.250  0.750] --> [ 0.500  0.000  0.500]
+
+Summary of calculation was written in "phonopy.yaml".
+                 _
+   ___ _ __   __| |
+  / _ \ '_ \ / _` |
+ |  __/ | | | (_| |
+  \___|_| |_|\__,_|

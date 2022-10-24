@@ -1,7 +1,7 @@
+# `aiida-phonopy`
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/aiida-phonopy/aiida-phonopy/develop.svg)](https://results.pre-commit.ci/latest/github/aiida-phonopy/aiida-phonopy/develop)
+[![PyPI version](https://badge.fury.io/py/aiida-phonopy.svg)](https://badge.fury.io/py/aiida-phonopy)
+[![Build Status](https://github.com/aiida-phonopy/aiida-phonopy/workflows/aiida-phonopy/badge.svg?branch=develop&event=push)](https://github.com/aiida-phonopy/aiida-phonopy/actions)
+[![Docs status](https://readthedocs.org/projects/aiida-phonopy/badge)](http://aiida-phonopy.readthedocs.io/)
 
-# AiiDA Phonopy plugin
-
-This the official Phonopy plugin for AiiDA. This plugin includes workflows and post process calculation to compute phonons and related properties through supercells and finite displacements approaches.
-
-The workflows are designed to be used with ``aiida-common-workflows``, where several quantum engines can be chosen as the force calculator. Nevertheless, the implementation allows for the possibility to use such workflows in other plugins. Read the documentation for development for more information.
+This is the official AiiDA plugin for [Phonopy](https://phonopy.github.io/phonopy/index.html).

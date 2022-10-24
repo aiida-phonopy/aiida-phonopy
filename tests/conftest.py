@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-outer-name,too-many-statements
 """Initialise a text database and profile for pytest."""
-import collections
+from collections.abc import Mapping
 import os
 import shutil
 
 import pytest
 
-pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def filepath_tests():
     """Return the absolute filepath of the `tests` folder.
 
@@ -24,10 +24,10 @@ def filepath_tests():
 @pytest.fixture
 def filepath_fixtures(filepath_tests):
     """Return the absolute filepath to the directory containing the file `fixtures`."""
-    return os.path.join(filepath_tests, "fixtures")
+    return os.path.join(filepath_tests, 'fixtures')
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope='function')
 def fixture_sandbox():
     """Return a `SandboxFolder`."""
     from aiida.common.folders import SandboxFolder
@@ -52,7 +52,7 @@ def fixture_code(fixture_localhost):
         from aiida.common import exceptions
         from aiida.orm import Code
 
-        label = f"test.{entry_point_name}"
+        label = f'test.{entry_point_name}'
 
         try:
             return Code.objects.get(label=label)  # pylint: disable=no-member
@@ -60,7 +60,7 @@ def fixture_code(fixture_localhost):
             return Code(
                 label=label,
                 input_plugin_name=entry_point_name,
-                remote_computer_exec=[fixture_localhost, "/bin/true"],
+                remote_computer_exec=[fixture_localhost, '/bin/true'],
             )
 
     return _fixture_code
@@ -76,11 +76,11 @@ def serialize_builder():
 
     def serialize_data(data):
         # pylint: disable=too-many-return-statements
-        from aiida.orm import BaseType, Dict, Code
+        from aiida.orm import BaseType, Code, Dict
         from aiida.plugins import DataFactory
 
-        StructureData = DataFactory("structure")
-        UpfData = DataFactory("pseudo.upf")
+        StructureData = DataFactory('structure')
+        UpfData = DataFactory('pseudo.upf')
 
         if isinstance(data, dict):
             return {key: serialize_data(value) for key, value in data.items()}
@@ -98,7 +98,7 @@ def serialize_builder():
             return data.get_formula()
 
         if isinstance(data, UpfData):
-            return f"{data.element}<md5={data.md5}>"
+            return f'{data.element}<md5={data.md5}>'
 
         return data
 
@@ -139,18 +139,18 @@ def generate_calc_job():
 def generate_calc_job_node(fixture_localhost):
     """Fixture to generate a mock `CalcJobNode` for testing parsers."""
 
-    def flatten_inputs(inputs, prefix=""):
+    def flatten_inputs(inputs, prefix=''):
         """Flatten inputs recursively like :meth:`aiida.engine.processes.process::Process._flatten_inputs`."""
         flat_inputs = []
         for key, value in inputs.items():
-            if isinstance(value, collections.Mapping):
-                flat_inputs.extend(flatten_inputs(value, prefix=prefix + key + "__"))
+            if isinstance(value, Mapping):
+                flat_inputs.extend(flatten_inputs(value, prefix=prefix + key + '__'))
             else:
                 flat_inputs.append((prefix + key, value))
         return flat_inputs
 
     def _generate_calc_job_node(
-        entry_point_name="phonopy.pp",
+        entry_point_name='phonopy.phonopy',
         computer=None,
         test_name=None,
         inputs=None,
@@ -180,26 +180,25 @@ def generate_calc_job_node(fixture_localhost):
 
         if test_name is not None:
             basepath = os.path.dirname(os.path.abspath(__file__))
-            filename = os.path.join(entry_point_name[len("phonopy.") :], test_name)
-            filepath_folder = os.path.join(basepath, "parsers", "fixtures", filename)
-            # should we check the input file?
-            filepath_input = os.path.join(filepath_folder, "phonopy_cells.yaml")
+            filename = os.path.join(entry_point_name[len('phonopy.'):], test_name)
+            filepath_folder = os.path.join(basepath, 'parsers', 'fixtures', filename)
+            # filepath_input = os.path.join(filepath_folder, "aiida.in")
 
-        entry_point = format_entry_point_string("aiida.calculations", entry_point_name)
+        entry_point = format_entry_point_string('aiida.calculations', entry_point_name)
 
         node = orm.CalcJobNode(computer=computer, process_type=entry_point)
-        node.set_attribute("input_filename", "phonopy_cells.yaml")
-        node.set_attribute("output_filename", "phonopy.yaml")
-        node.set_attribute("error_filename", "aiida.err")  # ?
-        node.set_option("resources", {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        node.set_option("max_wallclock_seconds", 1800)
+        node.set_attribute('input_filename', 'aiida.in')
+        node.set_attribute('output_filename', 'aiida.out')
+        node.set_attribute('error_filename', 'aiida.err')
+        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        node.set_option('max_wallclock_seconds', 1800)
 
         if attributes:
             node.set_attribute_many(attributes)  # here if you would specify temp folder etc
 
         if inputs:
-            metadata = inputs.pop("metadata", {})
-            options = metadata.get("options", {})
+            metadata = inputs.pop('metadata', {})
+            options = metadata.get('options', {})
 
             for name, option in options.items():
                 node.set_option(name, option)
@@ -214,7 +213,10 @@ def generate_calc_job_node(fixture_localhost):
         if retrieve_temporary:
             dirpath, filenames = retrieve_temporary
             for filename in filenames:
-                shutil.copy(os.path.join(filepath_folder, filename), os.path.join(dirpath, filename))
+                try:
+                    shutil.copy(os.path.join(filepath_folder, filename), os.path.join(dirpath, filename))
+                except FileNotFoundError:
+                    pass  # To test the absence of files in the retrieve_temporary folder
 
         if filepath_folder:
             retrieved = orm.FolderData()
@@ -223,13 +225,16 @@ def generate_calc_job_node(fixture_localhost):
             # Remove files that are supposed to be only present in the retrieved temporary folder
             if retrieve_temporary:
                 for filename in filenames:
-                    retrieved.delete_object(filename)
+                    try:
+                        retrieved.delete_object(filename)
+                    except OSError:
+                        pass  # To test the absence of files in the retrieve_temporary folder
 
-            retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label="retrieved")
+            retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
             retrieved.store()
 
-            remote_folder = orm.RemoteData(computer=computer, remote_path="/tmp")
-            remote_folder.add_incoming(node, link_type=LinkType.CREATE, link_label="remote_folder")
+            remote_folder = orm.RemoteData(computer=computer, remote_path='/tmp')
+            remote_folder.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
             remote_folder.store()
 
         return node
@@ -237,7 +242,7 @@ def generate_calc_job_node(fixture_localhost):
     return _generate_calc_job_node
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def generate_parser():
     """Fixture to load a parser class for testing parsers."""
 
@@ -258,27 +263,133 @@ def generate_parser():
 def generate_structure():
     """Return a `StructureData` representing bulk silicon."""
 
-    def _generate_structure(structure_id="silicon"):
-        """Return a `StructureData` representing bulk silicon or a snapshot of a single water molecule dynamics."""
+    def _generate_structure(structure_id='silicon'):
+        """Return a `StructureData` representing bulk silicon."""
         from aiida.orm import StructureData
 
-        if structure_id == "silicon":
-            param = 5.43
-            cell = [[0.0, param / 2.0, param / 2.0], [param / 2.0, 0, param / 2.0], [param / 2.0, param / 2.0, 0.0]]
-            structure = StructureData(cell=cell)
-            structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Si", name="Si")
-            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="Si", name="Si")
-        elif structure_id == "silicon-with-names":
-            param = 5.43
-            cell = [[0.0, param / 2.0, param / 2.0], [param / 2.0, 0, param / 2.0], [param / 2.0, param / 2.0, 0.0]]
-            structure = StructureData(cell=cell)
-            structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Si", name="A")
-            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="Si", name="B")
+        param = 5.43
+        cell = [[0.0, param / 2.0, param / 2.0], [param / 2.0, 0, param / 2.0], [param / 2.0, param / 2.0, 0.0]]
+        structure = StructureData(cell=cell)
+
+        if structure_id == 'silicon':
+            structure.append_atom(position=(0.0, 0.0, 0.0), symbols='Si', name='Si')
+            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols='Si', name='Si')
+        elif structure_id == 'silicon-with-names':
+            structure.append_atom(position=(0.0, 0.0, 0.0), symbols='Si', name='A')
+            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols='Si', name='B')
         else:
-            raise KeyError("Unknown structure_id='{}'".format(structure_id))
+            raise KeyError(f"Unknown structure_id='{structure_id}'")
         return structure
 
     return _generate_structure
+
+
+@pytest.fixture
+def generate_raw_data(generate_structure):
+    """Return a `RawData`."""
+
+    def _generate_raw_data(structure_id='silicon', inputs=None):
+        """Return a `RawData`."""
+        from aiida_phonopy.data.raw import RawData
+        structure = generate_structure(structure_id=structure_id)
+
+        if inputs is None:
+            inputs = {}
+
+        try:
+            structure = inputs.pop('structure')
+        except (KeyError, AttributeError):
+            pass
+
+        raw_data = RawData(structure=structure, **inputs)
+
+        return raw_data
+
+    return _generate_raw_data
+
+
+@pytest.fixture
+def generate_preprocess_data(generate_structure):
+    """Return a `PreProcessData`."""
+
+    def _generate_preprocess_data(structure_id='silicon', inputs=None):
+        """Return a `PreProcessData`."""
+        from aiida_phonopy.data.preprocess import PreProcessData
+        structure = generate_structure(structure_id=structure_id)
+
+        if inputs is None:
+            inputs = {}
+
+        try:
+            structure = inputs.pop('structure')
+        except (KeyError, AttributeError):
+            pass
+
+        preprocess_data = PreProcessData(structure=structure, **inputs)
+
+        return preprocess_data
+
+    return _generate_preprocess_data
+
+
+@pytest.fixture
+def generate_phonopy_data(generate_preprocess_data):
+    """Return a `PhonopyData`."""
+
+    def _generate_phonopy_data(preprocess_data=None, forces=None, dielectric=None, born_charges=None):
+        """Return a `PhonopyData`."""
+        from aiida_phonopy.data.phonopy import PhonopyData
+
+        if preprocess_data is None:
+            preprocess_data = generate_preprocess_data()
+            preprocess_data.set_displacements()
+
+        phonopy_data = PhonopyData(preprocess_data=preprocess_data)
+
+        if forces is None:
+            phonopy_data.set_forces([[[1., 0., 0.], [-1., 0., 0.]]  # 1st displacement
+                                     ])
+        else:
+            phonopy_data.set_forces(forces)
+
+        if dielectric is not None:
+            phonopy_data.set_dielectric(dielectric)
+
+        if born_charges is not None:
+            phonopy_data.set_born_charges(born_charges)
+
+        return phonopy_data
+
+    return _generate_phonopy_data
+
+
+@pytest.fixture
+def generate_example_phonopy_data():
+    """Return BTO PhonopyData."""
+
+    def _generate_example_phonopy_data():
+        """Return BTO PhonopyData."""
+        import os
+
+        import phonopy
+
+        from aiida_phonopy.data import PhonopyData, PreProcessData
+
+        basepath = os.path.dirname(os.path.abspath(__file__))
+        phyaml = os.path.join(basepath, 'fixtures', 'phonopy', 'phonopy.yaml')
+        fsets = os.path.join(basepath, 'fixtures', 'phonopy', 'FORCE_SETS')
+
+        ph = phonopy.load(phyaml, force_sets_filename=fsets)
+
+        preprocess_data = PreProcessData(phonopy_atoms=ph.unitcell, supercell_matrix=[3, 3, 3])
+        preprocess_data.set_displacements_from_dataset(dataset=ph.dataset)
+
+        phonopy_data = PhonopyData(preprocess_data=preprocess_data)
+        phonopy_data.set_forces(sets_of_forces=ph.forces)
+
+        return phonopy_data
+
+    return _generate_example_phonopy_data
 
 
 @pytest.fixture
@@ -291,49 +402,20 @@ def generate_remote_data():
         from aiida.orm import CalcJobNode, RemoteData
         from aiida.plugins.entry_point import format_entry_point_string
 
-        entry_point = format_entry_point_string("aiida.calculations", entry_point_name)
+        entry_point = format_entry_point_string('aiida.calculations', entry_point_name)
 
         remote = RemoteData(remote_path=remote_path)
         remote.computer = computer
 
         if entry_point_name is not None:
             creator = CalcJobNode(computer=computer, process_type=entry_point)
-            creator.set_option("resources", {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            remote.add_incoming(creator, link_type=LinkType.CREATE, link_label="remote_folder")
+            creator.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+            remote.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
             creator.store()
 
         return remote
 
     return _generate_remote_data
-
-
-@pytest.fixture
-def generate_force_sets_cls():
-    """Return a factory to create a subclass of a ``ForceSetsWorkChain``."""
-
-    def _generate_force_sets_cls():
-        """Generate a subclass of ``ForceSetsWorkChain``."""
-        from aiida_phonopy.workflows.force_sets import ForceSetsWorkChain
-
-        class TestForceSetsWorkChain(ForceSetsWorkChain):
-            """Test subclass of ``ForceSetsWorkChain``."""
-
-            @classmethod
-            def define(cls, spec):
-                super().define(spec)
-
-            def run_forces(self):
-                pass
-
-            def inspect_forces(self):
-                pass
-
-            # def run_results(self):
-            #    pass
-
-        return TestForceSetsWorkChain
-
-    return _generate_force_sets_cls
 
 
 @pytest.fixture
@@ -386,13 +468,13 @@ def generate_workchain_cls():
 def generate_workchain_force_sets(generate_workchain_cls, generate_force_sets_cls, generate_structure):
     """Generate an instance of a `ForceSetsWorkChain`."""
 
-    def _generate_workchain_force_sets(append_inputs=None, structure_id="silicon", return_inputs=False):
+    def _generate_workchain_force_sets(append_inputs=None, structure_id='silicon', return_inputs=False):
         from aiida.orm import List
 
         structure = generate_structure(structure_id=structure_id)
         supercell_matrix = List(list=[1, 1, 1])
 
-        inputs = {"structure": structure, "supercell_matrix": supercell_matrix}
+        inputs = {'structure': structure, 'supercell_matrix': supercell_matrix}
 
         if return_inputs:
             return inputs

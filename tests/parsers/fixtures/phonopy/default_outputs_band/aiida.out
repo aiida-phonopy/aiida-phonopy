@@ -1,0 +1,46 @@
+        _
+  _ __ | |__   ___  _ __   ___   _ __  _   _
+ | '_ \| '_ \ / _ \| '_ \ / _ \ | '_ \| | | |
+ | |_) | | | | (_) | | | | (_) || |_) | |_| |
+ | .__/|_| |_|\___/|_| |_|\___(_) .__/ \__, |
+ |_|                            |_|    |___/
+                                      2.14.0
+
+Python version 3.8.10
+Spglib version 1.16.3
+
+Phonopy configuration was read from "aiida.in".
+Crystal structure was read from "phonopy.yaml".
+Unit of length: angstrom
+Band structure mode (Auto)
+Settings:
+  Supercell: [3 3 3]
+  Primitive matrix (Auto):
+    [1.85037171e-17 1.29526020e-16 1.00000000e+00]
+    [1. 0. 0.]
+    [-1.85037171e-17  1.00000000e+00  3.70074342e-17]
+Spacegroup: R3m (160)
+Use -v option to watch primitive cell, unit cell, and supercell structures.
+
+Force sets were not found in "phonopy.yaml".
+Forces and displacements were read from "FORCE_SETS".
+Computing force constants...
+Max drift of force constants: -0.000494 (zz) 0.000170 (yy)
+
+SeeK-path is used to generate band paths.
+  About SeeK-path https://seekpath.readthedocs.io/ (citation there-in)
+Reciprocal space paths in reduced coordinates:
+[ 0.000  0.000  0.000] --> [ 0.500  0.500  0.500]
+[ 0.500  0.500  0.500] --> [ 0.503  0.497  0.500]
+[ 0.500 -0.497  0.497] --> [ 0.500  0.000  0.000]
+[ 0.500  0.000  0.000] --> [ 0.000  0.000  0.000]
+[ 0.000  0.000  0.000] --> [ 0.499 -0.499  0.000]
+[ 0.501  0.000  0.499] --> [ 0.500  0.000  0.500]
+[ 0.500  0.000  0.500] --> [ 0.000  0.000  0.000]
+
+Summary of calculation was written in "phonopy.yaml".
+                 _
+   ___ _ __   __| |
+  / _ \ '_ \ / _` |
+ |  __/ | | | (_| |
+  \___|_| |_|\__,_|
