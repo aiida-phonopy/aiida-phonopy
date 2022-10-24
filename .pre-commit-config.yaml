@@ -27,7 +27,8 @@ repos:
         args: ['-i']
         additional_dependencies: ['toml']
 
--   repo: local
+-   repo: https://github.com/PyCQA/pylint
+    rev: v2.12.2
     hooks:
     -   id: pylint
         name: pylint

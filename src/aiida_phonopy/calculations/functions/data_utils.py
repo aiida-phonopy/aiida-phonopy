@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Calcfunctions Utils for aiida-phonopy DataTypes."""
-
 from aiida import orm
 from aiida.engine import calcfunction
+from aiida.plugins import DataFactory
 
-from aiida_phonopy.data import PhonopyData, PreProcessData
+PreProcessData = DataFactory('phonopy.preprocess')
+PhonopyData = DataFactory('phonopy.phonopy')
 
 __all__ = (
     'get_unitcell_from_distance', 'get_primitive_from_distance', 'get_supercell_from_distance',
