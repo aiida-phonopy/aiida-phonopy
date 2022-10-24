@@ -34,4 +34,8 @@ repos:
         entry: pylint
         types: [python]
         language: system
-        require_serial: true
+        args:
+            [
+            "-rn", # Only display messages
+            "-sn", # Don't display the score
+            ]
