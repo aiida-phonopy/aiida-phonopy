@@ -15,9 +15,9 @@ from .raw import RawData
 
 class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
     """
-    This class stores information regarding the pre-process information regarding
+    This class is designed for handling the pre-process information regarding
     a frozen phonon calculation using `Phonopy`. These regard the unitcell structure,
-    the supercell and primitive matrix, symmetry info.
+    the supercell and primitive matrix, as well as other symmetry information.
     """
 
     def __init__(

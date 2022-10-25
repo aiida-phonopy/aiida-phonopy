@@ -10,11 +10,14 @@ from .preprocess import PreProcessData
 
 class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
     """
-    This class wraps the `phonopy.Phonopy` class. It represents the final Data status
+    This class wraps the :class:`phonopy.Phonopy` class. It represents the final Data node status
     of a frozen phonon calculaiton. It stores information regarding the pre-processing,
-    the displacements and forces dataset, the (eventual) non-analytical constants.
+    the displacements and forces dataset, and the (eventual) non-analytical constants.
 
     .. note: direct calculation of properties from this class is still not implemented.
+        Use :class:`~aiida_phonopy.calculations.phonopy.PhonopyCalculation` for
+        post-processing this data node, keeping the provenance and having the
+        data produced in the correct data type.
     """
 
     def __init__(self, preprocess_data: PreProcessData, **kwargs):
