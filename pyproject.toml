@@ -4,7 +4,8 @@ build-backend = 'flit_core.buildapi'
 
 [project]
 name = 'aiida-phonopy'
-dynamic = ['description', 'version']
+dynamic = ['version']
+description = 'The official AiiDA plugin for Phonopy'
 authors = [
     {name = 'Lorenzo Bastonero', email = 'bastonero.lorenzo@gmail.com'}
 ]
