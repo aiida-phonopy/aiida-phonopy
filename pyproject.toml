@@ -11,7 +11,7 @@ authors = [
 readme = 'README.md'
 license = {file = 'LICENSE.txt'}
 classifiers = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Framework :: AiiDA',
     'License :: OSI Approved :: MIT License',
     'Operating System :: POSIX :: Linux',
@@ -27,8 +27,6 @@ requires-python = '>=3.8'
 dependencies = [
     "aiida-core>=1.6.0,<2.0.0",
     "phonopy>=2.14,<3.0.0",
-    "seekpath",
-    "numpy",
 ]
 
 [project.urls]
@@ -54,29 +52,33 @@ docs = [
 ]
 
 [project.entry-points.'aiida.data']
-"phonopy.raw" = "aiida_phonopy.data.raw: RawData"
-"phonopy.preprocess" = "aiida_phonopy.data.preprocess: PreProcessData"
-"phonopy.phonopy" = "aiida_phonopy.data.phonopy: PhonopyData"
-"phonopy.force_constants" = "aiida_phonopy.data.force_constants: ForceConstantsData"
+'phonopy.raw' = 'aiida_phonopy.data.raw:RawData'
+'phonopy.preprocess' = 'aiida_phonopy.data.preprocess:PreProcessData'
+'phonopy.phonopy' = 'aiida_phonopy.data.phonopy:PhonopyData'
+'phonopy.force_constants' = 'aiida_phonopy.data.force_constants:ForceConstantsData'
 
 [project.entry-points.'aiida.calculations']
-"phonopy.phonopy" = "aiida_phonopy.calculations.phonopy: PhonopyCalculation"
+'phonopy.phonopy' = 'aiida_phonopy.calculations.phonopy:PhonopyCalculation'
 
 [project.entry-points.'aiida.parsers']
-"phonopy.phonopy" = "aiida_phonopy.parsers.phonopy: PhonopyParser"
+'phonopy.phonopy' = 'aiida_phonopy.parsers.phonopy:PhonopyParser'
 
 [project.entry-points.'aiida.workflows']
-"phonopy.phonopy" = "aiida_phonopy.workflows.phonopy: PhonopyWorkChain"
+'phonopy.phonopy' = 'aiida_phonopy.workflows.phonopy:PhonopyWorkChain'
 
 [tool.flit.module]
 name = 'aiida_phonopy'
 
 [tool.flit.sdist]
 exclude = [
-    '.github/',
     'tests/',
+    'docs/',
+    '.git/',
+    '.github/',
     '.gitignore',
     '.pre-commit-config.yaml',
+    '.readthedocs.yml',
+    'docker-compose.yml',
 ]
 
 [tool.flynt]
