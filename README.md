@@ -39,5 +39,5 @@ We acknowledge support from:
 * the [U Bremen Excellence Chairs](https://www.uni-bremen.de/u-bremen-excellence-chairs) program funded within the scope of the [Excellence Strategy of Germany’s federal and state governments](https://www.dfg.de/en/research_funding/excellence_strategy/index.html);
 * the [MAPEX](https://www.uni-bremen.de/en/mapex) Center for Materials and Processes.
 
-<img src="https://github.com/aiida-phonopy/aiida-phonopy/blob/d2f5e511c619a6de02b3d42ea5f9b3702d683409/docs/source/images/UBREMEN.pdf">
+<img src="https://github.com/aiida-phonopy/aiida-phonopy/docs/source/images/UBREMEN.pdf">
 <img src="https://raw.githubusercontent.com/aiida-phonopy/aiida-phonopy/develop/docs/source/images/MAPEX.jpg">
