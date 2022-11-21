@@ -4,8 +4,6 @@
 from aiida import orm
 import pytest
 
-from aiida_phonopy.data import preprocess
-
 
 @pytest.fixture
 def generate_phonopy_calculation_inputs(fixture_code, generate_example_phonopy_data):

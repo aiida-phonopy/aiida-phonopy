@@ -31,7 +31,7 @@ class PhonopyParser(Parser):
     def parse(self, **kwargs):
         """Parse retrieved files from remote folder."""
         retrieved = self.retrieved
-        retrieve_temporary_list = self.node.get_attribute('retrieve_temporary_list', None)
+        retrieve_temporary_list = self.node.base.attributes.get('retrieve_temporary_list', None)
 
         # If temporary files were specified, check that we have them
         if retrieve_temporary_list:
@@ -64,7 +64,7 @@ class PhonopyParser(Parser):
                     return self.exit(self.exit_codes.ERROR_OUTPUT_YAML_LOAD)
         except ValueError:
             try:
-                with retrieved.open(filename) as file:
+                with retrieved.base.repository.open(filename) as file:
                     try:
                         parsed_phonopy_yaml = yaml.safe_load(file)
                     except yaml.YAMLError:
@@ -142,12 +142,12 @@ class PhonopyParser(Parser):
         filename_stdout = self.node.get_option('output_filename')
         logs = get_logging_container()  # datastructure for logs
 
-        if filename_stdout not in self.retrieved.list_object_names():
+        if filename_stdout not in self.retrieved.base.repository.list_object_names():
             exit_code_stdout = self.exit_codes.ERROR_OUTPUT_STDOUT_MISSING
             return parsed_data, logs, exit_code_stdout
 
         try:
-            stdout = self.retrieved.get_object_content(filename_stdout)
+            stdout = self.retrieved.base.repository.get_object_content(filename_stdout)
         except (IOError, OSError):
             exit_code_stdout = self.exit_codes.ERROR_OUTPUT_STDOUT_READ
             return parsed_data, logs, exit_code_stdout
@@ -291,8 +291,8 @@ class PhonopyParser(Parser):
             thermal_properties['free_energy'].append(tp['free_energy'])
             thermal_properties['heat_capacity'].append(tp['heat_capacity'])
         old_thermal_property = thermal_properties.copy()
-        for key in old_thermal_property:
-            thermal_properties[key] = np.array(old_thermal_property[key])
+        for key, item in old_thermal_property.items():
+            thermal_properties[key] = np.array(item)
 
         tprops = orm.XyData()
         tprops.set_x(thermal_properties['temperatures'], 'Temperature', 'K')

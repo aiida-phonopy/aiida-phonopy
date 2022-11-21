@@ -120,61 +120,61 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     @property
     def phonopy_version(self):
         """Get the Phonopy version used."""
-        return self.get_attribute('phonopy_version')
+        return self.base.attributes.get('phonopy_version')
 
     def _set_phonopy_version(self):
         """Set the installed Phonopy version."""
         from phonopy.version import __version__ as the_phonopy_version
 
         self._if_can_modify()
-        self.set_attribute('phonopy_version', the_phonopy_version)
+        self.base.attributes.set('phonopy_version', the_phonopy_version)
 
     @property
     def numbers(self):
         """Get the `numbers` array of the atoms in the cell."""
-        return self.get_attribute('numbers')
+        return self.base.attributes.get('numbers')
 
     @property
     def masses(self):
         """Get the `masses` array of the atoms in the cell."""
-        return self.get_attribute('masses')
+        return self.base.attributes.get('masses')
 
     @property
     def positions(self):
         """Get the `positions` array of the atoms in the cell."""
-        return self.get_attribute('positions')
+        return self.base.attributes.get('positions')
 
     @property
     def cell(self):
         """Get the `cell` of the structure."""
-        return self.get_attribute('cell')
+        return self.base.attributes.get('cell')
 
     @property
     def magnetic_moments(self):
         """Get the `magnetic_moments` array of the atoms in the cell."""
-        return self.get_attribute('magnetic_moments')
+        return self.base.attributes.get('magnetic_moments')
 
     @property
     def symbols(self):
         """Get the chemical `symbols` array of the atoms in the cell."""
-        return self.get_attribute('symbols')
+        return self.base.attributes.get('symbols')
 
     @property
     def pbc(self):
         """Get the periodic boundary conditions."""
-        return self.get_attribute('pbc')
+        return self.base.attributes.get('pbc')
 
     @property
     def names(self):
         """Get the custom `names` array of the atoms in the cell.
 
         .. note: if no special names are specified, this will be equal to `symbols`."""
-        return self.get_attribute('names')
+        return self.base.attributes.get('names')
 
     def _set_unitcell_attributes(self, phonopy_atoms: PhonopyAtoms):
         """Set the attributes for full reproducibility of the `PhonopyAtoms` class."""
         self._if_can_modify()
-        self.set_attribute_many({
+        self.base.attributes.set_many({
             'numbers': phonopy_atoms.numbers,
             'masses': phonopy_atoms.masses,
             'positions': phonopy_atoms.positions,
@@ -196,17 +196,17 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
                 except KeyError:
                     names.append(numbers_to_names[str(number)])
                     symbols.append(numbers_to_symbols[str(number)])
-            self.set_attribute('symbols', symbols)
-            self.set_attribute('names', names)
+            self.base.attributes.set('symbols', symbols)
+            self.base.attributes.set('names', names)
         else:
             phonopy_atoms = self._get_phonopy_atoms_unitcell(distinguish_kinds=True)
-            self.set_attribute('symbols', deepcopy(phonopy_atoms.symbols))
-            self.set_attribute('names', deepcopy(phonopy_atoms.symbols))
+            self.base.attributes.set('symbols', deepcopy(phonopy_atoms.symbols))
+            self.base.attributes.set('names', deepcopy(phonopy_atoms.symbols))
 
     @property
     def supercell_matrix(self):
         """Get the `supercell_matrix`."""
-        return self.get_attribute('supercell_matrix')
+        return self.base.attributes.get('supercell_matrix')
 
     def _set_supercell_matrix(self, value):
         """Set the Phonopy supercell matrix.
@@ -218,12 +218,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self._if_can_modify()
         the_supercell_matrix = _get_valid_matrix(value)
 
-        self.set_attribute('supercell_matrix', deepcopy(the_supercell_matrix))
+        self.base.attributes.set('supercell_matrix', deepcopy(the_supercell_matrix))
 
     @property
     def primitive_matrix(self):
         """Get the `primitive_matrix`."""
-        return self.get_attribute('primitive_matrix')
+        return self.base.attributes.get('primitive_matrix')
 
     def _set_primitive_matrix(self, value):
         """Set the Phonopy primitive matrix.
@@ -239,12 +239,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         else:
             the_primitive_matrix = _get_valid_matrix(value)
 
-        self.set_attribute('primitive_matrix', deepcopy(the_primitive_matrix))
+        self.base.attributes.set('primitive_matrix', deepcopy(the_primitive_matrix))
 
     @property
     def symprec(self):
         """Get the Phonopy symmetry tolerance (`symprec`)."""
-        return self.get_attribute('symprec')
+        return self.base.attributes.get('symprec')
 
     def _set_symprec(self, value):
         """Set the Phonopy symmetry tolerance (`symprec`).
@@ -260,12 +260,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         if not isinstance(value, float):
             raise ValueError('only `float` type is accepted.')
 
-        self.set_attribute('symprec', deepcopy(value))
+        self.base.attributes.set('symprec', deepcopy(value))
 
     @property
     def is_symmetry(self):
         """Get `is_symmetry` value."""
-        return self.get_attribute('is_symmetry')
+        return self.base.attributes.get('is_symmetry')
 
     def _set_is_symmetry(self, value):
         """Set whether to use the symmetries. Use with care and if you know what your are doing.
@@ -280,13 +280,13 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         if not isinstance(value, bool):
             raise ValueError('only `bool` type is accepted.')
 
-        self.set_attribute('is_symmetry', deepcopy(value))
+        self.base.attributes.set('is_symmetry', deepcopy(value))
 
     @property
     def kinds_map(self):
         """Get the map bewtween of the `numbers` and the `symbols` and `names`."""
         try:
-            the_map = self.get_attribute('kinds_map')
+            the_map = self.base.attributes.get('kinds_map')
         except AttributeError:
             the_map = None
         return the_map
@@ -299,12 +299,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         :param value: tuple with two dictionaries (numbers_to_names, numbers_to_symbols)
         """
         self._if_can_modify()
-        self.set_attribute('kinds_map', value)
+        self.base.attributes.set('kinds_map', value)
 
     @property
     def distinguish_kinds(self):
         """Get whether or not kinds with same chemical symbol will be distinguished by symmetry."""
-        return self.get_attribute('distinguish_kinds')
+        return self.base.attributes.get('distinguish_kinds')
 
     def _set_distinguish_kinds(self, value):
         """Set whether or not to distinguish kinds."""
@@ -312,7 +312,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         if not isinstance(value, bool):
             raise ValueError('only `bool` type is accepted.')
 
-        self.set_attribute('distinguish_kinds', value)
+        self.base.attributes.set('distinguish_kinds', value)
 
     def _get_phonopy_atoms_unitcell(self, distinguish_kinds: bool) -> PhonopyAtoms:
         """Get the PhonopyAtoms object using the internal attributes."""
@@ -429,7 +429,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     def dielectric(self):
         """Get the `infinity` dielectric tensor (i.e. in the static field limit) in Cartesian coordinates."""
         try:
-            value = self.get_attribute('dielectric')
+            value = self.base.attributes.get('dielectric')
             value = np.array(value)
         except (KeyError, AttributeError):
             value = None
@@ -454,7 +454,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         the_dielectric = np.array(dielectric)
 
         if the_dielectric.shape == (3, 3):
-            self.set_attribute('dielectric', the_dielectric.tolist())
+            self.base.attributes.set('dielectric', the_dielectric.tolist())
         else:
             raise ValueError('the array is not of the correct shape')
 

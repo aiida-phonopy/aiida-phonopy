@@ -48,7 +48,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
     def displacement_dataset(self):
         """Get the dispacement dataset in a readible format for phonopy."""
         try:
-            the_displacement_dataset = self.get_attribute('displacement_dataset')
+            the_displacement_dataset = self.base.attributes.get('displacement_dataset')
         except AttributeError:
             the_displacement_dataset = None
         return the_displacement_dataset
@@ -107,7 +107,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         except ValueError as err:
             raise ValueError('one or more input types are not accepted') from err
 
-        self.set_attribute('displacement_dataset', copy.deepcopy(ph.dataset))
+        self.base.attributes.set('displacement_dataset', copy.deepcopy(ph.dataset))
 
     def set_displacements_from_dataset(self, dataset):
         """Set displacements for frozen phonon calculation from a dataset.
@@ -135,7 +135,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         else:
             raise ValueError('type not accepted')
 
-        self.set_attribute('displacement_dataset', copy.deepcopy(ph.dataset))
+        self.base.attributes.set('displacement_dataset', copy.deepcopy(ph.dataset))
 
     def get_supercells_with_displacements(self):
         """Get the supercells with displacements for frozen phonon calculation.
