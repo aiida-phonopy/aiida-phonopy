@@ -84,7 +84,7 @@ aiida-phonopy calculation of rocksalt NaCl.
        PhononPhonopy = WorkflowFactory('phonopy.phonopy')
        builder = PhononPhonopy.get_builder()
        builder.structure = structure
-       builder.calculator_settings = Dict(dict={'forces': forces_config,
+       builder.calculator_settings = Dict({'forces': forces_config,
                                                 'nac': nac_config})
        builder.run_phonopy = Bool(True)
        builder.remote_phonopy = Bool(True)
@@ -95,7 +95,7 @@ aiida-phonopy calculation of rocksalt NaCl.
                  'distance': 0.01,
                  'is_nac': True})
        builder.symmetry_tolerance = Float(1e-5)
-       builder.options = Dict(dict=base_config['options'])
+       builder.options = Dict(base_config['options'])
        builder.metadata.label = "NaCl 2x2x2 phonon example"
        builder.metadata.description = "NaCl 2x2x2 phonon example"
 

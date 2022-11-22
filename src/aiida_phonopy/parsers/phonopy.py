@@ -77,7 +77,7 @@ class PhonopyParser(Parser):
         phonopy_yaml_keys = ['phonopy', 'physical_unit', 'space_group']
         parsed_parameters = {key: value for key, value in parsed_phonopy_yaml.items() if key in phonopy_yaml_keys}
         parsed_parameters.update(parsed_stdout)
-        self.out('output_parameters', orm.Dict(dict=parsed_parameters))
+        self.out('output_parameters', orm.Dict(parsed_parameters))
 
         # We use the input `parameters` to check the expected retrieved files in folder.
         expected_filenames_keys = self.get_expected_filenames_keys()
@@ -239,7 +239,7 @@ class PhonopyParser(Parser):
     def parse_yaml(self, file):
         """Parse a `.yaml` file and return it as a Dict."""
         data = self.load_with_yaml(file=file)
-        return orm.Dict(dict=data)
+        return orm.Dict(data)
 
     def parse_total_dos(self, file):
         """Parse `total_dos.dat` output file."""
