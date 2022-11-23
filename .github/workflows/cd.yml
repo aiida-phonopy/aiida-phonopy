@@ -57,8 +57,17 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
+            fail-fast: false
             matrix:
-                python-version: ['3.8', '3.9', '3.10', '3.11']
+                include:
+                -   python-version: '3.8'
+                    phonopy-version: '2.14.0'
+                -   python-version: '3.9'
+                    phonopy-version: '2.15.0'
+                -   python-version: '3.10'
+                    phonopy-version: '2.16.3'
+                -   python-version: '3.11'
+                    phonopy-version: '2.16.3'
 
         services:
             postgres:
@@ -79,10 +88,14 @@ jobs:
                 restore-keys:
                     pip-${{ matrix.python-version }}-tests
 
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v2
+        -   name: Setup Conda
+            uses: s-weigand/setup-conda@v1
             with:
                 python-version: ${{ matrix.python-version }}
+                conda-channels: conda-forge
+
+        -   name: Set up Phonopy ${{ matrix.phonopy-version }}
+            run: conda install -y phonopy==${{ matrix.phonopy-version }}
 
         -   name: Install Python dependencies
             run: pip install -e .[tests]
