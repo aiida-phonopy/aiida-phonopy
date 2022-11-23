@@ -121,8 +121,14 @@ jobs:
         -   name: Install flit
             run: pip install flit~=3.4
 
-        -   name: Build and publish
+        -   name: Build and publish to TestPyPI
             run: flit publish
             env:
                 FLIT_USERNAME: __token__
-                FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}
+                FLIT_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+
+        -   name: Build and publish to PyPI
+            run: flit publish
+            env:
+                FLIT_USERNAME: __token__
+                FLIT_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
