@@ -1,18 +1,38 @@
-name: ci
+name: cd
 
-on: [push, pull_request]
+on:
+    push:
+        tags:
+        -   'v[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
 
-    pre-commit:
+    validate-release-tag:
 
+        if: github.repository == 'aiida-phonopy/aiida-phonopy'
         runs-on: ubuntu-latest
 
         steps:
-        -   uses: actions/checkout@v1
+        -   name: Checkout source
+            uses: actions/checkout@v2
 
-        -   name: Cache python dependencies
-            id: cache-pip
+        -   name: Set up Python 3.8
+            uses: actions/setup-python@v2
+            with:
+                python-version: '3.8'
+
+        -   name: Validate the tag version against the package version
+            run: python .github/workflows/validate_release_tag.py $GITHUB_REF
+
+    pre-commit:
+
+        needs: [validate-release-tag]
+        runs-on: ubuntu-latest
+
+        steps:
+        -   uses: actions/checkout@v2
+
+        -   name: Cache Python dependencies
             uses: actions/cache@v1
             with:
                 path: ~/.cache/pip
@@ -25,7 +45,7 @@ jobs:
             with:
                 python-version: '3.8'
 
-        -   name: Install python dependencies
+        -   name: Install Python dependencies
             run: pip install -e .[pre-commit,tests]
 
         -   name: Run pre-commit
@@ -33,6 +53,7 @@ jobs:
 
     tests:
 
+        needs: [validate-release-tag]
         runs-on: ubuntu-latest
 
         strategy:
@@ -45,8 +66,12 @@ jobs:
                     phonopy-version: '2.15.0'
                 -   python-version: '3.10'
                     phonopy-version: '2.16.3'
+                -   python-version: '3.11'
+                    phonopy-version: '2.16.3'
 
         services:
+            postgres:
+                image: postgres:12
             rabbitmq:
                 image: rabbitmq:latest
                 ports:
@@ -55,8 +80,7 @@ jobs:
         steps:
         -   uses: actions/checkout@v2
 
-        -   name: Cache python dependencies
-            id: cache-pip
+        -   name: Cache Python dependencies
             uses: actions/cache@v1
             with:
                 path: ~/.cache/pip
@@ -73,13 +97,32 @@ jobs:
         -   name: Set up Phonopy ${{ matrix.phonopy-version }}
             run: conda install -y phonopy==${{ matrix.phonopy-version }}
 
-        # -   name: Set up Phonopy ${{ matrix.phonopy-version }}
-        #     run: pip install phonopy==${{ matrix.phonopy-version }}
-
-        -   name: Install python dependencies
+        -   name: Install Python dependencies
             run: pip install -e .[tests]
 
         -   name: Run pytest
-            env:
-                AIIDA_WARN_v3: 1
             run: pytest -sv tests
+
+    publish:
+
+        name: Publish to PyPI
+        needs: [pre-commit, tests]
+        runs-on: ubuntu-latest
+
+        steps:
+        -   name: Checkout source
+            uses: actions/checkout@v2
+
+        -   name: Set up Python 3.8
+            uses: actions/setup-python@v2
+            with:
+                python-version: '3.8'
+
+        -   name: Install flit
+            run: pip install flit~=3.4
+
+        -   name: Build and publish
+            run: flit publish
+            env:
+                FLIT_USERNAME: __token__
+                FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}

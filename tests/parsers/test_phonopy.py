@@ -4,8 +4,6 @@
 from aiida import orm
 import pytest
 
-from aiida_phonopy.data import preprocess
-
 
 @pytest.fixture
 def generate_phonopy_calculation_inputs(fixture_code, generate_example_phonopy_data):
@@ -20,7 +18,7 @@ def generate_phonopy_calculation_inputs(fixture_code, generate_example_phonopy_d
 
         inputs = {
             'code': fixture_code(entry_point_name),
-            'parameters': orm.Dict(dict=parameters),
+            'parameters': orm.Dict(parameters),
             'phonopy_data': generate_example_phonopy_data(),
             'metadata': {
                 'options': {
@@ -72,7 +70,7 @@ def generate_alas_phonopy_data():
 def generate_minimal_inputs():
     """Return only those inputs that the parser will expect to be there."""
     return {
-        'parameters': orm.Dict(dict={}),
+        'parameters': orm.Dict({}),
     }
 
 
@@ -81,7 +79,7 @@ def generate_band_inputs(generate_alas_phonopy_data):
     """Return only those inputs that the parser will expect to be there."""
     return {
         'phonopy_data': generate_alas_phonopy_data(),
-        'parameters': orm.Dict(dict={'BAND': 'auto'}),
+        'parameters': orm.Dict({'BAND': 'auto'}),
     }
 
 
@@ -90,7 +88,7 @@ def generate_dos_inputs(generate_alas_phonopy_data):
     """Return only those inputs that the parser will expect to be there."""
     return {
         'phonopy_data': generate_alas_phonopy_data(),
-        'parameters': orm.Dict(dict={
+        'parameters': orm.Dict({
             'DOS': True,
             'MESH': 50,
             'WRITE_MESH': False
@@ -103,7 +101,7 @@ def generate_pdos_inputs(generate_alas_phonopy_data):
     """Return only those inputs that the parser will expect to be there."""
     return {
         'phonopy_data': generate_alas_phonopy_data(),
-        'parameters': orm.Dict(dict={
+        'parameters': orm.Dict({
             'PDOS': 'Al',
             'MESH': 50,
             'WRITE_MESH': False

@@ -26,7 +26,7 @@ classifiers = [
 keywords = ['aiida', 'workflows']
 requires-python = '>=3.8'
 dependencies = [
-    "aiida-core>=1.6.0,<2.0.0",
+    "aiida-core>=2.0.0",
     "phonopy>=2.14,<3.0.0",
 ]
 
@@ -126,7 +126,6 @@ max-line-length = 120
 [tool.pylint.messages_control]
 disable = [
     'protected-access',
-    'bad-continuation',
     'duplicate-code',
     'import-outside-toplevel',
     'inconsistent-return-statements',
