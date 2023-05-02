@@ -335,7 +335,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
         :type symmetrize_nac: bool, defaults to self.is_symmetry
         :param factor_nac: factor for non-analytical corrections
-        :type factor_nac: float,defaults to Hartree*Bohr
+        :type factor_nac: float, defaults to Hartree*Bohr
         :param kwargs: for internal use to set the primitive cell
         """
         from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
@@ -460,7 +460,16 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
     @property
     def born_charges(self):
-        """Get the effective Born charges tensors in Cartesian coordinates."""
+        """Get the effective Born charges tensors in Cartesian coordinates.
+
+        ..note:
+            The indecis refers to:
+                1. Atomic index.
+                2. Polarization index.
+                3. Atomic displacement index.
+
+        :returns: numpy.ndarray, shape (num primitive cell atoms, 3, 3)
+        """
         try:
             value = self.get_array('born_charges')
         except (KeyError, AttributeError):
@@ -468,12 +477,15 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         return value
 
     def set_born_charges(self, born_charges):
-        """Set the `infinity` dielectric tensor in Cartesian coordinates.
+        """Set the Born effective charge tensors in Cartesian coordinates.
 
-        .. note: it is assumed that the tensors have been computed on the primitive cell.
+        ..note:
+            The indecis refers to:
+                1. Atomic index.
+                2. Polarization index.
+                3. Atomic displacement index.
 
-        :param dielectric: (number of atoms in the primitive cell, 3, 3) shape array like
-
+        :param born_charges: (number of atoms in the primitive cell, 3, 3) shape array like
         :raises:
             * TypeError: if the format is not compatible or of the correct type
             * ValueError: if the format is not compatible or of the correct type

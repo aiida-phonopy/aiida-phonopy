@@ -2,14 +2,12 @@
 """
 This module defines the class for force constants data.
 """
-
-from aiida.orm import ArrayData
 import numpy as np
 
 from .raw import RawData
 
 
-class ForceConstantsData(RawData, ArrayData):  # pylint: disable=too-many-ancestors
+class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
     """
     This class provides the force constants data, along with the non-analytical constants
     (optional) and the structure information (unitcell, supercell, ...).
@@ -37,12 +35,13 @@ class ForceConstantsData(RawData, ArrayData):  # pylint: disable=too-many-ancest
     def get_phonopy_instance(self, **kwargs):
         """Return a `phonopy.Phonopy` object with force and nac parameters (if set).
 
-        :param kwargs: compatible keys with the super method in `RawData`
+        :param kwargs: see :func:`aiida_phonopy.data.preprocess.PreProcessData.get_phonopy_instance`
+            * symmetrize_nac: whether or not to symmetrize the nac parameters
+                using point group symmetry; bool, defaults to self.is_symmetry
+            * factor_nac: factor for non-analytical corrections;
+                float, defaults to Hartree*Bohr
         """
         ph_instance = super().get_phonopy_instance(**kwargs)
-
-        if self.displacement_dataset is not None:
-            ph_instance.dataset = self.displacement_dataset
 
         if self.force_constants is not None:
             ph_instance.set_force_constants(self.force_constants)
