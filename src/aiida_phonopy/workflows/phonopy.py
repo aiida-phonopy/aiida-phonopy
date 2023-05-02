@@ -129,12 +129,12 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         Now you can gather all the information in one data noe, i.e. in a `PhonopyData` node.
         To do so, you can simple run:
 
-        ```self.ctx.preprocess_data.calcfunctions.generate_full_phonopy_data(**self.outputs.supercells_forces)```
+        ```self.ctx.preprocess_data.calcfunctions.generate_phonopy_data(**self.outputs.supercells_forces)```
 
         and then expose it as output in the `output_phonopy_data` namespace.
 
         * Alternatively: instead of exposing the supercell forces as outputs, you can directly gather all the forces
-        in a dictionary and run directly to the `generate_full_phonopy_data` method using this dictionary (always using
+        in a dictionary and run directly to the `generate_phonopy_data` method using this dictionary (always using
         the double *).
 
         See the implementation in aiidateam/aiida-common-workflows for an example.
@@ -152,7 +152,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         Then, gather all the information of nac and forces in a unique `PhonopyData` via:
 
         ```
-        self.ctx.preprocess_data.calcfunctions.generate_full_phonopy_data(
+        self.ctx.preprocess_data.calcfunctions.generate_phonopy_data(
             nac_parameters=nac_paramters,
             **self.outputs.supercells_forces
             )
