@@ -31,7 +31,7 @@ class PhonopyParser(Parser):
     def parse(self, **kwargs):
         """Parse retrieved files from remote folder."""
         retrieved = self.retrieved
-        retrieve_temporary_list = self.node.get_attribute('retrieve_temporary_list', None)
+        retrieve_temporary_list = self.node.base.attributes.get('retrieve_temporary_list', None)
 
         # If temporary files were specified, check that we have them
         if retrieve_temporary_list:
@@ -64,7 +64,7 @@ class PhonopyParser(Parser):
                     return self.exit(self.exit_codes.ERROR_OUTPUT_YAML_LOAD)
         except ValueError:
             try:
-                with retrieved.open(filename) as file:
+                with retrieved.base.repository.open(filename) as file:
                     try:
                         parsed_phonopy_yaml = yaml.safe_load(file)
                     except yaml.YAMLError:
@@ -77,7 +77,7 @@ class PhonopyParser(Parser):
         phonopy_yaml_keys = ['phonopy', 'physical_unit', 'space_group']
         parsed_parameters = {key: value for key, value in parsed_phonopy_yaml.items() if key in phonopy_yaml_keys}
         parsed_parameters.update(parsed_stdout)
-        self.out('output_parameters', orm.Dict(dict=parsed_parameters))
+        self.out('output_parameters', orm.Dict(parsed_parameters))
 
         # We use the input `parameters` to check the expected retrieved files in folder.
         expected_filenames_keys = self.get_expected_filenames_keys()
@@ -142,12 +142,12 @@ class PhonopyParser(Parser):
         filename_stdout = self.node.get_option('output_filename')
         logs = get_logging_container()  # datastructure for logs
 
-        if filename_stdout not in self.retrieved.list_object_names():
+        if filename_stdout not in self.retrieved.base.repository.list_object_names():
             exit_code_stdout = self.exit_codes.ERROR_OUTPUT_STDOUT_MISSING
             return parsed_data, logs, exit_code_stdout
 
         try:
-            stdout = self.retrieved.get_object_content(filename_stdout)
+            stdout = self.retrieved.base.repository.get_object_content(filename_stdout)
         except (IOError, OSError):
             exit_code_stdout = self.exit_codes.ERROR_OUTPUT_STDOUT_READ
             return parsed_data, logs, exit_code_stdout
@@ -246,7 +246,7 @@ class PhonopyParser(Parser):
     def parse_yaml(self, file):
         """Parse a `.yaml` file and return it as a Dict."""
         data = self.load_with_yaml(file=file)
-        return orm.Dict(dict=data)
+        return orm.Dict(data)
 
     def parse_total_dos(self, file):
         """Parse `total_dos.dat` output file."""
@@ -298,8 +298,8 @@ class PhonopyParser(Parser):
             thermal_properties['free_energy'].append(tp['free_energy'])
             thermal_properties['heat_capacity'].append(tp['heat_capacity'])
         old_thermal_property = thermal_properties.copy()
-        for key in old_thermal_property:
-            thermal_properties[key] = np.array(old_thermal_property[key])
+        for key, item in old_thermal_property.items():
+            thermal_properties[key] = np.array(item)
 
         tprops = orm.XyData()
         tprops.set_x(thermal_properties['temperatures'], 'Temperature', 'K')

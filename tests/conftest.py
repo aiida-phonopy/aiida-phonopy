@@ -50,17 +50,18 @@ def fixture_code(fixture_localhost):
 
     def _fixture_code(entry_point_name):
         from aiida.common import exceptions
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode, load_code
 
         label = f'test.{entry_point_name}'
 
         try:
-            return Code.objects.get(label=label)  # pylint: disable=no-member
+            return load_code(label)
         except exceptions.NotExistent:
-            return Code(
+            return InstalledCode(
                 label=label,
-                input_plugin_name=entry_point_name,
-                remote_computer_exec=[fixture_localhost, '/bin/true'],
+                computer=fixture_localhost,
+                filepath_executable='/bin/true',
+                default_calc_job_plugin=entry_point_name,
             )
 
     return _fixture_code
@@ -76,10 +77,10 @@ def serialize_builder():
 
     def serialize_data(data):
         # pylint: disable=too-many-return-statements
-        from aiida.orm import BaseType, Code, Dict
+        from aiida.orm import AbstractCode, BaseType, Data, Dict, KpointsData, RemoteData
         from aiida.plugins import DataFactory
 
-        StructureData = DataFactory('structure')
+        StructureData = DataFactory('core.structure')
         UpfData = DataFactory('pseudo.upf')
 
         if isinstance(data, dict):
@@ -88,7 +89,7 @@ def serialize_builder():
         if isinstance(data, BaseType):
             return data.value
 
-        if isinstance(data, Code):
+        if isinstance(data, AbstractCode):
             return data.full_label
 
         if isinstance(data, Dict):
@@ -99,6 +100,20 @@ def serialize_builder():
 
         if isinstance(data, UpfData):
             return f'{data.element}<md5={data.md5}>'
+
+        if isinstance(data, RemoteData):
+            # For `RemoteData` we compute the hash of the repository. The value returned by `Node._get_hash` is not
+            # useful since it includes the hash of the absolute filepath and the computer UUID which vary between tests
+            return data.base.repository.hash()
+
+        if isinstance(data, KpointsData):
+            try:
+                return data.get_kpoints()
+            except AttributeError:
+                return data.get_kpoints_mesh()
+
+        if isinstance(data, Data):
+            return data.base.caching._get_hash()  # pylint: disable=protected-access
 
         return data
 
@@ -187,14 +202,14 @@ def generate_calc_job_node(fixture_localhost):
         entry_point = format_entry_point_string('aiida.calculations', entry_point_name)
 
         node = orm.CalcJobNode(computer=computer, process_type=entry_point)
-        node.set_attribute('input_filename', 'aiida.in')
-        node.set_attribute('output_filename', 'aiida.out')
-        node.set_attribute('error_filename', 'aiida.err')
+        node.base.attributes.set('input_filename', 'aiida.in')
+        node.base.attributes.set('output_filename', 'aiida.out')
+        node.base.attributes.set('error_filename', 'aiida.err')
         node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         node.set_option('max_wallclock_seconds', 1800)
 
         if attributes:
-            node.set_attribute_many(attributes)  # here if you would specify temp folder etc
+            node.base.attributes.set_many(attributes)  # here if you would specify temp folder etc
 
         if inputs:
             metadata = inputs.pop('metadata', {})
@@ -206,7 +221,7 @@ def generate_calc_job_node(fixture_localhost):
             # here we link the inputs (which determines what to parse) to the CalcJobNode
             for link_label, input_node in flatten_inputs(inputs):
                 input_node.store()
-                node.add_incoming(input_node, link_type=LinkType.INPUT_CALC, link_label=link_label)
+                node.base.links.add_incoming(input_node, link_type=LinkType.INPUT_CALC, link_label=link_label)
 
         node.store()
 
@@ -220,21 +235,21 @@ def generate_calc_job_node(fixture_localhost):
 
         if filepath_folder:
             retrieved = orm.FolderData()
-            retrieved.put_object_from_tree(filepath_folder)
+            retrieved.base.repository.put_object_from_tree(filepath_folder)
 
             # Remove files that are supposed to be only present in the retrieved temporary folder
             if retrieve_temporary:
                 for filename in filenames:
                     try:
-                        retrieved.delete_object(filename)
+                        retrieved.base.repository.delete_object(filename)
                     except OSError:
                         pass  # To test the absence of files in the retrieve_temporary folder
 
-            retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+            retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
             retrieved.store()
 
             remote_folder = orm.RemoteData(computer=computer, remote_path='/tmp')
-            remote_folder.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
+            remote_folder.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
             remote_folder.store()
 
         return node
@@ -410,7 +425,7 @@ def generate_remote_data():
         if entry_point_name is not None:
             creator = CalcJobNode(computer=computer, process_type=entry_point)
             creator.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-            remote.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
+            remote.base.links.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
             creator.store()
 
         return remote
@@ -472,7 +487,7 @@ def generate_workchain_force_sets(generate_workchain_cls, generate_force_sets_cl
         from aiida.orm import List
 
         structure = generate_structure(structure_id=structure_id)
-        supercell_matrix = List(list=[1, 1, 1])
+        supercell_matrix = List([1, 1, 1])
 
         inputs = {'structure': structure, 'supercell_matrix': supercell_matrix}
 

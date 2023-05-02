@@ -126,7 +126,6 @@ max-line-length = 120
 [tool.pylint.messages_control]
 disable = [
     'protected-access',
-    'bad-continuation',
     'duplicate-code',
     'import-outside-toplevel',
     'inconsistent-return-statements',
