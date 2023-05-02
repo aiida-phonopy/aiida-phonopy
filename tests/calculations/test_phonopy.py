@@ -21,7 +21,7 @@ def generate_inputs(
 
         # Generating parameters
         if parameters is None:
-            parameters = orm.Dict(dict={})
+            parameters = orm.Dict({})
 
         # Building input dict to return
         ret_dic = {
@@ -80,7 +80,7 @@ def test_phonopy_default(fixture_sandbox, generate_calc_job, generate_inputs):
 def test_phonopy_cmdsline(fixture_sandbox, generate_calc_job, generate_inputs):
     """Test a `PhonopyCalculation` with user-defined cmdline from `parameters`."""
     entry_point_name = 'phonopy.phonopy'
-    parameters = orm.Dict(dict={'band': 'auto', 'writedm': False})
+    parameters = orm.Dict({'band': 'auto', 'writedm': False})
     inputs = generate_inputs(parameters=parameters)
 
     cmd = ['aiida.in']

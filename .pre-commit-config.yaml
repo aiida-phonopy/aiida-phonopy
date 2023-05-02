@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 'v4.2.0'
+    rev: 'v4.1.0'
     hooks:
     -   id: double-quote-string-fixer
     -   id: end-of-file-fixer
@@ -9,12 +9,12 @@ repos:
     -   id: trailing-whitespace
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.55'
+    rev: '0.76'
     hooks:
     -   id: flynt
 
 -   repo: https://github.com/pycqa/isort
-    rev: '5.10.1'
+    rev: '5.12.0'
     hooks:
     -   id: isort
 

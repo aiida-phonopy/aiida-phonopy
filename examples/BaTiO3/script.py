@@ -25,7 +25,7 @@ def main():
 
     inputs = {
         'code': code,
-        'parameters': orm.Dict(dict=parameters),
+        'parameters': orm.Dict(parameters),
         'phonopy_data': phonopy_data,
         'metadata': {
             'options': {
