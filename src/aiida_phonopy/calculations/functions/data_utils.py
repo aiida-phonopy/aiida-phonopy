@@ -8,43 +8,41 @@ PreProcessData = DataFactory('phonopy.preprocess')
 PhonopyData = DataFactory('phonopy.phonopy')
 
 __all__ = (
-    'get_unitcell_from_distance', 'get_primitive_from_distance', 'get_supercell_from_distance',
-    'get_supercells_with_displacements_from_distance', 'get_displacements_from_distance',
-    'get_preprocess_with_new_displacements_from_distance', 'generate_preprocess_data_from_distance',
-    'generate_phonopy_data_full', 'CalcfunctionMixin'
+    'get_unitcell', 'get_primitive', 'get_supercell', 'get_supercells_with_displacements', 'get_displacements',
+    'get_preprocess_with_new_displacements', 'generate_preprocess_data', 'generate_phonopy_data', 'CalcfunctionMixin'
 )
 
 
 @calcfunction
-def get_unitcell_from_distance(preprocess_data: PreProcessData):
+def get_unitcell(preprocess_data: PreProcessData):
     """Get the unitcell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_unitcell()
     return structure_data
 
 
 @calcfunction
-def get_primitive_from_distance(preprocess_data: PreProcessData):
+def get_primitive(preprocess_data: PreProcessData):
     """Get the primitive cell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_primitive_cell()
     return structure_data
 
 
 @calcfunction
-def get_supercell_from_distance(preprocess_data: PreProcessData):
+def get_supercell(preprocess_data: PreProcessData):
     """Get the supercell (pristine) of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_supercell()
     return structure_data
 
 
 @calcfunction
-def get_supercells_with_displacements_from_distance(preprocess_data: PreProcessData):
+def get_supercells_with_displacements(preprocess_data: PreProcessData):
     """Get the supercells with displacements of a PreProcessData as a StructureData."""
     structures_data = preprocess_data.get_supercells_with_displacements()
     return structures_data
 
 
 @calcfunction
-def get_displacements_from_distance(preprocess_data: PreProcessData):
+def get_displacements(preprocess_data: PreProcessData):
     """Get the displacements of a PreProcessData as an ArrayData with array name `displacements`."""
     displacements = preprocess_data.get_displacements()
     the_displacements = orm.ArrayData()
@@ -54,7 +52,7 @@ def get_displacements_from_distance(preprocess_data: PreProcessData):
 
 
 @calcfunction
-def generate_preprocess_data_from_distance(
+def generate_preprocess_data(
     structure: orm.StructureData,
     displacement_generator=None,
     supercell_matrix=None,
@@ -128,9 +126,7 @@ def generate_preprocess_data_from_distance(
 
 
 @calcfunction
-def get_preprocess_with_new_displacements_from_distance(
-    preprocess_data: PreProcessData, displacement_generator: orm.Dict
-):
+def get_preprocess_with_new_displacements(preprocess_data: PreProcessData, displacement_generator: orm.Dict):
     """Get a new PreProcessData from an old one from new displacement generator settings."""
     displacement_dataset = preprocess_data.generate_displacement_dataset(**displacement_generator.get_dict())
 
@@ -149,7 +145,7 @@ def get_preprocess_with_new_displacements_from_distance(
 
 
 @calcfunction
-def generate_phonopy_data_full(preprocess_data: PreProcessData, nac_parameters=None, **forces_dict):
+def generate_phonopy_data(preprocess_data: PreProcessData, nac_parameters=None, forces_index=None, **forces_dict):
     """Create a PhonopyData node from a PreProcess(Phonopy)Data node, storing forces and (optionally)
         non-analytical constants.
 
@@ -158,8 +154,9 @@ def generate_phonopy_data_full(preprocess_data: PreProcessData, nac_parameters=N
 
         :param nac_parameters: ArrayData containing 'dielectric' and 'born_charges' as arrays
             with their correct shape
+        :param forces_index: Int if a TrajectoryData is given, in order to get the correct slice of the array.
         :param forces_dict: dictionary of supercells forces as ArrayData stored as `forces`, each Data
-            labelled in the dictionary in the format `{prefix}_{suffix}`.
+            labelled in the dictionary in the format `forces_{suffix}`.
             The prefix is common and the suffix corresponds to the suffix number of the supercell with
             displacement label given from the `get_supercells_with_displacements` method.
 
@@ -172,33 +169,22 @@ def generate_phonopy_data_full(preprocess_data: PreProcessData, nac_parameters=N
 
             .. note: if residual forces would be stored, label it with 0 as suffix.
     """
-    import numpy as np
-
-    # Getting the prefix
-    for key in forces_dict:
-        try:
-            int(key.split('_')[-1])
-            # dumb way of getting the prefix including cases of multiple `_`, e.g. `force_calculation_001`
-            prefix = key[:-(len(key.split('_')[-1]) + 1)]
-        except ValueError as err:
-            raise ValueError(f'{key} is not an acceptable key, must finish with an int number.') from err
+    prefix = 'forces'
 
     forces_0 = forces_dict.pop(f'{prefix}_0', None)
+    # Setting the dictionary of forces
+    dict_of_forces = {}
 
-    # Setting force sets array
-    force_sets = [0 for _ in forces_dict]
-
-    # Filling arrays in numeric order determined by the key label
     for key, value in forces_dict.items():
-        index = int(key.split('_')[-1])
-        force_sets[index - 1] = value.get_array('forces')
+        if key.startswith(prefix):
+            dict_of_forces[key] = value.get_array('forces')
 
-    # Finilizing force sets array
-    sets_of_forces = np.array(force_sets)
+    if forces_index is not None:
+        forces_index = forces_index.value
 
     # Setting data on a new PhonopyData
     new_phonopy_data = PhonopyData(preprocess_data=preprocess_data)
-    new_phonopy_data.set_forces(sets_of_forces=sets_of_forces)
+    new_phonopy_data.set_forces(dict_of_forces=dict_of_forces, forces_index=forces_index)
 
     if forces_0 is not None:
         new_phonopy_data.set_residual_forces(forces=forces_0.get_array('forces'))
@@ -218,33 +204,33 @@ class CalcfunctionMixin:
 
     def get_unitcell(self):
         """Get the unitcell as a StructureData through a calfunction."""
-        return get_unitcell_from_distance(preprocess_data=self._data_node)
+        return get_unitcell(preprocess_data=self._data_node)
 
     def get_primitive_cell(self):
         """Get the primitive cell as a StructureData through a calfunction."""
-        return get_primitive_from_distance(preprocess_data=self._data_node)
+        return get_primitive(preprocess_data=self._data_node)
 
     def get_supercell(self):
         """Get the supercell (pristine) as a StructureData through a calfunction."""
-        return get_supercell_from_distance(preprocess_data=self._data_node)
+        return get_supercell(preprocess_data=self._data_node)
 
     def get_supercells_with_displacements(self):
         """Get the supercells with displacements as a StructureData through a calfunction."""
-        return get_supercells_with_displacements_from_distance(preprocess_data=self._data_node)
+        return get_supercells_with_displacements(preprocess_data=self._data_node)
 
     def get_displacements(self):
         """Get the displacements as an ArrayData through a calfunction."""
-        return get_displacements_from_distance(preprocess_data=self._data_node)
+        return get_displacements(preprocess_data=self._data_node)
 
     def get_preprocess_with_new_displacements(self, displacement_generator: orm.Dict):
         """Create a PreProcessData node from a PreProcess/PhonopyData with a new set of displacements.
 
         :param displacement_generator: a `storable` dictionary  """
-        return get_preprocess_with_new_displacements_from_distance(
+        return get_preprocess_with_new_displacements(
             preprocess_data=self._data_node, displacement_generator=displacement_generator
         )
 
-    def generate_full_phonopy_data(self, nac_parameters=None, **forces_dict):
+    def generate_phonopy_data(self, nac_parameters=None, forces_index=None, **forces_dict):
         """Create a PhonopyData node from a PreProcess(Phonopy)Data node, storing forces and (optionally)
         non-analytical constants.
 
@@ -253,6 +239,7 @@ class CalcfunctionMixin:
 
         :param nac_parameters: ArrayData containing 'dielectric' and 'born_charges' as arrays
             with their correct shape
+        :param forces_index: Int if a TrajectoryData is given, in order to get the correct slice of the array.
         :param forces_dict: dictionary of supercells forces as ArrayData stored as `forces`, each Data
             labelled in the dictionary in the format `{prefix}_{suffix}`.
             The prefix is common and the suffix corresponds to the suffix number of the supercell with
@@ -264,4 +251,6 @@ class CalcfunctionMixin:
                 and forces in each ArrayData stored as 'forces',
                 i.e. ArrayData.get_array('forces') must not raise error
         """
-        return generate_phonopy_data_full(preprocess_data=self._data_node, nac_parameters=nac_parameters, **forces_dict)
+        return generate_phonopy_data(
+            preprocess_data=self._data_node, nac_parameters=nac_parameters, forces_index=forces_index, **forces_dict
+        )

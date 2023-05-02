@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.1.0 - 2023-05-02
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.0...v1.0.0)
+
+In this release we apply some improvements in the way the data is stored, and refactor the calculation utils to make names shorter and more comprehensible.
+
+## v1.0.0 - 2022-11-0X
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.0.0...v0.7.0)
+
+In this release the new version of AiiDA v2.x is fully supported.
+
+
 ## v0.7.0 - 2022-11-0X
 
 [full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v0.7.0...v0.6.0)

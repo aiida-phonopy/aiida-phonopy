@@ -143,7 +143,6 @@ class PhonopyCalculation(CalcJob):
         """Define inputs, outputs, and outline."""
         super().define(spec)
 
-        # in v1.0 it will be a namespace of Dict
         spec.input(
             'parameters',
             valid_type=orm.Dict,
@@ -168,7 +167,7 @@ class PhonopyCalculation(CalcJob):
             help='Force constants of the input structure.'
         )
         spec.input('settings', valid_type=orm.Dict, required=False, help='Settings for phonopy calculation.')
-        spec.inputs.validator = cls._validate_inputs
+        # spec.inputs.validator = cls._validate_inputs
 
         spec.input('metadata.options.withmpi', valid_type=bool, default=False)
         spec.input('metadata.options.input_filename', valid_type=str, default=cls._DEFAULT_INPUT_FILE)
@@ -219,7 +218,7 @@ class PhonopyCalculation(CalcJob):
             message='The retrieved folder did not contain the required phonopy file.'
         )
         spec.exit_code(
-            303,
+            304,
             'ERROR_OUTPUT_FILES_MISSING',
             message='The retrieved folder did not contain one or more expected output files.'
         )
@@ -266,15 +265,6 @@ class PhonopyCalculation(CalcJob):
         if value:
             if isinstance(value, orm.Dict):
                 __validate_dict(value.get_dict())
-
-    @classmethod
-    def _validate_inputs(cls, value, _):
-        """Validate the top level namespace."""
-        if 'force_constants' in value or 'phonopy_data' in value:
-            if 'force_constants' in value and 'phonopy_data' in value:
-                return 'specify only one between `force_constants` and `phonopy_data`'
-        else:
-            return 'at least one between `force_constants` and `phonopy_data` must be specified'
 
     def prepare_for_submission(self, folder):
         """Prepare the calculation job for submission by transforming input nodes into input files.
@@ -384,7 +374,7 @@ class PhonopyCalculation(CalcJob):
         if 'phonopy_data' in self.inputs:
             ph = self.inputs.phonopy_data.get_phonopy_instance(**kwargs)
         elif 'force_constants' in self.inputs:
-            ph = self.force_constants.get_phonopy_instance(**kwargs)
+            ph = self.inputs.force_constants.get_phonopy_instance(**kwargs)
 
         # Setting the phonopy yaml obtject to produce yaml lines
         # .. note: this does not write the force constants

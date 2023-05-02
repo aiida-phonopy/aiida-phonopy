@@ -208,6 +208,12 @@ def test_phonopy_pdos(generate_calc_job_node, generate_parser, generate_pdos_inp
     ('parameters', 'test_name', 'output_results', 'temporary_list'),
     (
         ({
+            'FORCE_CONSTANTS': 'write'
+        }, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
+        ({
+            'WRITE_FORCE_CONSTANTS': True
+        }, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
+        ({
             'BAND': 'AUTO'
         }, 'default_outputs_band', ['phonon_bands'], ['band.hdf5']),
         ({
@@ -258,8 +264,8 @@ def test_phonopy_outputs(
         assert result in results
 
 
-def test_phonopy_files_missing(generate_calc_job_node, generate_parser, generate_band_inputs, tmpdir):
-    """Test a `phonopy` calculation where files are missing from temporary directory."""
+def test_phonopy_phonopy_missing(generate_calc_job_node, generate_parser, generate_band_inputs, tmpdir):
+    """Test a `phonopy` calculation where `phonopy.yaml` is missing from temporary directory."""
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
@@ -267,7 +273,7 @@ def test_phonopy_files_missing(generate_calc_job_node, generate_parser, generate
 
     node = generate_calc_job_node(
         entry_point_calc_job,
-        test_name='default_files_missing',
+        test_name='default_phonopy_missing',
         inputs=generate_band_inputs,
         attributes=attributes,
         retrieve_temporary=(tmpdir, attributes['retrieve_temporary_list']),
@@ -278,7 +284,7 @@ def test_phonopy_files_missing(generate_calc_job_node, generate_parser, generate
 
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
-    assert calcfunction.exit_status == node.process_class.exit_codes.ERROR_OUTPUT_FILES_MISSING.status
+    assert calcfunction.exit_status == node.process_class.exit_codes.ERROR_OUTPUT_PHONOPY_MISSING.status
 
 
 def test_phonopy_stdout_missing(fixture_localhost, generate_calc_job_node, generate_parser):
