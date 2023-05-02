@@ -160,11 +160,15 @@ class PhonopyParser(Parser):
             exit_code_stdout = self.exit_codes.ERROR_UNEXPECTED_PARSER_EXCEPTION
 
         # If the stdout was incomplete, most likely the job was interrupted before it could cleanly finish, so the
-        # output files are most likely corrupt and cannot be restarted from
+        # output files are most likely corrupt and cannot be restarted
         if 'ERROR_OUTPUT_STDOUT_INCOMPLETE' in logs['error']:
             exit_code_stdout = self.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE
+
         if 'ERROR_BAD_INPUTS' in logs['error']:
-            exit_code_stdout = self.exit_codes.ERROR_BAD_INPUTS
+            parameters = _uppercase_dict(self.node.inputs.parameters.get_dict(), dict_name='parameters')
+            if 'FORCE_CONSTANTS' in parameters:
+                if str.upper(parameters['FORCE_CONSTANTS']) != 'WRITE':
+                    exit_code_stdout = self.exit_codes.ERROR_BAD_INPUTS
 
         return parsed_data, logs, exit_code_stdout
 
@@ -182,7 +186,7 @@ class PhonopyParser(Parser):
             'tdisp': {'TDISP'},
             'tdispmat': {'TDISPMAT'},
             'qpoints': {'QPOINTS', 'WRITEDM'},
-            'fc': {'WRITE_FORCE_CONSTANTS'},
+            'fc': {'WRITE_FORCE_CONSTANTS', 'FORCE_CONSTANTS'},
             'mod': {'MODULATION'},
             'irreps': {'IRREPS', 'SHOW_IRREPS', 'LITTLE_COGROUP'}
         }
@@ -192,13 +196,16 @@ class PhonopyParser(Parser):
                 if tag in tag_map:
                     # Usually these tags are set only if one needs them, i.e. to TRUE,
                     # thus this further control is actually pointless. Nevertheless,
-                    # we want to avoid anyway to raise error when in inputs one of these
+                    # we want to avoid to raise error when in inputs one of these
                     # tags is set to FALSE, meaning there will be no output to parse.
                     if tag.startswith(('WRITE', 'DOS', 'TPROP', 'TDISP', 'TDISPMAT')):
                         if value:
                             retrieved_set.add(key_map)
                     else:
-                        retrieved_set.add(key_map)
+                        if tag != 'FORCE_CONSTANTS':
+                            retrieved_set.add(key_map)
+                        elif str.upper(value) == 'WRITE':
+                            retrieved_set.add(key_map)
 
         # Double check on mesh. The writing tag must have priority.
         if 'WRITE_MESH' in parameters.keys():
