@@ -13,7 +13,6 @@ def test_phonopy_attributes(generate_phonopy_data):
 @pytest.mark.usefixtures('aiida_profile')
 def test_phonopy_invalid_forces(generate_phonopy_data):
     """Test `PreProcessData` invalid forces."""
-
     message = 'the array is not of the correct shape'
 
     with pytest.raises(ValueError) as exception:

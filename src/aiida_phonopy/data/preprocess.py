@@ -156,7 +156,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         self._set_displacements(_serialize(copy.deepcopy(ph.dataset)))
 
     def get_phonopy_instance(self, symmetrize_nac=None, factor_nac=None, **kwargs):
-        """Return a `phonopy.Phonopy` object with the current values.
+        """Return a :class:`~phonopy.Phonopy` object with the current values.
 
         :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
         :type symmetrize_nac: bool, defaults to self.is_symmetry

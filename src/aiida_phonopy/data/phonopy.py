@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-This module defines the class which wraps the :func:`phonopy.Phonopy` main class.
-"""
+"""This module defines the class which wraps the :class:`phonopy.Phonopy` main class."""
+from __future__ import annotations
 
 import numpy as np
 
@@ -9,10 +8,11 @@ from .preprocess import PreProcessData
 
 
 class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
-    """
-    This class wraps the :class:`phonopy.Phonopy` class. It represents the final Data node status
-    of a frozen phonon calculaiton. It stores information regarding the pre-processing,
-    the displacements and forces dataset, and the (eventual) non-analytical constants.
+    """This class wraps the :class:`phonopy.Phonopy` class.
+
+    It represents the final Data node status of a frozen phonon calculaiton.
+    It stores information regarding the pre-processing, the displacements and
+    forces dataset, and the (eventual) non-analytical constants.
 
     .. note: direct calculation of properties from this class is still not implemented.
         Use :class:`~aiida_phonopy.calculations.phonopy.PhonopyCalculation` for
@@ -22,22 +22,23 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
 
     def __init__(self, preprocess_data: PreProcessData, **kwargs):
 
-        if isinstance(preprocess_data, PreProcessData):
-            kwargs['structure'] = preprocess_data.get_unitcell()
-            kwargs['supercell_matrix'] = preprocess_data.supercell_matrix
-            kwargs['primitive_matrix'] = preprocess_data.primitive_matrix
-            kwargs['symprec'] = preprocess_data.symprec
-            kwargs['is_symmetry'] = preprocess_data.is_symmetry
-            kwargs['distinguish_kinds'] = preprocess_data.distinguish_kinds
-            super().__init__(**kwargs)
+        if not isinstance(preprocess_data, PreProcessData):
+            raise ValueError(f'incorrect type. Given type <{type(preprocess_data)}>, expected `PreProcessData')
 
-            # super().set_displacements_from_dataset(preprocess_data.displacement_dataset)
-            dataset = preprocess_data.displacement_dataset
+        kwargs['structure'] = preprocess_data.get_unitcell()
+        kwargs['supercell_matrix'] = preprocess_data.supercell_matrix
+        kwargs['primitive_matrix'] = preprocess_data.primitive_matrix
+        kwargs['symprec'] = preprocess_data.symprec
+        kwargs['is_symmetry'] = preprocess_data.is_symmetry
+        kwargs['distinguish_kinds'] = preprocess_data.distinguish_kinds
+        super().__init__(**kwargs)
 
-            if dataset is not None:
-                self.base.attributes.set('displacement_dataset', dataset)
-            else:
-                raise ValueError('cannot instantiate object without having displacement dataset set')
+        dataset = preprocess_data.displacement_dataset
+
+        if dataset is not None:
+            super().set_displacements_from_dataset(dataset)
+        else:
+            raise ValueError('cannot instantiate object without having displacement dataset set')
 
     def set_displacements(self):
         raise RuntimeError('`displacements` cannot be changed for this Data')
@@ -46,7 +47,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
         raise RuntimeError('`displacements` cannot be changed for this Data')
 
     def get_phonopy_instance(self, subtract_residual_forces=None, **kwargs):
-        """Return a `phonopy.Phonopy` object with force and nac parameters (if set).
+        """Return a :class:`~phonopy.Phonopy` object with force and nac parameters (if set).
 
         :param subtract_residual_forces: whether or not subract residual forces (if set)
         :type subtract_residual_forces: bool, defaults to False
@@ -123,22 +124,29 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
                 raise ValueError('the array is not of the correct shape. Check also `forces_index`')
 
     @property
-    def forces(self):
+    def forces(self) -> list[list]:
         """Get forces for each supercell with displacements in the dataset as a unique array."""
         try:
             the_forces = self.get_array('forces')
+            return the_forces
         except (KeyError, AttributeError):
-            try:
-                nsupercells = len(self.displacements)
-                the_forces = np.zeros((nsupercells)).tolist()
-                for i in range(nsupercells):
-                    if self.forces_index is not None:
-                        the_forces[i] = self.get_array(f'forces_{i+1}')[self.forces_index]
-                    else:
-                        the_forces[i] = self.get_array(f'forces_{i+1}')
-                the_forces = np.array(the_forces)
-            except (KeyError, AttributeError):
-                the_forces = None
+            pass
+
+        if not 'forces_1' in self.get_arraynames():
+            return
+
+        try:
+            nsupercells = len(self.displacements)
+            the_forces = np.zeros((nsupercells)).tolist()
+            for i in range(nsupercells):
+                if self.forces_index is not None:
+                    the_forces[i] = self.get_array(f'forces_{i+1}')[self.forces_index]
+                else:
+                    the_forces[i] = self.get_array(f'forces_{i+1}')
+            the_forces = np.array(the_forces)
+        except (KeyError, AttributeError):
+            return
+
         return the_forces
 
     def set_forces(self, sets_of_forces=None, dict_of_forces=None, forces_index=None):
