@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Abstract workflow for automatic frozen phonons calculations."""
-
 from abc import ABCMeta
 
 from aiida import orm
@@ -70,10 +69,10 @@ def validate_inputs(inputs, _):
 
 
 class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
-    """
-    Abstract Workflow to compute automatically the force sets and force constants
-    of a given structure using the frozen phonons approach. Phonopy is used to produce
-    structures with displacements, while the forces are calculated with a quantum engine of choice.
+    """Abstract workflow for automated frozen phonons.
+
+    Phonopy is used to produce structures with displacements,
+    while the forces are calculated with a quantum engine of choice.
 
     This workchain is meant to be used as a base for other specific force calculato plugin workchains,
     or as an example on how to set a possible workchain/workflow. For this reason, the outline of
@@ -167,7 +166,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         want, for some reason, compute the nac on the unitcell, you will need to get the reduced nac.
         To do so, you can consider using a built-in function in phonopy, namely:
 
-        ```phonopy.structure.symmetry.elaborate_borns_and_epsilon```
+        :py:func:`phonopy.structure.symmetry.elaborate_borns_and_epsilon`
 
     """
 
@@ -347,7 +346,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
                 return f'Displacement options must be of the correct type; got invalid values {invalid_values}.'
 
     def setup(self):
-        """Setup the workflow generating the PreProcessData."""
+        """Set up the workflow generating the PreProcessData."""
         if 'preprocess_data' in self.inputs:
             preprocess = self.inputs.preprocess_data
             if 'displacement_generator' in self.inputs:

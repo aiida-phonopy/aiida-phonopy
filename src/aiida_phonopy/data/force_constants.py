@@ -1,39 +1,60 @@
 # -*- coding: utf-8 -*-
-"""
-This module defines the class for force constants data.
-"""
+"""Module defining the class for force constants data."""
+from __future__ import annotations
+
+from aiida.orm import StructureData
 import numpy as np
+from phonopy.structure.cells import PhonopyAtoms
 
 from .raw import RawData
 
 
 class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
-    """
-    This class provides the force constants data, along with the non-analytical constants
-    (optional) and the structure information (unitcell, supercell, ...).
+    """Self-contained class for force constants data and non-analytical constants.
+
+    It stores also the structure information (unitcell, supercell, ...), for a
+    complete transferable data type.
     """
 
     def __init__(
         self,
-        structure=None,
-        phonopy_atoms=None,
-        supercell_matrix=None,
-        primitive_matrix=None,
-        symprec=1e-05,
-        is_symmetry=True,
+        structure: StructureData | None = None,
+        phonopy_atoms: PhonopyAtoms | None = None,
+        supercell_matrix: list | None = None,
+        primitive_matrix: list | None = None,
+        symprec: float = 1e-05,
+        is_symmetry: bool = True,
+        distinguish_kinds: bool = True,
         **kwargs
     ):
+        """Instantiate the class.
+
+        The minimal input is to define either the `structure` or the `phonopy_atoms` input.
+        They cannot be specified at the same time.
+
+        :param structure: an :class:`~aiida.orm.StructureData` node
+        :param phononpy_atoms: a :class:`~phonopy.structure.cells.PhonopyAtoms` instance
+        :param supercell_matrix: a (3,3) shape array describing the supercell transformation
+        :param primitive_matrix: a (3,3) shape array describing the primite transformation
+        :param symprec: precision tollerance for symmetry analysis
+        :param is_symmetry: whether using symmetries
+        :distinguish_kinds: it stores a mapping between kinds and chemical symbols;
+            by default Phonopy does not support kind,
+            thus useful if in the input `structure` kinds are defined
+        :paramm kwargs: for internal use
+        """
         kwargs['structure'] = structure
         kwargs['phonopy_atoms'] = phonopy_atoms
         kwargs['supercell_matrix'] = supercell_matrix
         kwargs['primitive_matrix'] = primitive_matrix
         kwargs['symprec'] = symprec
         kwargs['is_symmetry'] = is_symmetry
+        kwargs['distinguish_kinds'] = distinguish_kinds
 
         super().__init__(**kwargs)
 
     def get_phonopy_instance(self, **kwargs):
-        """Return a `phonopy.Phonopy` object with force and nac parameters (if set).
+        """Return a :class:`~phonopy.Phonopy` object with force and nac parameters (if set).
 
         :param kwargs: see :func:`aiida_phonopy.data.preprocess.PreProcessData.get_phonopy_instance`
             * symmetrize_nac: whether or not to symmetrize the nac parameters
@@ -49,7 +70,7 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
         return ph_instance
 
     @property
-    def force_constants(self):
+    def force_constants(self) -> np.ndarray:
         """Get force force constants matrix."""
         try:
             the_forces = self.get_array('force_constants')
@@ -57,7 +78,7 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
             the_forces = None
         return the_forces
 
-    def set_force_constants(self, force_constants):
+    def set_force_constants(self, force_constants: list | np.ndarray):
         """Set force constants matrix.
 
         :param force_constants: array of force constants matrix in compact or full format

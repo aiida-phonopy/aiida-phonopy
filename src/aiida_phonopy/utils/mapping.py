@@ -22,7 +22,8 @@ def get_logging_container():
     })
 
 
-def _case_transform_dict(dictionary, dict_name, func_name, transform):
+def _case_transform_dict(dictionary: dict, dict_name: str, func_name, transform):
+    """Transform a dictionary to have the first keys capitalized or decapitalized."""
     from collections import Counter
 
     from aiida.common import InputValidationError
@@ -42,9 +43,11 @@ def _case_transform_dict(dictionary, dict_name, func_name, transform):
     return new_dict
 
 
-def _lowercase_dict(dictionary, dict_name):
+def _lowercase_dict(dictionary: dict, dict_name: str):
+    """Transform a dictionary to have the first keys decapitalized."""
     return _case_transform_dict(dictionary, dict_name, '_lowercase_dict', str.lower)
 
 
-def _uppercase_dict(dictionary, dict_name):
+def _uppercase_dict(dictionary: dict, dict_name: str):
+    """Transform a dictionary to have the first keys capitalized."""
     return _case_transform_dict(dictionary, dict_name, '_uppercase_dict', str.upper)
