@@ -44,7 +44,7 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
         ph_instance = super().get_phonopy_instance(**kwargs)
 
         if self.force_constants is not None:
-            ph_instance.set_force_constants(self.force_constants)
+            ph_instance.force_constants = self.force_constants
 
         return ph_instance
 
