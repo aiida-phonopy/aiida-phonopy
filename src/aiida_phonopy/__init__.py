@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 """The official AiiDA plugin for Phonopy."""
-__version__ = '1.1.0'
+__version__ = '1.1.1a2'
