@@ -190,7 +190,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
             ph.dataset = self.displacement_dataset
         return ph
 
-    def get_supercells_with_displacements(self) -> dict:
+    def get_supercells_with_displacements(self) -> dict[orm.StructureData]:
         """Get the supercells with displacements for frozen phonon calculation.
 
         .. note: this is not linking in the provenance the output structures.
@@ -212,7 +212,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
         for i, scell in enumerate(supercells):  # start from 1 - better choice for gathering forces
             label = f'supercell_{str(i + 1).zfill(digits)}'
-            structures_dict.update({label: phonopy_atoms_to_structure(scell, mapping)})
+            structures_dict.update({label: phonopy_atoms_to_structure(scell, mapping, self.pbc)})
 
         return structures_dict
 

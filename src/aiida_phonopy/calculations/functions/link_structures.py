@@ -8,11 +8,16 @@ from phonopy.structure.cells import PhonopyAtoms
 __all__ = ('phonopy_atoms_to_structure', 'phonopy_atoms_from_structure', 'if_to_map')
 
 
-def phonopy_atoms_to_structure(cell: PhonopyAtoms, mapping: dict | None = None) -> StructureData:
+def phonopy_atoms_to_structure(
+    cell: PhonopyAtoms,
+    mapping: dict | None = None,
+    pbc: tuple[bool, bool, bool] = (True, True, True),
+) -> StructureData:
     """Return a StructureData from a PhonopyAtoms instance.
 
     :param cell: a PhonopyAtoms instance
     :param mapping: a number to kinds and symbols map, defaults to None
+    :param pbc: periodic boundary conditions in the three lattice directions
     """
     if mapping:
         numbers_to_kinds, numbers_to_symbols = mapping
@@ -33,7 +38,7 @@ def phonopy_atoms_to_structure(cell: PhonopyAtoms, mapping: dict | None = None) 
     positions = cell.positions
     masses = cell.masses
 
-    structure = StructureData(cell=cell.cell)
+    structure = StructureData(cell=cell.cell, pbc=pbc)
     for position, symbol, name, mass in zip(positions, symbols, names, masses):
         structure.append_atom(position=position, symbols=symbol, name=name, mass=mass)
 
