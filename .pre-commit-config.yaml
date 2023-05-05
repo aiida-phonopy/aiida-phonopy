@@ -34,3 +34,14 @@ repos:
         entry: pylint
         types: [python]
         language: system
+
+-   repo: https://github.com/PyCQA/pydocstyle
+    rev: '6.1.1'
+    hooks:
+    -   id: pydocstyle
+        exclude: >
+            (?x)^(
+                docs/.*|
+                tests/.*(?<!\.py)$
+            )$
+        additional_dependencies: ['toml']

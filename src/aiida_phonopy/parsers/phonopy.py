@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Parsers of `PhonopyCalculation` output files."""
+from __future__ import annotations
 
 import os
 import traceback
@@ -15,8 +16,8 @@ from aiida_phonopy.utils.mapping import _uppercase_dict, get_logging_container
 from .base import Parser
 
 
-def file_opener(folder_path, filename):
-    """Function to open sistematically each expected output format."""
+def file_opener(folder_path: str, filename: str):
+    """Return a function to open different expected output format."""
     filename_path = os.path.join(folder_path, filename)
 
     if filename.endswith('hdf5'):
@@ -127,7 +128,7 @@ class PhonopyParser(Parser):
         # if filenames:
         #     self.exit_codes.ERROR_NOT_IMPLEMENTED_PARSER
 
-    def parse_stdout(self):
+    def parse_stdout(self) -> tuple:
         """Parse the stdout output file.
 
         :param parameters: the input parameters dictionary
@@ -172,7 +173,7 @@ class PhonopyParser(Parser):
 
         return parsed_data, logs, exit_code_stdout
 
-    def get_expected_filenames_keys(self):
+    def get_expected_filenames_keys(self) -> set:
         """Return the retrieve file keys (that map to the filenames outputs) depending on the tags in `parameters`."""
         retrieved_set = set()
         parameters = _uppercase_dict(self.node.inputs.parameters.get_dict(), dict_name='parameters')
@@ -214,7 +215,7 @@ class PhonopyParser(Parser):
 
         return retrieved_set
 
-    def parse_force_constants(self, filepath):
+    def parse_force_constants(self, filepath: str) -> orm.ArrayData:
         """Parse the `force_constants.hdf5` output file."""
         from phonopy.file_IO import read_force_constants_hdf5
 
@@ -227,7 +228,7 @@ class PhonopyParser(Parser):
 
         return fc_array
 
-    def load_with_numpy(self, file):
+    def load_with_numpy(self, file: str) -> np.ndarray:
         """Load a txt file using numpy."""
         try:
             data = np.loadtxt(file)
@@ -235,7 +236,7 @@ class PhonopyParser(Parser):
             self.exit(self.exit_codes.ERROR_OUTPUT_NUMPY_LOAD)
         return data
 
-    def load_with_yaml(self, file):
+    def load_with_yaml(self, file: str) -> dict:
         """Load a yaml file using."""
         try:
             data = yaml.safe_load(file)
@@ -243,12 +244,12 @@ class PhonopyParser(Parser):
             self.exit(self.exit_codes.ERROR_OUTPUT_YAML_LOAD)
         return data
 
-    def parse_yaml(self, file):
+    def parse_yaml(self, file: str) -> orm.Dict:
         """Parse a `.yaml` file and return it as a Dict."""
         data = self.load_with_yaml(file=file)
         return orm.Dict(data)
 
-    def parse_total_dos(self, file):
+    def parse_total_dos(self, file: str) -> orm.XyData:
         """Parse `total_dos.dat` output file."""
         data = self.load_with_numpy(file=file)
 
@@ -260,7 +261,7 @@ class PhonopyParser(Parser):
 
         return dos
 
-    def parse_projected_dos(self, file):
+    def parse_projected_dos(self, file: str) -> orm.XyData:
         """Parse `projected_dos.dat` output file."""
         data = self.load_with_numpy(file=file)
 
@@ -281,7 +282,7 @@ class PhonopyParser(Parser):
 
         return pdos
 
-    def parse_thermal_properties(self, file):
+    def parse_thermal_properties(self, file: str) -> orm.XyData:
         """Parse the `thermal_properties.yaml`` output file."""
         data = self.load_with_yaml(file=file)
 
@@ -316,7 +317,7 @@ class PhonopyParser(Parser):
 
         return tprops
 
-    def parse_band_structure(self, file, freqs_units='THz'):
+    def parse_band_structure(self, file: str, freqs_units: str = 'THz') -> orm.BandsData:
         """Parse the `band.hdf5`` output file.
 
         Expected keys are:
@@ -389,7 +390,7 @@ class PhonopyParser(Parser):
 
         return band_structure
 
-    def parse_qpoints(self, file, freqs_units='THz'):
+    def parse_qpoints(self, file: str, freqs_units: str = 'THz') -> orm.BandsData:
         """Parse the `mesh.hdf5`` and `qpoints.hdf5`` output files.
 
         Expected keys are:

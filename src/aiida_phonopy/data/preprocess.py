@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-This module defines the class for managing the frozen phonon structure.
-"""
+"""Module defining the class for managing the frozen phonon structure."""
+from __future__ import annotations
 
 import copy
 import json
 
 from aiida import orm
 import numpy as np
+from phonopy.structure.cells import PhonopyAtoms
 
 from aiida_phonopy.calculations.functions.link_structures import phonopy_atoms_to_structure
 
@@ -15,23 +15,40 @@ from .raw import RawData
 
 
 class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
-    """
+    """Class for pre-processing of frozen-phonon calculations.
+
     This class is designed for handling the pre-process information regarding
-    a frozen phonon calculation using `Phonopy`. These regard the unitcell structure,
+    a frozen phonon calculation using ``Phonopy``. These regard the unitcell structure,
     the supercell and primitive matrix, as well as other symmetry information.
     """
 
     def __init__(
         self,
-        structure=None,
-        phonopy_atoms=None,
-        supercell_matrix=None,
-        primitive_matrix=None,
-        symprec=1e-05,
-        is_symmetry=True,
-        distinguish_kinds=True,
+        structure: orm.StructureData | None = None,
+        phonopy_atoms: PhonopyAtoms | None = None,
+        supercell_matrix: list | None = None,
+        primitive_matrix: list | None = None,
+        symprec: float = 1e-05,
+        is_symmetry: bool = True,
+        distinguish_kinds: bool = True,
         **kwargs
     ):
+        """Instantiate the class.
+
+        The minimal input is to define either the `structure` or the `phonopy_atoms` input.
+        They cannot be specified at the same time.
+
+        :param structure: an :class:`~aiida.orm.StructureData` node
+        :param phononpy_atoms: a :class:`~phonopy.structure.cells.PhonopyAtoms` instance
+        :param supercell_matrix: a (3,3) shape array describing the supercell transformation
+        :param primitive_matrix: a (3,3) shape array describing the primite transformation
+        :param symprec: precision tollerance for symmetry analysis
+        :param is_symmetry: whether using symmetries
+        :distinguish_kinds: it stores a mapping between kinds and chemical symbols;
+            by default Phonopy does not support kind,
+            thus useful if in the input `structure` kinds are defined
+        :paramm kwargs: for internal use
+        """
         kwargs['structure'] = structure
         kwargs['phonopy_atoms'] = phonopy_atoms
         kwargs['supercell_matrix'] = supercell_matrix
@@ -46,8 +63,11 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
             self.set_displacements()
 
     @property
-    def displacement_dataset(self):
-        """Get the dispacement dataset in a readible format for phonopy."""
+    def displacement_dataset(self) -> dict | list | None:
+        """Get the dispacement dataset in a readible format for phonopy.
+
+        If not set, None is returned.
+        """
         message = '`displacement_dataset` stored in the database will be deprecated in v2.0.0'
         try:
             import warnings
@@ -64,7 +84,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
             return None
 
     @property
-    def displacements(self):
+    def displacements(self) -> list | dict:
         """Get the displacements to apply to the supercell.
 
         :returns: array with displacements; can be type-I or type-II (see :func:`phonopy.Phonopy.displacements`)
@@ -73,26 +93,26 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         # otherwise a loop is generated (i.e. in the PhonopyData class, when setting the forces).
         ph = super().get_phonopy_instance()
         ph.dataset = self.displacement_dataset
-
         return ph.displacements
 
-    def get_displacements(self):
+    def get_displacements(self) -> list | dict:
         """Get the displacements to apply to the supercell."""
         return self.displacements
 
     def set_displacements(
         self,
-        distance=0.01,
-        is_plusminus='auto',
-        is_diagonal=True,
-        is_trigonal=False,
-        number_of_snapshots=None,
-        random_seed=None,
-        temperature=None,
-        cutoff_frequency=None,
+        distance: float = 0.01,
+        is_plusminus: str = 'auto',
+        is_diagonal: bool = True,
+        is_trigonal: bool = False,
+        number_of_snapshots: int | None = None,
+        random_seed: int | None = None,
+        temperature: float | None = None,
+        cutoff_frequency: float | None = None,
     ):
         """Set displacements for frozen phonon calculation.
-        (see `phonopy.Phonopy.generate_displacements` for a complete description of the inputs)
+
+        Refer to :py:func:`phonopy.Phonopy.generate_displacements` for a complete description of the inputs.
 
         .. note: temperature different from 0K can be given only when forces are set up.
         Thus, in the PreProcessData value different from zero will raise an error.
@@ -118,7 +138,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
         self._set_displacements(copy.deepcopy(ph.dataset))
 
-    def _set_displacements(self, value):
+    def _set_displacements(self, value: list | dict):
         """Put in the repository the displacement dataset in json format."""
         try:
             serialized = json.dumps(value)
@@ -127,8 +147,9 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
         self.base.repository.put_object_from_bytes(serialized.encode('utf-8'), 'displacement_dataset.json')
 
-    def set_displacements_from_dataset(self, dataset):
+    def set_displacements_from_dataset(self, dataset: dict | list):
         """Set displacements for frozen phonon calculation from a dataset.
+
         Useful if you want to set displacements from a previously random generated
         displacement dataset, or for setting dataset for self-consistent harmonic
         approximation.
@@ -155,13 +176,13 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
         self._set_displacements(_serialize(copy.deepcopy(ph.dataset)))
 
-    def get_phonopy_instance(self, symmetrize_nac=None, factor_nac=None, **kwargs):
+    def get_phonopy_instance(self, symmetrize_nac: bool = None, factor_nac: float | None = None, **kwargs):
         """Return a :class:`~phonopy.Phonopy` object with the current values.
 
         :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
         :type symmetrize_nac: bool, defaults to self.is_symmetry
         :param factor_nac: factor for non-analytical corrections
-        :type factor_nac: float,defaults to Hartree*Bohr
+        :type factor_nac: float, defaults to Hartree*Bohr
         :param kwargs: for internal use to set the primitive cell
         """
         ph = super().get_phonopy_instance(symmetrize_nac, factor_nac, **kwargs)
@@ -169,10 +190,13 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
             ph.dataset = self.displacement_dataset
         return ph
 
-    def get_supercells_with_displacements(self):
+    def get_supercells_with_displacements(self) -> dict:
         """Get the supercells with displacements for frozen phonon calculation.
 
-        :returns: dictionary with StructureData nodes (note: not stored), None if
+        .. note: this is not linking in the provenance the output structures.
+            Use the `self.calcfunctions.get_supercells_with_displacements` instead
+
+        :returns: dictionary with StructureData nodes, None if
             the displacement dataset has not been set
         """
         # Here we distinguish the kind, but only for mapping purposes.
@@ -194,17 +218,18 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
     def generate_displacement_dataset(
         self,
-        distance=0.01,
-        is_plusminus='auto',
-        is_diagonal=True,
-        is_trigonal=False,
-        number_of_snapshots=None,
-        random_seed=None,
-        temperature=None,
-        cutoff_frequency=None,
+        distance: float = 0.01,
+        is_plusminus: str = 'auto',
+        is_diagonal: bool = True,
+        is_trigonal: bool = False,
+        number_of_snapshots: int | None = None,
+        random_seed: int | None = None,
+        temperature: float | None = None,
+        cutoff_frequency: float | None = None,
     ):
         """Return the displacement dataset for frozen phonon calculation.
-        (see `phonopy.Phonopy.generate_displacements` for a complete description of the inputs)
+
+        Refer to :py:func:`phonopy.Phonopy.generate_displacements` for a complete description of the inputs.
 
         :raises ValueError: if the inputs are not compatible with phonopy standards
         """
@@ -236,14 +261,14 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
     @staticmethod
     def generate_preprocess_data(
         structure: orm.StructureData,
-        displacement_generator=None,
-        supercell_matrix=None,
-        primitive_matrix=None,
-        symprec=None,
-        is_symmetry=None,
-        distinguish_kinds=None,
+        displacement_generator: dict | None = None,
+        supercell_matrix: list | None = None,
+        primitive_matrix: list | None = None,
+        symprec: float | None = None,
+        is_symmetry: bool | None = None,
+        distinguish_kinds: bool | None = None,
     ):
-        """Returns a complete stored PreProcessData node.
+        """Return a complete stored PreProcessData node.
 
         :param structure: structure data node representing the unitcell
         :type structure: orm.StructureData
@@ -260,6 +285,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         :type is_symmetry: orm.Bool, optional
         :param distinguish_kinds: if distinguish names of same specie by symmetry, defaults to True
         :type distinguish_kinds: orm.Bool, optional
+
         :return: PreProcessData node
         """
         from aiida_phonopy.calculations.functions.data_utils import generate_preprocess_data
@@ -289,7 +315,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         return generate_preprocess_data(**kwargs)
 
 
-def _serialize(data):
+def _serialize(data: dict | list):
     """Serialize the data for displacement dataset, in case it contains numpy.ndarray."""
     serialized = copy.deepcopy(data)
 

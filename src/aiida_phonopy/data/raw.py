@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-This module defines the base class for other Data types.
-"""
+"""Module defining the base class for other Data types."""
+from __future__ import annotations
 
 from copy import deepcopy
 
@@ -17,7 +16,7 @@ from aiida_phonopy.calculations.functions.link_structures import (
 )
 
 
-def _get_valid_matrix(matrix):
+def _get_valid_matrix(matrix: list | np.ndarray) -> np.ndarray:
     """Get and validate the `supercell_matrix` and `primitive_matrix` inputs.
 
     :param matrix: (3,1) or (3,3) shape array
@@ -54,29 +53,44 @@ def _get_valid_matrix(matrix):
 
 
 class RawData(ArrayData):  # pylint: disable=too-many-ancestors
-    """
-    This class contaings the base information for the other phonon and phonopy related data types,
-    i.e. the unitcell and its symmetry information, the supercell and primitive cell matrices.
-    """
+    """Base class containing the information for the other phonon related data types."""
 
     def __init__(
         self,
-        structure: orm.StructureData = None,
-        phonopy_atoms: PhonopyAtoms = None,
-        supercell_matrix: list = None,
-        primitive_matrix: list = None,
+        structure: orm.StructureData | None = None,
+        phonopy_atoms: PhonopyAtoms | None = None,
+        supercell_matrix: list | None = None,
+        primitive_matrix: list | None = None,
         symprec: float = 1e-05,
         is_symmetry: bool = True,
         distinguish_kinds: bool = True,
         **kwargs
     ):
+        """Instantiate the class.
+
+        The minimal input is to define either the `structure` or the `phonopy_atoms` input.
+        They cannot be specified at the same time.
+
+        :param structure: an :class:`~aiida.orm.StructureData` node
+        :param phononpy_atoms: a :class:`~phonopy.structure.cells.PhonopyAtoms` instance
+        :param supercell_matrix: a (3,3) shape array describing the supercell transformation
+        :param primitive_matrix: a (3,3) shape array describing the primite transformation
+        :param symprec: precision tollerance for symmetry analysis
+        :param is_symmetry: whether using symmetries
+        :distinguish_kinds: it stores a mapping between kinds and chemical symbols;
+            by default Phonopy does not support kind,
+            thus useful if in the input `structure` kinds are defined
+        :paramm kwargs: for internal use
+        """
         if structure and phonopy_atoms:
             raise ValueError('cannot pass `structure`and `phonopy_atoms` at the same time')
 
         if structure:
             phonopy_atoms_unitcell, mapping = phonopy_atoms_from_structure(structure)
+            pbc = structure.pbc
         elif phonopy_atoms:
             phonopy_atoms_unitcell, mapping = (phonopy_atoms, None)
+            pbc = [True, True, True]  # to be changed when Phonopy will support PBC
         else:
             raise ValueError('at least one between `structure` and `phonopy_atoms` must be specified')
 
@@ -97,7 +111,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
         # Inizializing the class attributes.
         self._set_phonopy_version()
-        self._set_unitcell_attributes(phonopy_atoms=phonopy_atoms_unitcell)
+        self._set_unitcell_attributes(phonopy_atoms=phonopy_atoms_unitcell, pbc=pbc)
         self._set_kinds_map(mapping)
         self._set_distinguish_kinds(distinguish_kinds)  # crucial before setting symbols/names!
         self._set_symbols_and_names()
@@ -118,7 +132,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             self._set_primitive_matrix('auto')
 
     @property
-    def phonopy_version(self):
+    def phonopy_version(self) -> str:
         """Get the Phonopy version used."""
         return self.base.attributes.get('phonopy_version')
 
@@ -130,48 +144,54 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('phonopy_version', the_phonopy_version)
 
     @property
-    def numbers(self):
-        """Get the `numbers` array of the atoms in the cell."""
+    def numbers(self) -> list[int]:
+        """Get the array corresponding to the atomic number in periodic table of the sturcture."""
         return self.base.attributes.get('numbers')
 
     @property
-    def masses(self):
-        """Get the `masses` array of the atoms in the cell."""
+    def masses(self) -> list[float]:
+        """Get the array of the atomic masses in the cell."""
         return self.base.attributes.get('masses')
 
     @property
-    def positions(self):
-        """Get the `positions` array of the atoms in the cell."""
+    def positions(self) -> list[float]:
+        """Get the array of the atomic positions in the cell."""
         return self.base.attributes.get('positions')
 
     @property
-    def cell(self):
-        """Get the `cell` of the structure."""
+    def cell(self) -> list:
+        """Get the lattice matrix of the structure.
+
+        .. important: lattice vectors as rows of the matrix
+
+        :return: a (3,3) shape array
+        """
         return self.base.attributes.get('cell')
 
     @property
-    def magnetic_moments(self):
+    def magnetic_moments(self) -> list[int]:
         """Get the `magnetic_moments` array of the atoms in the cell."""
         return self.base.attributes.get('magnetic_moments')
 
     @property
-    def symbols(self):
+    def symbols(self) -> list[str]:
         """Get the chemical `symbols` array of the atoms in the cell."""
         return self.base.attributes.get('symbols')
 
     @property
-    def pbc(self):
+    def pbc(self) -> tuple[int, int, int]:
         """Get the periodic boundary conditions."""
         return self.base.attributes.get('pbc')
 
     @property
-    def names(self):
+    def names(self) -> list[str]:
         """Get the custom `names` array of the atoms in the cell.
 
-        .. note: if no special names are specified, this will be equal to `symbols`."""
+        .. note: if no special names are specified, this will be equal to `symbols`.
+        """
         return self.base.attributes.get('names')
 
-    def _set_unitcell_attributes(self, phonopy_atoms: PhonopyAtoms):
+    def _set_unitcell_attributes(self, phonopy_atoms: PhonopyAtoms, pbc: tuple[bool, bool, bool]):
         """Set the attributes for full reproducibility of the `PhonopyAtoms` class."""
         self._if_can_modify()
         self.base.attributes.set_many({
@@ -180,7 +200,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             'positions': phonopy_atoms.positions,
             'cell': phonopy_atoms.cell,
             'magnetic_moments': phonopy_atoms.magnetic_moments,
-            'pbc': [True, True, True],  # to change when modifying Phonopy
+            'pbc': pbc,  # to change when modifying Phonopy
         })
 
     def _set_symbols_and_names(self):
@@ -204,15 +224,19 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             self.base.attributes.set('names', deepcopy(phonopy_atoms.symbols))
 
     @property
-    def supercell_matrix(self):
-        """Get the `supercell_matrix`."""
+    def supercell_matrix(self) -> list:
+        """Get the `supercell_matrix`.
+
+        :return: a (3,3) shape array
+        """
         return self.base.attributes.get('supercell_matrix')
 
-    def _set_supercell_matrix(self, value):
+    def _set_supercell_matrix(self, value: list | np.ndarray):
         """Set the Phonopy supercell matrix.
 
         :param value: (3,3) or (3,1) shape array
         :type value: list, orm.List, numpy.ndarray
+
         :raises ModificationNotAllowed: if object is already stored
         """
         self._if_can_modify()
@@ -221,12 +245,15 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('supercell_matrix', deepcopy(the_supercell_matrix))
 
     @property
-    def primitive_matrix(self):
-        """Get the `primitive_matrix`."""
+    def primitive_matrix(self) -> list:
+        """Get the `primitive_matrix`.
+
+        :return: a (3,3) shape array
+        """
         return self.base.attributes.get('primitive_matrix')
 
-    def _set_primitive_matrix(self, value):
-        """Set the Phonopy primitive matrix.
+    def _set_primitive_matrix(self, value: list | np.ndarray):
+        """Set the primitive matrix.
 
         :param value: (3,3) or (3,1) shape array, or str
         :type value: list, orm.List, numpy.ndarray, str
@@ -242,12 +269,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('primitive_matrix', deepcopy(the_primitive_matrix))
 
     @property
-    def symprec(self):
-        """Get the Phonopy symmetry tolerance (`symprec`)."""
+    def symprec(self) -> float:
+        """Get the tolerance for symmetry analysis."""
         return self.base.attributes.get('symprec')
 
-    def _set_symprec(self, value):
-        """Set the Phonopy symmetry tolerance (`symprec`).
+    def _set_symprec(self, value: float):
+        """Set the symmetry tolerance.
 
         :param value: tolerance for symmetry analysis. Check that you get
         the right symmetry of your structure before starting any calculation. Default is 1e-05.
@@ -263,15 +290,22 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('symprec', deepcopy(value))
 
     @property
-    def is_symmetry(self):
-        """Get `is_symmetry` value."""
+    def is_symmetry(self) -> bool:
+        """Get `is_symmetry` value.
+
+        It refers to whether Phonopy will use symmetries to reduce the number of
+        displacements for frozen phonons.
+        """
         return self.base.attributes.get('is_symmetry')
 
-    def _set_is_symmetry(self, value):
-        """Set whether to use the symmetries. Use with care and if you know what your are doing.
+    def _set_is_symmetry(self, value: bool):
+        """Set whether to use the symmetries.
+
+        Use with care and if you know what your are doing.
 
         :param value: whether to use or not the symmetries. Deafault is True.
         :type value: bool
+
         :raises:
             * ModificationNotAllowed: if object is already stored
             * TypeError: if the input is not of type `bool`
@@ -283,7 +317,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('is_symmetry', deepcopy(value))
 
     @property
-    def kinds_map(self):
+    def kinds_map(self) -> dict | None:
         """Get the map bewtween of the `numbers` and the `symbols` and `names`."""
         try:
             the_map = self.base.attributes.get('kinds_map')
@@ -291,9 +325,10 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             the_map = None
         return the_map
 
-    def _set_kinds_map(self, value):
-        """Set the kind names map between the PhonopyAtoms unitcell and a reference
-        structure. This is needed since PhonopyAtoms does not support kind names.
+    def _set_kinds_map(self, value: dict):
+        """Set the kind names map between the PhonopyAtoms unitcell and a reference structure.
+
+        This is needed since PhonopyAtoms does not support kind names.
         This attribute allows to get proper `StructureData` supercells with displacements.
 
         :param value: tuple with two dictionaries (numbers_to_names, numbers_to_symbols)
@@ -302,11 +337,11 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('kinds_map', value)
 
     @property
-    def distinguish_kinds(self):
+    def distinguish_kinds(self) -> bool:
         """Get whether or not kinds with same chemical symbol will be distinguished by symmetry."""
         return self.base.attributes.get('distinguish_kinds')
 
-    def _set_distinguish_kinds(self, value):
+    def _set_distinguish_kinds(self, value: bool):
         """Set whether or not to distinguish kinds."""
         self._if_can_modify()
         if not isinstance(value, bool):
@@ -329,8 +364,10 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
         return PhonopyAtoms(**kwargs)
 
-    def get_phonopy_instance(self, symmetrize_nac=None, factor_nac=None, **kwargs) -> Phonopy:
-        """Return a `phonopy.Phonopy` object with the current values.
+    def get_phonopy_instance(
+        self, symmetrize_nac: bool | None = None, factor_nac: float | None = None, **kwargs
+    ) -> Phonopy:
+        """Return a :py:class:`phonopy.Phonopy` object with the current values.
 
         :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
         :type symmetrize_nac: bool, defaults to self.is_symmetry
@@ -406,8 +443,13 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         phonopy_instance = self.get_phonopy_instance(**kwargs).supercell
         return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map)
 
-    def get_cells_mappings(self):
-        """Return a dictionary containing the mappings among unit-, super- and primitive cell"""
+    def get_cells_mappings(self) -> dict[dict[list]]:
+        """Return a dictionary containing the mappings among unit-, super- and primitive cell.
+
+        :return: dictionary with the following key:pair structure:
+            * primitive: {p2p_map: list, p2s_map: list, s2p_map: list}
+            * supercell: {u2u_map: list, u2s_map: list, s2u_map: list}
+        """
         ph = self.get_phonopy_instance()
 
         cells_maps = {
@@ -426,8 +468,8 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         return cells_maps
 
     @property
-    def dielectric(self):
-        """Get the `infinity` dielectric tensor (i.e. in the static field limit) in Cartesian coordinates."""
+    def dielectric(self) -> np.ndarray | None:
+        """Get the high-frequency dielectric tensor in Cartesian coordinates."""
         try:
             value = self.base.attributes.get('dielectric')
             value = np.array(value)
@@ -435,10 +477,10 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             value = None
         return value
 
-    def set_dielectric(self, dielectric):
-        """Set the `infinity` dielectric tensor in Cartesian coordinates.
+    def set_dielectric(self, dielectric: list | np.ndarray):
+        """Set the high-frequency dielectric tensor in Cartesian coordinates.
 
-        .. note: it is assumed that the reference system is the same (if not the) of the primitive cell.
+        .. note: it is assumed that the reference system is the same of the primitive cell.
 
         :param dielectric: (3, 3) array like
 
@@ -459,7 +501,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             raise ValueError('the array is not of the correct shape')
 
     @property
-    def born_charges(self):
+    def born_charges(self) -> np.ndarray:
         """Get the effective Born charges tensors in Cartesian coordinates.
 
         ..note:
@@ -476,7 +518,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             value = None
         return value
 
-    def set_born_charges(self, born_charges):
+    def set_born_charges(self, born_charges: list | np.ndarray):
         """Set the Born effective charge tensors in Cartesian coordinates.
 
         ..note:
@@ -486,6 +528,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
                 3. Atomic displacement index.
 
         :param born_charges: (number of atoms in the primitive cell, 3, 3) shape array like
+
         :raises:
             * TypeError: if the format is not compatible or of the correct type
             * ValueError: if the format is not compatible or of the correct type
@@ -504,8 +547,8 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         else:
             raise ValueError('the array is not of the correct shape')
 
-    def has_nac_parameters(self):
-        """Returns wheter or not the Data has non-analytical constants."""
+    def has_nac_parameters(self) -> bool:
+        """Return wheter or not the Data has non-analytical constants."""
         return (self.dielectric is not None and self.born_charges is not None)
 
     def _if_can_modify(self):

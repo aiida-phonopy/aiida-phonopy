@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """CalcJob for phonopy post-processing."""
-
 from aiida import orm
 from aiida.common import InputValidationError, datastructures
 from aiida.engine import CalcJob
@@ -274,7 +273,7 @@ class PhonopyCalculation(CalcJob):
         lists that are to be retrieved after job completion.
 
         :param folder: a sandbox folder to temporarily write files on disk.
-        :return: :py:`~aiida.common.datastructures.CalcInfo` instance.
+        :return: :py:class:`~aiida.common.datastructures.CalcInfo` instance.
         """
         retrieve_list = []
         retrieve_temporary_list = []

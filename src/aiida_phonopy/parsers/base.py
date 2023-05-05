@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Defines a `Parser` base class for `aiida-phonopy`.
-
-All `Parser` implementations in `aiida-phonopy` must use this base class, not `aiida.parsers.Parser`.
-"""
+"""Defines a `Parser` base class for `aiida-phonopy`."""
+# All `Parser` implementations in `aiida-phonopy` must use this base class, not `aiida.parsers.Parser`.
 from aiida.parsers import Parser as _BaseParser
 
 __all__ = ('Parser',)

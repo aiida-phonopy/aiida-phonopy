@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Calcfunctions Utils for aiida-phonopy DataTypes."""
+from __future__ import annotations
+
 from aiida import orm
 from aiida.engine import calcfunction
-from aiida.plugins import DataFactory
 
-PreProcessData = DataFactory('phonopy.preprocess')
-PhonopyData = DataFactory('phonopy.phonopy')
+from aiida_phonopy.data import PhonopyData, PreProcessData
 
 __all__ = (
     'get_unitcell', 'get_primitive', 'get_supercell', 'get_supercells_with_displacements', 'get_displacements',
@@ -14,35 +14,35 @@ __all__ = (
 
 
 @calcfunction
-def get_unitcell(preprocess_data: PreProcessData):
+def get_unitcell(preprocess_data: PreProcessData) -> orm.StructureData:
     """Get the unitcell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_unitcell()
     return structure_data
 
 
 @calcfunction
-def get_primitive(preprocess_data: PreProcessData):
+def get_primitive(preprocess_data: PreProcessData) -> orm.StructureData:
     """Get the primitive cell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_primitive_cell()
     return structure_data
 
 
 @calcfunction
-def get_supercell(preprocess_data: PreProcessData):
+def get_supercell(preprocess_data: PreProcessData) -> orm.StructureData:
     """Get the supercell (pristine) of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_supercell()
     return structure_data
 
 
 @calcfunction
-def get_supercells_with_displacements(preprocess_data: PreProcessData):
+def get_supercells_with_displacements(preprocess_data: PreProcessData) -> dict[orm.StructureData]:
     """Get the supercells with displacements of a PreProcessData as a StructureData."""
     structures_data = preprocess_data.get_supercells_with_displacements()
     return structures_data
 
 
 @calcfunction
-def get_displacements(preprocess_data: PreProcessData):
+def get_displacements(preprocess_data: PreProcessData) -> orm.ArrayData:
     """Get the displacements of a PreProcessData as an ArrayData with array name `displacements`."""
     displacements = preprocess_data.get_displacements()
     the_displacements = orm.ArrayData()
@@ -54,14 +54,14 @@ def get_displacements(preprocess_data: PreProcessData):
 @calcfunction
 def generate_preprocess_data(
     structure: orm.StructureData,
-    displacement_generator=None,
-    supercell_matrix=None,
-    primitive_matrix=None,
-    symprec=None,
-    is_symmetry=None,
-    distinguish_kinds=None,
+    displacement_generator: orm.Dict | None = None,
+    supercell_matrix: orm.List | None = None,
+    primitive_matrix: orm.List | None = None,
+    symprec: orm.Float | None = None,
+    is_symmetry: orm.Float | None = None,
+    distinguish_kinds: orm.Bool | None = None,
 ):
-    """Returns a complete stored PreProcessData node.
+    """Return a complete stored PreProcessData node.
 
     :param structure: structure data node representing the unitcell
     :type structure: orm.StructureData
@@ -126,7 +126,9 @@ def generate_preprocess_data(
 
 
 @calcfunction
-def get_preprocess_with_new_displacements(preprocess_data: PreProcessData, displacement_generator: orm.Dict):
+def get_preprocess_with_new_displacements(
+    preprocess_data: PreProcessData, displacement_generator: orm.Dict
+) -> PreProcessData:
     """Get a new PreProcessData from an old one from new displacement generator settings."""
     displacement_dataset = preprocess_data.generate_displacement_dataset(**displacement_generator.get_dict())
 
@@ -145,29 +147,33 @@ def get_preprocess_with_new_displacements(preprocess_data: PreProcessData, displ
 
 
 @calcfunction
-def generate_phonopy_data(preprocess_data: PreProcessData, nac_parameters=None, forces_index=None, **forces_dict):
-    """Create a PhonopyData node from a PreProcess(Phonopy)Data node, storing forces and (optionally)
-        non-analytical constants.
+def generate_phonopy_data(
+    preprocess_data: PreProcessData,
+    nac_parameters: orm.ArrayData | None = None,
+    forces_index: orm.Int | None = None,
+    **forces_dict
+) -> PhonopyData:
+    """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
-        `Forces` must be passed as **kwargs**, since we are calling a calcfunction with a variable
-        number of supercells forces.
+    `Forces` must be passed as **kwargs**, since we are calling a calcfunction with a variable
+    number of supercells forces.
 
-        :param nac_parameters: ArrayData containing 'dielectric' and 'born_charges' as arrays
-            with their correct shape
-        :param forces_index: Int if a TrajectoryData is given, in order to get the correct slice of the array.
-        :param forces_dict: dictionary of supercells forces as ArrayData stored as `forces`, each Data
-            labelled in the dictionary in the format `forces_{suffix}`.
-            The prefix is common and the suffix corresponds to the suffix number of the supercell with
-            displacement label given from the `get_supercells_with_displacements` method.
+    :param nac_parameters: ArrayData containing 'dielectric' and 'born_charges' as arrays
+        with their correct shape
+    :param forces_index: Int if a TrajectoryData is given, in order to get the correct slice of the array.
+    :param forces_dict: dictionary of supercells forces as ArrayData stored as `forces`, each Data
+        labelled in the dictionary in the format `forces_{suffix}`.
+        The prefix is common and the suffix corresponds to the suffix number of the supercell with
+        displacement label given from the `get_supercells_with_displacements` method.
 
-            For example:
-                {'forces_1':ArrayData, 'forces_2':ArrayData}
-                <==>
-                {'supercell_1':StructureData, 'supercell_2':StructureData}
-                and forces in each ArrayData stored as 'forces',
-                i.e. ArrayData.get_array('forces') must not raise error
+        For example:
+            {'forces_1':ArrayData, 'forces_2':ArrayData}
+            <==>
+            {'supercell_1':StructureData, 'supercell_2':StructureData}
+            and forces in each ArrayData stored as 'forces',
+            i.e. ArrayData.get_array('forces') must not raise error
 
-            .. note: if residual forces would be stored, label it with 0 as suffix.
+        .. note: if residual forces would be stored, label it with 0 as suffix.
     """
     prefix = 'forces'
 
@@ -199,40 +205,46 @@ def generate_phonopy_data(preprocess_data: PreProcessData, nac_parameters=None, 
 class CalcfunctionMixin:
     """Set of calcfunctions to be called from the aiida-phonopy DataTypes."""
 
-    def __init__(self, data_node):
+    def __init__(self, data_node: PreProcessData | PhonopyData):
+        """Instantiate the class."""
         self._data_node = data_node
 
-    def get_unitcell(self):
+    def get_unitcell(self) -> orm.StructureData:
         """Get the unitcell as a StructureData through a calfunction."""
         return get_unitcell(preprocess_data=self._data_node)
 
-    def get_primitive_cell(self):
+    def get_primitive_cell(self) -> orm.StructureData:
         """Get the primitive cell as a StructureData through a calfunction."""
         return get_primitive(preprocess_data=self._data_node)
 
-    def get_supercell(self):
+    def get_supercell(self) -> orm.StructureData:
         """Get the supercell (pristine) as a StructureData through a calfunction."""
         return get_supercell(preprocess_data=self._data_node)
 
-    def get_supercells_with_displacements(self):
+    def get_supercells_with_displacements(self) -> dict[orm.StructureData]:
         """Get the supercells with displacements as a StructureData through a calfunction."""
         return get_supercells_with_displacements(preprocess_data=self._data_node)
 
-    def get_displacements(self):
+    def get_displacements(self) -> orm.ArrayData:
         """Get the displacements as an ArrayData through a calfunction."""
         return get_displacements(preprocess_data=self._data_node)
 
-    def get_preprocess_with_new_displacements(self, displacement_generator: orm.Dict):
+    def get_preprocess_with_new_displacements(self, displacement_generator: orm.Dict) -> PreProcessData:
         """Create a PreProcessData node from a PreProcess/PhonopyData with a new set of displacements.
 
-        :param displacement_generator: a `storable` dictionary  """
+        :param displacement_generator: a `storable` dictionary
+        """
         return get_preprocess_with_new_displacements(
             preprocess_data=self._data_node, displacement_generator=displacement_generator
         )
 
-    def generate_phonopy_data(self, nac_parameters=None, forces_index=None, **forces_dict):
-        """Create a PhonopyData node from a PreProcess(Phonopy)Data node, storing forces and (optionally)
-        non-analytical constants.
+    def generate_phonopy_data(
+        self,
+        nac_parameters: orm.ArrayData | None = None,
+        forces_index: orm.Int | None = None,
+        **forces_dict
+    ) -> PhonopyData:
+        """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
         `Forces` must be passed as **kwargs**, since we are calling a calcfunction with a variable
         number of supercells forces.

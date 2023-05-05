@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """Functions for linking PhonopyAtoms and StructureData."""
+from __future__ import annotations
+
+from aiida.orm import StructureData
+from phonopy.structure.cells import PhonopyAtoms
 
 __all__ = ('phonopy_atoms_to_structure', 'phonopy_atoms_from_structure', 'if_to_map')
 
 
-def phonopy_atoms_to_structure(cell, mapping=None):
+def phonopy_atoms_to_structure(cell: PhonopyAtoms, mapping: dict | None = None) -> StructureData:
     """Return a StructureData from a PhonopyAtoms instance.
 
     :param cell: a PhonopyAtoms instance
     :param mapping: a number to kinds and symbols map, defaults to None
     """
-    from aiida import orm
-
     if mapping:
         numbers_to_kinds, numbers_to_symbols = mapping
         symbols = []
@@ -31,21 +33,22 @@ def phonopy_atoms_to_structure(cell, mapping=None):
     positions = cell.positions
     masses = cell.masses
 
-    structure = orm.StructureData(cell=cell.cell)
+    structure = StructureData(cell=cell.cell)
     for position, symbol, name, mass in zip(positions, symbols, names, masses):
         structure.append_atom(position=position, symbols=symbol, name=name, mass=mass)
 
     return structure
 
 
-def phonopy_atoms_from_structure(structure):
+def phonopy_atoms_from_structure(structure: StructureData) -> PhonopyAtoms:
     """Return a tuple containg the PhonopyAtoms and the mapping from a StructureData.
 
     :param structure: StructureData instance
-    :return: it returns a PhonopyAtoms istance and the mapping
+    :return: tuple with element:
+        * a :class:`~phonopy.structure.cells.PhonopyAtoms` istance
+        * mapping dictionary, with key:pair of the type int:str, string
+            referring to the custom atomic name
     """
-    from phonopy.structure.cells import PhonopyAtoms
-
     to_map = if_to_map(structure)
 
     if not to_map:  # when kind_names=symbols are used in the structure
@@ -93,10 +96,11 @@ def phonopy_atoms_from_structure(structure):
     return (cell, [numbers_to_kinds, numbers_to_symbols])
 
 
-def if_to_map(structure):
+def if_to_map(structure: StructureData) -> bool:
     """Return a bool according whether kind names and symbols are the same.
 
     :param structure: StructureData instance
+
     :return: True if kind names different from symbols are used, False otherwise
     """
     check_kinds = [True for kind in structure.kinds if kind.name != kind.symbol]

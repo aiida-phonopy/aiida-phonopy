@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""This module defines the class which wraps the :class:`phonopy.Phonopy` main class."""
+"""Module defining the class which wraps the :class:`phonopy.Phonopy` main class."""
 from __future__ import annotations
 
 import numpy as np
+from phonopy import Phonopy
 
 from .preprocess import PreProcessData
 
 
 class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
-    """This class wraps the :class:`phonopy.Phonopy` class.
+    """Class wrapping the :class:`phonopy.Phonopy` class.
 
     It represents the final Data node status of a frozen phonon calculaiton.
     It stores information regarding the pre-processing, the displacements and
@@ -21,9 +22,15 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
     """
 
     def __init__(self, preprocess_data: PreProcessData, **kwargs):
+        """Instantiate the class.
 
+        :param preprocess_data: a :class:`~aiida_phonopy.data.preprocess.PreProcessData` node
+
+        :raises TypeError: if the input is not of the correct type,
+        :raises ValueError: if the preprocess_data input does not contain displacement dataset
+        """
         if not isinstance(preprocess_data, PreProcessData):
-            raise ValueError(f'incorrect type. Given type <{type(preprocess_data)}>, expected `PreProcessData')
+            raise TypeError(f'incorrect type. Given type <{type(preprocess_data)}>, expected `PreProcessData')
 
         kwargs['structure'] = preprocess_data.get_unitcell()
         kwargs['supercell_matrix'] = preprocess_data.supercell_matrix
@@ -41,13 +48,15 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
             raise ValueError('cannot instantiate object without having displacement dataset set')
 
     def set_displacements(self):
+        """Set displacements cannot be accessed from PhonopyData."""
         raise RuntimeError('`displacements` cannot be changed for this Data')
 
     def set_displacements_from_dataset(self):
+        """Set displacements cannot be accessed from PhonopyData."""
         raise RuntimeError('`displacements` cannot be changed for this Data')
 
-    def get_phonopy_instance(self, subtract_residual_forces=None, **kwargs):
-        """Return a :class:`~phonopy.Phonopy` object with force and nac parameters (if set).
+    def get_phonopy_instance(self, subtract_residual_forces: bool | None = None, **kwargs) -> Phonopy:
+        """Return a :class:`~phonopy.Phonopy` object with forces and nac parameters (if set).
 
         :param subtract_residual_forces: whether or not subract residual forces (if set)
         :type subtract_residual_forces: bool, defaults to False
@@ -80,7 +89,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
         return ph_instance
 
     @property
-    def residual_forces(self):
+    def residual_forces(self) -> np.ndarray:
         """Get the residual forces calculated on the pristine (i.e. no displaced) supercell structure (if set).
 
         ..note: if you have specified the `forces_index` this will be used as well here.
@@ -94,7 +103,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
             the_forces = None
         return the_forces
 
-    def set_residual_forces(self, forces):
+    def set_residual_forces(self, forces: list | np.ndarray):
         """Set the residual forces of the pristine supercell.
 
         :param forces: (atoms in supercell, 3) array shape
@@ -124,7 +133,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
                 raise ValueError('the array is not of the correct shape. Check also `forces_index`')
 
     @property
-    def forces(self) -> list[list]:
+    def forces(self) -> np.ndarray:
         """Get forces for each supercell with displacements in the dataset as a unique array."""
         try:
             the_forces = self.get_array('forces')
@@ -149,7 +158,12 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
 
         return the_forces
 
-    def set_forces(self, sets_of_forces=None, dict_of_forces=None, forces_index=None):
+    def set_forces(
+        self,
+        sets_of_forces: list | np.ndarray | None = None,
+        dict_of_forces: dict | None = None,
+        forces_index: int | None = None
+    ):
         """Set forces per each supercell with displacement in the dataset.
 
         :param sets_of_forces: a set of atomic forces in displaced supercells. The order of
@@ -203,7 +217,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
                 raise ValueError('index for forces must be an integer')
 
     @property
-    def forces_index(self):
+    def forces_index(self) -> int:
         """Return the index of the forces to use."""
         try:
             index = self.base.attributes.get('forces_index')
@@ -211,8 +225,12 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
             index = None
         return index
 
-    def set_forces_index(self, value):
-        """Set the `forces_index` attribute."""
+    def set_forces_index(self, value: int):
+        """Set the `forces_index` attribute.
+
+        This is used for tacking a particular array index of each single forces set.
+        This is useful to not duplicate data of e.g. trajectories.
+        """
         if isinstance(value, int):
             self.base.attributes.set('forces_index', value)
         else:
