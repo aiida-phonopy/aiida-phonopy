@@ -144,27 +144,36 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self.base.attributes.set('phonopy_version', the_phonopy_version)
 
     @property
-    def numbers(self) -> list[int]:
-        """Get the array corresponding to the atomic number in periodic table of the sturcture."""
+    def numbers(self) -> np.ndarray:
+        """Get the array corresponding to the atomic number in periodic table of the sturcture.
+
+        :return: (nat,) shaper array
+        """
         return self.base.attributes.get('numbers')
 
     @property
-    def masses(self) -> list[float]:
-        """Get the array of the atomic masses in the cell."""
+    def masses(self) -> np.ndarray:
+        """Get the array of the atomic masses in the cell.
+
+        :return: (nat,) shape array
+        """
         return self.base.attributes.get('masses')
 
     @property
-    def positions(self) -> list[float]:
-        """Get the array of the atomic positions in the cell."""
+    def positions(self) -> np.ndarray:
+        """Get the array of the atomic positions in the cell.
+
+        :return: (nat, 3) shape array
+        """
         return self.base.attributes.get('positions')
 
     @property
-    def cell(self) -> list:
+    def cell(self) -> np.ndarray:
         """Get the lattice matrix of the structure.
 
         .. important: lattice vectors as rows of the matrix
 
-        :return: a (3,3) shape array
+        :return: (3,3) shape array
         """
         return self.base.attributes.get('cell')
 
@@ -200,7 +209,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             'positions': phonopy_atoms.positions,
             'cell': phonopy_atoms.cell,
             'magnetic_moments': phonopy_atoms.magnetic_moments,
-            'pbc': pbc,  # to change when modifying Phonopy
+            'pbc': pbc,
         })
 
     def _set_symbols_and_names(self):
@@ -429,19 +438,19 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         """Get the `unitcell` as StructureData (not stored)."""
         kwargs = {'distinguish': True}
         phonopy_instance = self.get_phonopy_instance(**kwargs).unitcell
-        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map)
+        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map, self.pbc)
 
     def get_primitive_cell(self) -> orm.StructureData:
         """Get the `primitive cell` as StructureData (not stored)."""
         kwargs = {'distinguish': True}
         phonopy_instance = self.get_phonopy_instance(**kwargs).primitive
-        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map)
+        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map, self.pbc)
 
     def get_supercell(self) -> orm.StructureData:
         """Get the pristine `supercell` as StructureData (not stored)."""
         kwargs = {'distinguish': True}
         phonopy_instance = self.get_phonopy_instance(**kwargs).supercell
-        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map)
+        return phonopy_atoms_to_structure(phonopy_instance, self.kinds_map, self.pbc)
 
     def get_cells_mappings(self) -> dict[dict[list]]:
         """Return a dictionary containing the mappings among unit-, super- and primitive cell.

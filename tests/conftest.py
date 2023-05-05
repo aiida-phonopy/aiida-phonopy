@@ -278,13 +278,13 @@ def generate_parser():
 def generate_structure():
     """Return a `StructureData` representing bulk silicon."""
 
-    def _generate_structure(structure_id='silicon'):
+    def _generate_structure(structure_id='silicon', pbc=[True, True, True]):
         """Return a `StructureData` representing bulk silicon."""
         from aiida.orm import StructureData
 
         param = 5.43
         cell = [[0.0, param / 2.0, param / 2.0], [param / 2.0, 0, param / 2.0], [param / 2.0, param / 2.0, 0.0]]
-        structure = StructureData(cell=cell)
+        structure = StructureData(cell=cell, pbc=pbc)
 
         if structure_id == 'silicon':
             structure.append_atom(position=(0.0, 0.0, 0.0), symbols='Si', name='Si')
@@ -303,10 +303,10 @@ def generate_structure():
 def generate_raw_data(generate_structure):
     """Return a `RawData`."""
 
-    def _generate_raw_data(structure_id='silicon', inputs=None):
+    def _generate_raw_data(structure_id='silicon', pbc=[True, True, True], inputs=None):
         """Return a `RawData`."""
         from aiida_phonopy.data.raw import RawData
-        structure = generate_structure(structure_id=structure_id)
+        structure = generate_structure(structure_id=structure_id, pbc=pbc)
 
         if inputs is None:
             inputs = {}
@@ -327,10 +327,10 @@ def generate_raw_data(generate_structure):
 def generate_preprocess_data(generate_structure):
     """Return a `PreProcessData`."""
 
-    def _generate_preprocess_data(structure_id='silicon', inputs=None):
+    def _generate_preprocess_data(structure_id='silicon', pbc=[True, True, True], inputs=None):
         """Return a `PreProcessData`."""
         from aiida_phonopy.data.preprocess import PreProcessData
-        structure = generate_structure(structure_id=structure_id)
+        structure = generate_structure(structure_id=structure_id, pbc=pbc)
 
         if inputs is None:
             inputs = {}

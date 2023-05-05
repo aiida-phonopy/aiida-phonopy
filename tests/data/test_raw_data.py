@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for the :mod:`data` module."""
+"""Tests for the :mod:`aiida_phonopy.data` module."""
 
 import numpy as np
 import pytest
@@ -16,18 +16,41 @@ def test_raw_attributes(generate_raw_data):
     assert raw_data.masses.tolist() == [28.0855, 28.0855]
     assert raw_data.positions.tolist() == [[0., 0., 0.], [param / 4.0, param / 4.0, param / 4.0]]
     assert raw_data.cell.tolist() == cell
-    assert raw_data.magnetic_moments == None
+    assert raw_data.magnetic_moments is None
     assert raw_data.symbols == ['Si', 'Si']
     assert raw_data.names == ['Si', 'Si']
+    assert raw_data.pbc == (True, True, True)
     assert raw_data.supercell_matrix is not None
     assert raw_data.primitive_matrix is not None
     assert raw_data.symprec == 1e-5
-    assert raw_data.is_symmetry == True
-    assert raw_data.kinds_map == None
-    assert raw_data.distinguish_kinds == True
-    assert raw_data.dielectric == None
-    assert raw_data.born_charges == None
-    assert raw_data.has_nac_parameters() == False
+    assert raw_data.is_symmetry
+    assert raw_data.kinds_map is None
+    assert raw_data.distinguish_kinds
+    assert raw_data.dielectric is None
+    assert raw_data.born_charges is None
+    assert not raw_data.has_nac_parameters()
+
+
+@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.parametrize(
+    'pbc', (
+        (True, True, True),
+        (True, True, False),
+        (True, False, True),
+        (False, True, True),
+        (True, False, False),
+        (False, True, False),
+        (False, False, True),
+    )
+)
+def test_pbc(generate_raw_data, pbc):
+    """Test `RawData` with different PBC."""
+    raw_data = generate_raw_data(pbc=pbc)
+
+    assert raw_data.pbc == pbc
+    assert raw_data.get_unitcell().pbc == pbc
+    assert raw_data.get_primitive_cell().pbc == pbc
+    assert raw_data.get_supercell().pbc == pbc
 
 
 @pytest.mark.usefixtures('aiida_profile')

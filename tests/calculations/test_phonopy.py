@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-outer-name
-"""Tests for the `PhonopyCalculation` class."""
+"""Tests for :class:`aiida_phonopy.calculations.PhonopyCalculation`."""
 from aiida import orm
 from aiida.common import datastructures
 import pytest
