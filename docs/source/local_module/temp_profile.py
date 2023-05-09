@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import os
 import pathlib
 import shutil
@@ -40,8 +39,7 @@ def load_temp_profile(
 
     :param name: The name of the profile to load.
     :param add_computer: Whether to add a computer to the profile.
-    :param add_phonopy_code: Whether to add a Quantum ESPRESSO pw.x code to the profile.
-    :param add_sssp: Whether to add the SSSP pseudopotentials to the profile.
+    :param add_phonopy_code: Whether to add a phonopy code to the profile.
     :param debug: Whether to enable debug mode (printing all SQL queries).
     :param wipe_previous: Whether to wipe any previous data
     """
@@ -95,7 +93,7 @@ def load_temp_profile(
 def load_computer(work_directory: pathlib.Path, cpu_count: int):
     """Idempotent function to add the computer to the database."""
     created, computer = orm.Computer.collection.get_or_create(
-        label='localhost',
+        label='local_direct',
         description='local computer with direct scheduler',
         hostname='localhost',
         workdir=str(work_directory.absolute()),
@@ -113,7 +111,7 @@ def load_computer(work_directory: pathlib.Path, cpu_count: int):
 def load_phonopy_code(computer, exec_path: pathlib.Path):
     """Idempotent function to add the code to the database."""
     try:
-        code = orm.load_code('phonopy@localhost')
+        code = orm.load_code('phonopy@local_direct')
     except:
         code = orm.Code(
             input_plugin_name='phonopy.phonopy',

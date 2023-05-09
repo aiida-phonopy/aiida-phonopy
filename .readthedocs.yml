@@ -5,15 +5,15 @@ build:
   tools:
     python: mambaforge-4.10
 
+conda:
+  environment: environment.yml
+
 python:
     install:
         - method: pip
           path: .
           extra_requirements:
             - docs
-
-conda:
-  environment: environment.yml
 
 sphinx:
     builder: html
