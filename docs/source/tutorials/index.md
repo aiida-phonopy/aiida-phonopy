@@ -20,7 +20,7 @@ Go to one of the tutorials!
 :maxdepth: 1
 :hidden: true
 
-./basic.md
-./intermidiate.md
-./advanced.md
+../basic.ipynb
+../intermidiate.ipynb
+../advanced.ipynb
 ```
