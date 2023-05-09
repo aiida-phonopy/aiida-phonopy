@@ -53,7 +53,6 @@ extensions = [
     'sphinx_design',
     'aiida.sphinxext',
     'autoapi.extension',
-    # 'myst_parser',
 ]
 
 myst_enable_extensions = [
