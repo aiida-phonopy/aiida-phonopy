@@ -46,7 +46,7 @@ tests = [
     'pytest-regressions~=2.3',
 ]
 docs = [
-    'myst-nb',
+    # 'myst-nb',
     'jupytext>=1.11.2,<1.15.0',
     # 'sphinx-book-theme==1.0.0rc2',
     # 'sphinx-design2',
@@ -59,7 +59,7 @@ docs = [
     'sphinx-design~=0.4.1',
     'sphinxcontrib-details-directive~=0.1.0',
     'sphinx-autoapi~=2.0.1',
-    # 'myst_parser~=1.0.0',
+    'myst_parser~=1.0.0',
 ]
 
 [project.entry-points.'aiida.data']
