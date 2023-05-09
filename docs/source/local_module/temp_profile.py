@@ -114,8 +114,9 @@ def load_phonopy_code(computer, exec_path: pathlib.Path):
         code = orm.load_code('phonopy@local_direct')
     except:
         code = orm.Code(
-            input_plugin_name='phonopy.phonopy',
+            default_calc_job_plugin='phonopy.phonopy',
             remote_computer_exec=[computer, str(exec_path)],
+            with_mpi=False,
         )
         code.label = 'phonopy'
         code.description = 'phonopy code on local computer'
