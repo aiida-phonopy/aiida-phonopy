@@ -49,12 +49,9 @@ docs = [
     'myst-nb',
     'jupytext>=1.11.2,<1.15.0',
     'sphinx-book-theme==1.0.0rc2',
-    'pydata-sphinx-theme==v0.13.0rc4',
     'sphinx-design2',
     'sphinx-copybutton',
     'sphinxext-rediraffe~=0.2.7',
-    # TODO this can uncommented once https://github.com/mgaitan/sphinxcontrib-mermaid/issues/109 is fixed
-    # "sphinxcontrib.mermaid~=0.7.1",
     'sphinxext-opengraph~=0.7.5',
     'sphinx-pyscript',
     'sphinx-tippy>=0.3.1',
