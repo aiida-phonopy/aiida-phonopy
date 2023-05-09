@@ -49,7 +49,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx_togglebutton',
-    'sphinx_click',
     'sphinx_design',
     'aiida.sphinxext',
     'autoapi.extension',
