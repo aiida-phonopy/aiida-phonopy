@@ -32,7 +32,7 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
         The minimal input is to define either the `structure` or the `phonopy_atoms` input.
         They cannot be specified at the same time.
 
-        :param structure: an :class:`~aiida.orm.StructureData` node
+        :param structure: a :class:`~aiida.orm.StructureData` node
         :param phononpy_atoms: a :class:`~phonopy.structure.cells.PhonopyAtoms` instance
         :param supercell_matrix: a (3,3) shape array describing the supercell transformation
         :param primitive_matrix: a (3,3) shape array describing the primite transformation
