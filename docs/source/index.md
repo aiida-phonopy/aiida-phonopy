@@ -42,8 +42,8 @@ substitutions:
 
       .. rubric:: AiiDA Phonopy
 
-      An AiiDA plugin package to integrate the `Phonopy`_ software.
-      Compute and store phonon related properties of materials with the popular open source `Phonopy`_ code
+      An AiiDA plugin package to integrate the `Phonopy` software.
+      Compute and store phonon related properties of materials with the popular open source `Phonopy` code
       with automatic data provenance provided by AiiDA.
 
       **aiida-phonopy version:** |release|
@@ -158,7 +158,7 @@ reference/index
 If you use this plugin for your research, please cite the following works:
 
 ```{eval-rst}
-.. highlights:: Atsushi Togo and Isao Tanaka, |Phonopy paper|_, Scripta Materialia **108**, 1-5 (2015)
+.. highlights:: Atsushi Togo and Isao Tanaka, |Phonopy paper|, Scripta Materialia **108**, 1-5 (2015)
 ```
 
 ```{eval-rst}
@@ -166,7 +166,7 @@ If you use this plugin for your research, please cite the following works:
 ```
 
 ```{eval-rst}
-.. highlights:: Martin Uhrin, Sebastiaan. P. Huber, Jusong Yu, Nicola Marzari, and Giovanni Pizzi, |AiiDA engine paper|_, Computational Materials Science **187**, 110086 (2021)
+.. highlights:: Martin Uhrin, Sebastiaan. P. Huber, Jusong Yu, Nicola Marzari, and Giovanni Pizzi, |AiiDA engine paper|, Computational Materials Science **187**, 110086 (2021)
 
 ```
 
@@ -180,9 +180,9 @@ We acknowledge support from:
     :class: logo-table
     :header-rows: 0
 
-    * - The `U Bremen Excellence Chairs`_ program funded within the scope of the |ESG|_.
+    * - The `U Bremen Excellence Chairs` program funded within the scope of the |ESG|.
       - |ubremen|
-    * - The `MAPEX`_ Center for Materials and Processes.
+    * - The `MAPEX` Center for Materials and Processes.
       - |mapex|
 ```
 
