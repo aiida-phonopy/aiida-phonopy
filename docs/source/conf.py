@@ -47,7 +47,6 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
-    'sphinxcontrib-details-directive~=0.1.0',
     'sphinx_copybutton',
     'sphinx_togglebutton',
     'sphinx_design',

@@ -52,6 +52,7 @@ docs = [
     'sphinx-design2',
     'sphinx-copybutton',
     'sphinxext-rediraffe~=0.2.7',
+    'sphinxcontrib-details-directive~=0.1.0',
     'sphinxext-opengraph~=0.7.5',
     'sphinx-pyscript',
     'sphinx-tippy>=0.3.1',
