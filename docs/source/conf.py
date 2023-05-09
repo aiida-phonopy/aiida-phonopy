@@ -80,6 +80,8 @@ intersphinx_mapping = {
     'aiida_quantumespresso': ('http://aiida-quantumespresso.readthedocs.io/en/latest/', None),
 }
 
+# Execution mode for notebooks
+nb_execution_mode = 'cache'
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [
