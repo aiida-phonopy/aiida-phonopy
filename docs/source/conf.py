@@ -42,7 +42,7 @@ version = '.'.join(aiida_phonopy.__version__.split('.')[:2])
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'myst_parser',
+    'myst_nb',
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.intersphinx',
@@ -62,12 +62,12 @@ myst_enable_extensions = [
     'html_image',
 ]
 
-# source_suffix = {
-#     '.rst': 'restructuredtext',
-#     '.md': 'myst-nb',
-#     '.ipynb': 'myst-nb',
-#     '.myst': 'myst-nb',
-# }
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'myst-nb',
+    '.ipynb': 'myst-nb',
+    '.myst': 'myst-nb',
+}
 
 # Setting the intersphinx mapping to other readthedocs
 intersphinx_mapping = {
