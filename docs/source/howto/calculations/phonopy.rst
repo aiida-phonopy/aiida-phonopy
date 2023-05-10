@@ -18,11 +18,8 @@ Plugin entry point ``phonopy.phonopy``
 How to launch a ``phonopy`` calculation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Below is a script with a basic example of how to run a ``phonopy`` calculation through the ``PhonopyCalculation``
-plugin that computes the phonon band structure of an fcc silicon crystal:
-
-.. literalinclude:: ../../tutorials/include/run_phonopy_basic.py
-    :language: python
+Below is a basic example of how to run a ``phonopy`` calculation through the ``PhonopyCalculation``
+plugin that computes the phonon band structure of an fcc silicon crystal.
 
 Note that you may have to change the name of the code that is loaded using ``load_code``.
 

@@ -60,7 +60,10 @@ myst_enable_extensions = [
     'deflist',
     'dollarmath',
     'html_image',
+    'substitution',
 ]
+
+myst_substitutions = {'release': release, 'version': version}
 
 source_suffix = {
     '.rst': 'restructuredtext',
