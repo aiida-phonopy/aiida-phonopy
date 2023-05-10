@@ -46,11 +46,20 @@ tests = [
     'pytest-regressions~=2.3',
 ]
 docs = [
-    "Sphinx",
-    "docutils",
-    "sphinx-copybutton~=0.3.0",
-    "sphinx-book-theme~=0.1.0",
-    "sphinx-click~=2.7.1",
+    'myst-nb~=0.17',
+    'jupytext>=1.11.2,<1.15.0',
+    # 'sphinx-book-theme==1.0.0rc2',
+    # 'sphinx-design2',
+    # 'sphinx-autodoc2~=0.4.2',
+    'sphinx-togglebutton',
+    'sphinx~=5.2',
+    'sphinx-copybutton~=0.5.2',
+    'sphinx-book-theme~=1.0.1',
+    # 'sphinx-click~=4.4.0',
+    'sphinx-design~=0.4.1',
+    'sphinxcontrib-details-directive~=0.1.0',
+    'sphinx-autoapi~=2.0.1',
+    #'myst_parser~=1.0.0',
 ]
 
 [project.entry-points.'aiida.data']

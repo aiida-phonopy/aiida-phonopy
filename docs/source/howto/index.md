@@ -3,8 +3,8 @@
 # How-to guides
 
 :::{important}
-The following how-to guides assume that you are familiar with the basics of AiiDA, such as creating data and running processes.
-At the very least, make sure you have followed and understood the {ref}`basic tutorials <tutorials:preprocessdata>`.
+The following how-to guides assume that you are familiar with the basics of AiiDA and AiiDA-Phonopy, such as creating data and running processes.
+At the very least, make sure you have followed and understood the [basic tutorials](../basic.ipynb).
 :::
 
 ```{toctree}

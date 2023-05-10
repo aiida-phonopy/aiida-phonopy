@@ -59,7 +59,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
         """Return a :class:`~phonopy.Phonopy` object with forces and nac parameters (if set).
 
         :param subtract_residual_forces: whether or not subract residual forces (if set)
-        :type subtract_residual_forces: bool, defaults to False
+        :type subtract_residual_forces: bool
         :param kwargs: see :func:`aiida_phonopy.data.preprocess.PreProcessData.get_phonopy_instance`
             * symmetrize_nac: whether or not to symmetrize the nac parameters
                 using point group symmetry; bool, defaults to self.is_symmetry

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from aiida import orm
 from aiida.engine import calcfunction
-
-from aiida_phonopy.data import PhonopyData, PreProcessData
+from aiida.plugins import DataFactory
 
 __all__ = (
     'get_unitcell', 'get_primitive', 'get_supercell', 'get_supercells_with_displacements', 'get_displacements',
@@ -14,35 +13,35 @@ __all__ = (
 
 
 @calcfunction
-def get_unitcell(preprocess_data: PreProcessData) -> orm.StructureData:
+def get_unitcell(preprocess_data) -> orm.StructureData:
     """Get the unitcell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_unitcell()
     return structure_data
 
 
 @calcfunction
-def get_primitive(preprocess_data: PreProcessData) -> orm.StructureData:
+def get_primitive(preprocess_data) -> orm.StructureData:
     """Get the primitive cell of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_primitive_cell()
     return structure_data
 
 
 @calcfunction
-def get_supercell(preprocess_data: PreProcessData) -> orm.StructureData:
+def get_supercell(preprocess_data) -> orm.StructureData:
     """Get the supercell (pristine) of a PreProcessData as a StructureData."""
     structure_data = preprocess_data.get_supercell()
     return structure_data
 
 
 @calcfunction
-def get_supercells_with_displacements(preprocess_data: PreProcessData) -> dict[orm.StructureData]:
+def get_supercells_with_displacements(preprocess_data) -> dict:
     """Get the supercells with displacements of a PreProcessData as a StructureData."""
     structures_data = preprocess_data.get_supercells_with_displacements()
     return structures_data
 
 
 @calcfunction
-def get_displacements(preprocess_data: PreProcessData) -> orm.ArrayData:
+def get_displacements(preprocess_data) -> orm.ArrayData:
     """Get the displacements of a PreProcessData as an ArrayData with array name `displacements`."""
     displacements = preprocess_data.get_displacements()
     the_displacements = orm.ArrayData()
@@ -64,22 +63,23 @@ def generate_preprocess_data(
     """Return a complete stored PreProcessData node.
 
     :param structure: structure data node representing the unitcell
-    :type structure: orm.StructureData
+    :type structure: :class:`~aiida.orm.StructureData`
     :param displacement_generator: dictionary containing the info for generating the displacements
-    :type displacement_generator: orm.Dict
+    :type displacement_generator: :class:`~aiida.orm.Dict`
     :param supercell_matrix: supercell matrix, defaults to diag(1,1,1)
-    :type supercell_matrix: orm.List, optional
+    :type supercell_matrix: :class:`~aiida.orm.List`, Optional
     :param primitive_matrix: primitive matrix, defaults to "auto"
-    :type primitive_matrix: orm.List or orm.List, optional
+    :type primitive_matrix: :class:`~aiida.orm.List`, Optional
     :param symprec: symmetry precision on atoms, defaults to 1e-5
-    :type symprec: orm.Float, optional
+    :type symprec: :class:`~aiida.orm.Float`, Optional
     :param is_symmetry: if using space group symmetry, defaults to True
-    :type is_symmetry: orm.Bool, optional
+    :type is_symmetry: :class:`~aiida.orm.Bool`, Optional
     :param distinguish_kinds: if distinguish names of same specie by symmetry, defaults to True
-    :type distinguish_kinds: orm.Bool, optional
+    :type distinguish_kinds: :class:`~aiida.orm.Bool`, Optional
 
     :return: PreProcessData node
     """
+    PreProcessData = DataFactory('phonopy.preprocess')
     kwargs = {}
 
     kwargs['structure'] = structure
@@ -126,10 +126,9 @@ def generate_preprocess_data(
 
 
 @calcfunction
-def get_preprocess_with_new_displacements(
-    preprocess_data: PreProcessData, displacement_generator: orm.Dict
-) -> PreProcessData:
+def get_preprocess_with_new_displacements(preprocess_data, displacement_generator: orm.Dict):
     """Get a new PreProcessData from an old one from new displacement generator settings."""
+    PreProcessData = DataFactory('phonopy.preprocess')
     displacement_dataset = preprocess_data.generate_displacement_dataset(**displacement_generator.get_dict())
 
     preprocess = PreProcessData(
@@ -148,11 +147,8 @@ def get_preprocess_with_new_displacements(
 
 @calcfunction
 def generate_phonopy_data(
-    preprocess_data: PreProcessData,
-    nac_parameters: orm.ArrayData | None = None,
-    forces_index: orm.Int | None = None,
-    **forces_dict
-) -> PhonopyData:
+    preprocess_data, nac_parameters: orm.ArrayData | None = None, forces_index: orm.Int | None = None, **forces_dict
+):
     """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
     `Forces` must be passed as **kwargs**, since we are calling a calcfunction with a variable
@@ -175,6 +171,7 @@ def generate_phonopy_data(
 
         .. note: if residual forces would be stored, label it with 0 as suffix.
     """
+    PhonopyData = DataFactory('phonopy.phonopy')
     prefix = 'forces'
 
     forces_0 = forces_dict.pop(f'{prefix}_0', None)
@@ -205,7 +202,7 @@ def generate_phonopy_data(
 class CalcfunctionMixin:
     """Set of calcfunctions to be called from the aiida-phonopy DataTypes."""
 
-    def __init__(self, data_node: PreProcessData | PhonopyData):
+    def __init__(self, data_node):
         """Instantiate the class."""
         self._data_node = data_node
 
@@ -221,7 +218,7 @@ class CalcfunctionMixin:
         """Get the supercell (pristine) as a StructureData through a calfunction."""
         return get_supercell(preprocess_data=self._data_node)
 
-    def get_supercells_with_displacements(self) -> dict[orm.StructureData]:
+    def get_supercells_with_displacements(self) -> dict:
         """Get the supercells with displacements as a StructureData through a calfunction."""
         return get_supercells_with_displacements(preprocess_data=self._data_node)
 
@@ -229,7 +226,7 @@ class CalcfunctionMixin:
         """Get the displacements as an ArrayData through a calfunction."""
         return get_displacements(preprocess_data=self._data_node)
 
-    def get_preprocess_with_new_displacements(self, displacement_generator: orm.Dict) -> PreProcessData:
+    def get_preprocess_with_new_displacements(self, displacement_generator: orm.Dict):
         """Create a PreProcessData node from a PreProcess/PhonopyData with a new set of displacements.
 
         :param displacement_generator: a `storable` dictionary
@@ -239,11 +236,8 @@ class CalcfunctionMixin:
         )
 
     def generate_phonopy_data(
-        self,
-        nac_parameters: orm.ArrayData | None = None,
-        forces_index: orm.Int | None = None,
-        **forces_dict
-    ) -> PhonopyData:
+        self, nac_parameters: orm.ArrayData | None = None, forces_index: orm.Int | None = None, **forces_dict
+    ):
         """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
         `Forces` must be passed as **kwargs**, since we are calling a calcfunction with a variable

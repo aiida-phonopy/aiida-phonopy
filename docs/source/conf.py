@@ -49,7 +49,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx_togglebutton',
-    'sphinx_click',
     'sphinx_design',
     'aiida.sphinxext',
     'autoapi.extension',
@@ -61,7 +60,10 @@ myst_enable_extensions = [
     'deflist',
     'dollarmath',
     'html_image',
+    'substitution',
 ]
+
+myst_substitutions = {'release': release, 'version': version}
 
 source_suffix = {
     '.rst': 'restructuredtext',
@@ -81,6 +83,8 @@ intersphinx_mapping = {
     'aiida_quantumespresso': ('http://aiida-quantumespresso.readthedocs.io/en/latest/', None),
 }
 
+# Execution mode for notebooks
+nb_execution_mode = 'cache'
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [
@@ -118,7 +122,7 @@ templates_path = ['_templates']
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+# language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

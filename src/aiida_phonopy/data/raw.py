@@ -20,7 +20,7 @@ def _get_valid_matrix(matrix: list | np.ndarray) -> np.ndarray:
     """Get and validate the `supercell_matrix` and `primitive_matrix` inputs.
 
     :param matrix: (3,1) or (3,3) shape array
-    :type matrix: list, orm.List, numpy.ndarray
+    :type matrix: :class:`list`, :class:`~aiida.orm.List`, :class:`numpy.ndarray`
     :return: a (3,3) numpy.ndarray
     :raises:
         * TypeError: if it is not a valid array type and if the array does not contain only numbers
@@ -244,7 +244,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         """Set the Phonopy supercell matrix.
 
         :param value: (3,3) or (3,1) shape array
-        :type value: list, orm.List, numpy.ndarray
+        :type value: :class:`list`, :class:`~aiida.orm.List`, :class:`numpy.ndarray`
 
         :raises ModificationNotAllowed: if object is already stored
         """
@@ -264,8 +264,8 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     def _set_primitive_matrix(self, value: list | np.ndarray):
         """Set the primitive matrix.
 
-        :param value: (3,3) or (3,1) shape array, or str
-        :type value: list, orm.List, numpy.ndarray, str
+        :param value: (3,3) or (3,1) shape array, or 'auto"
+        :type value: :class:`list`, :class:`~aiida.orm.List`, :class:`numpy.ndarray`, :class:`str`
         :raises ModificationNotAllowed: if object is already stored
         """
         self._if_can_modify()
@@ -378,10 +378,11 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     ) -> Phonopy:
         """Return a :py:class:`phonopy.Phonopy` object with the current values.
 
-        :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
-        :type symmetrize_nac: bool, defaults to self.is_symmetry
-        :param factor_nac: factor for non-analytical corrections
-        :type factor_nac: float, defaults to Hartree*Bohr
+        :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry;
+            defaults to self.is_symmetry
+        :type symmetrize_nac: bool
+        :param factor_nac: factor for non-analytical corrections; defaults to Hartree*Bohr
+        :type factor_nac: float
         :param kwargs: for internal use to set the primitive cell
         """
         from phonopy.structure.symmetry import symmetrize_borns_and_epsilon

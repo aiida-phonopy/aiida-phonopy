@@ -400,10 +400,13 @@ class PhonopyCalculation(CalcJob):
 
         # appending eventual blocked keys to parameters
         if 'force_constants' in self.inputs:
-            parameters.append({'FORCE_CONSTANTS': 'READ'})
+            parameters.update({'FORCE_CONSTANTS': 'READ'})
+            if self.inputs.force_constants.has_nac_parameters():
+                parameters.setdefault('NAC', True)
 
-        if 'nac_parameters' in self.inputs:
-            parameters.append({'NAC': True})
+        if 'phonopy_data' in self.inputs:
+            if self.inputs.phonopy_data.has_nac_parameters():
+                parameters.setdefault('NAC', True)
 
         # if not "SYMMETRY_TOLERANCE" in parameters.keys():
         #     symprec = self.inputs.phonopy_data.symprec

@@ -179,10 +179,11 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
     def get_phonopy_instance(self, symmetrize_nac: bool = None, factor_nac: float | None = None, **kwargs):
         """Return a :class:`~phonopy.Phonopy` object with the current values.
 
-        :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry.
-        :type symmetrize_nac: bool, defaults to self.is_symmetry
-        :param factor_nac: factor for non-analytical corrections
-        :type factor_nac: float, defaults to Hartree*Bohr
+        :param symmetrize_nac: whether or not to symmetrize the nac parameters using point group symmetry;
+            defaults to self.is_symmetry
+        :type symmetrize_nac: bool
+        :param factor_nac: factor for non-analytical corrections; defaults to Hartree*Bohr
+        :type factor_nac: float
         :param kwargs: for internal use to set the primitive cell
         """
         ph = super().get_phonopy_instance(symmetrize_nac, factor_nac, **kwargs)
@@ -271,20 +272,20 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         """Return a complete stored PreProcessData node.
 
         :param structure: structure data node representing the unitcell
-        :type structure: orm.StructureData
+        :type structure: :class:`~aiida.orm.StructureData`
         :param displacement_generator: dictionary containing the info for generating the displacements,
             defaults to phonopy default (see phonopy doc)
         :type displacement_generator: orm.Dict
         :param supercell_matrix: supercell matrix, defaults to diag(1,1,1)
-        :type supercell_matrix: orm.List, optional
+        :type supercell_matrix: :class:`~aiida.orm.List`, Optional
         :param primitive_matrix: primitive matrix, defaults to "auto"
-        :type primitive_matrix: orm.List or orm.List, optional
+        :type primitive_matrix: :class:`~aiida.orm.List`, Optional
         :param symprec: symmetry precision on atoms, defaults to 1e-5
-        :type symprec: orm.Float, optional
+        :type symprec: :class:`~aiida.orm.Float`, Optional
         :param is_symmetry: if using space group symmetry, defaults to True
-        :type is_symmetry: orm.Bool, optional
+        :type is_symmetry: :class:`~aiida.orm.Bool`, Optional
         :param distinguish_kinds: if distinguish names of same specie by symmetry, defaults to True
-        :type distinguish_kinds: orm.Bool, optional
+        :type distinguish_kinds: :class:`~aiida.orm.Bool`, Optional
 
         :return: PreProcessData node
         """

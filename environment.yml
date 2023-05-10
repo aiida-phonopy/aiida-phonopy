@@ -1,0 +1,21 @@
+name: aiida-phonopy-demo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - aiida-core~=2.3.0
+  - xmltodict
+  - jupyterlab=3
+  - jupyterlab-myst
+  - cryptography>=37.0.4  # lower gives wrong link to openssl
+  - nglview=3
+  # see: https://github.com/nglviewer/nglview/issues/1032
+  - ipywidgets<8
+  # documentation
+  - myst-parser>=0.18.1
+  - myst-nb>=0.17.1
+  - sphinx-design
+  - sphinx-book-theme
+  - sphinx-subfigure>=0.2.4
+  - seekpath
