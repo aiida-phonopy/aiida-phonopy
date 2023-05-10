@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.1 - 2023-05-10
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.1...v1.1.0)
+
+This release comes with some bug fixes of the previous version for data storage,
+it improves the docstrings and typing, and finally adds the documentation.
+
 ## v1.1.0 - 2023-05-02
 
 [full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.0...v1.0.0)
