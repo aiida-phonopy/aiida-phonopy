@@ -408,6 +408,38 @@ def generate_example_phonopy_data():
 
 
 @pytest.fixture
+def generate_force_constants():
+    """Return BTO ForceConstantsData."""
+
+    def _generate_force_constants():
+        """Return BTO ForceConstantsData."""
+        import os
+
+        import phonopy
+
+        from aiida_phonopy.data import ForceConstantsData
+
+        basepath = os.path.dirname(os.path.abspath(__file__))
+        phyaml = os.path.join(basepath, 'fixtures', 'phonopy', 'phonopy.yaml')
+        fsets = os.path.join(basepath, 'fixtures', 'phonopy', 'FORCE_SETS')
+
+        ph = phonopy.load(phyaml, force_sets_filename=fsets)
+        ph.produce_force_constants()
+
+        fc_data = ForceConstantsData(
+            phonopy_atoms=ph.unitcell,
+            supercell_matrix=ph.supercell_matrix,
+            primitive_matrix=ph.primitive_matrix,
+            symprec=ph.symmetry.tolerance,
+        )
+        fc_data.set_force_constants(ph.force_constants)
+
+        return fc_data
+
+    return _generate_force_constants
+
+
+@pytest.fixture
 def generate_remote_data():
     """Return a `RemoteData` node."""
 

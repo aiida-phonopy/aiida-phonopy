@@ -325,7 +325,7 @@ class PhonopyCalculation(CalcJob):
         for value in self._OUTPUTS.values():
             retrieve_temporary_list.append(value[0])  # first value of the tuple
         if 'force_constants' in self.inputs:  # otherwise we retrieve the same thing as the input
-            retrieve_temporary_list.pop(self._INPUT_FORCE_CONSTANTS)
+            retrieve_temporary_list.remove(self._INPUT_FORCE_CONSTANTS)
 
         # ============================ calcinfo ===============================
 

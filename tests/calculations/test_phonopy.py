@@ -77,6 +77,46 @@ def test_phonopy_default(fixture_sandbox, generate_calc_job, generate_inputs):
     assert len(calc_info.codes_info) == 1
 
 
+def test_phonopy_with_fc(fixture_sandbox, generate_calc_job, generate_inputs, generate_force_constants):
+    """Test a `PhonopyCalculation` with force constants."""
+    entry_point_name = 'phonopy.phonopy'
+    inputs = generate_inputs()
+    inputs.pop('phonopy_data')
+    inputs['force_constants'] = generate_force_constants()
+
+    calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
+
+    raw_inputs = ['phonopy.yaml', 'aiida.in']
+    retrieve_temporary_list = [
+        'phonopy.yaml',
+        'band.hdf5',
+        'qpoints.hdf5',
+        'mesh.hdf5',
+        'irreps.yaml',
+        'thermal_properties.yaml',
+        'thermal_displacements.yaml',
+        'thermal_displacement_matrices.yaml',
+        'modulation.yaml',
+        'total_dos.dat',
+        'projected_dos.dat',
+    ]
+    retrieve_list = ['aiida.out']
+
+    # Check the attributes of the returned `CalcInfo`
+    assert isinstance(calc_info, datastructures.CalcInfo)
+    assert len(calc_info.local_copy_list) == 0
+
+    assert len(calc_info.retrieve_list) == len(retrieve_list)
+    assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
+
+    assert len(calc_info.retrieve_temporary_list) == len(retrieve_temporary_list)
+    assert sorted(calc_info.retrieve_temporary_list) == sorted(retrieve_temporary_list)
+
+    # Checks on the files written to the sandbox folder as raw input
+    assert sorted(fixture_sandbox.get_content_list()) == sorted(raw_inputs + ['force_constants.hdf5'])
+    assert len(calc_info.codes_info) == 1
+
+
 def test_phonopy_cmdsline(fixture_sandbox, generate_calc_job, generate_inputs):
     """Test a `PhonopyCalculation` with user-defined cmdline from `parameters`."""
     entry_point_name = 'phonopy.phonopy'
