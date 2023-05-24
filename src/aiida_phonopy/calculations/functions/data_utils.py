@@ -57,7 +57,7 @@ def generate_preprocess_data(
     supercell_matrix: orm.List | None = None,
     primitive_matrix: orm.List | None = None,
     symprec: orm.Float | None = None,
-    is_symmetry: orm.Float | None = None,
+    is_symmetry: orm.Bool | None = None,
     distinguish_kinds: orm.Bool | None = None,
 ):
     """Return a complete stored PreProcessData node.
