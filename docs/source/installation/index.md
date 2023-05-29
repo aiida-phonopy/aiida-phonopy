@@ -1,7 +1,8 @@
 ---
 myst:
     substitutions:
-        pip: '`pip`'
+        pip: '[`pip`](https://pip.pypa.io/en/stable/index.html)'
+        PyPI: '[PyPI](https://pypi.org/)'
 ---
 
 # Get started
@@ -12,7 +13,7 @@ myst:
 
 To work with `aiida-phonopy`, you should have:
 
-- installed `aiida-core`
+- installed `aiida-core`.
 - configured an AiiDA profile.
 
 Please refer to the
@@ -23,7 +24,7 @@ of `aiida-core` for detailed instructions.
 
 ## Installation
 
-The Python package can be installed from the Python Package index [PyPI](https://pypi.org/) or directly from the source:
+The Python package can be installed from the Python Package Index ({{ PyPI }}) or directly from the source:
 
 ::::{tab-set}
 
@@ -35,7 +36,7 @@ The recommended method of installation is to use the Python package manager {{ p
 $ pip install aiida-phonopy
 ```
 
-This will install the latest stable version that was released to PyPI.
+This will install the latest stable version that was released to the {{ PyPI }}.
 :::
 
 :::{tab-item} Source
@@ -71,10 +72,10 @@ In this example, we will set up the `localhost`, the computer where AiiDA itself
 To set up a computer, use the ``verdi`` CLI of ``aiida-core``.
 
 ```console
-$ verdi computer setup -n -L localhost -H localhost -T core.local -S core.direct
+$ verdi computer setup -n -L localhost -H localhost -T core.local -S core.direct -w $AIIDA_PATH/workdir
 ```
 
-After creating the localhost computer, configure it using:
+After creating the localhost computer, configure the `core.local` transport using:
 
 ```console
 $ verdi computer configure core.local localhost -n --safe-interval 0
@@ -89,16 +90,18 @@ $ verdi computer test localhost
 
 :::{tab-item} API
 
-To setup a computer using the Python API, run the following code in a Python script or interactive shell:
+To setup a computer using the Python API, run the following code in a Python script with `verdi run` or in the `verdi` shell:
 
 ```python
 from aiida.orm import Computer
+from pathlib import Path
 
 computer = Computer(
     label='localhost',
     hostname='localhost',
     transport_type='core.local',
-    scheduler_type='core.direct'
+    scheduler_type='core.direct',
+    workdir=Path('$AIIDA_PATH/workdir').absolute().as_posix()
 ).store()
 computer.configure()
 ```
@@ -107,6 +110,11 @@ computer.configure()
 ::::
 
 For more detailed information, please refer to the documentation [on setting up compute resources](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/run_codes.html#how-to-set-up-a-computer).
+
+:::{note}
+The computer `workdir` is where AiiDA will run the calculations for codes set up for this computer.
+The commands above will set the `workdir` of the `localhost` computer in `$AIIDA_PATH/workdir`.
+:::
 
 (installation-setup-code)=
 
@@ -123,23 +131,23 @@ In this example, we will setup the `phonopy` code that is installed on the compu
 To setup a particular Phonopy code, use the ``verdi`` CLI of ``aiida-core``.
 
 ```console
-$ verdi code create core.code.installed -n --computer localhost --label phonopy --default-calc-job-plugin phoonpy.phonopy --filepath-executable /path/to/phonopy
+$ verdi code create core.code.installed -n --computer localhost --label phonopy --default-calc-job-plugin phonopy.phonopy --filepath-executable $(which phonopy)
 ```
 :::
 
 :::{tab-item} API
 
-To setup particular Phonopy code using the Python API, run the following code in a Python script or interactive shell:
+To set up the Phonopy code using the Python API, run the following code in a Python script with `verdi run` or in the `verdi` shell:
 
 ```python
-
 from aiida.orm import InstalledCode
+import shutil
 
 computer = load_computer('localhost')
 code = InstalledCode(
     label='phonopy',
     computer=computer,
-    filepath_executable='/path/to/phonopy',
+    filepath_executable=shutil.which('phonopy'),
     default_calc_job_plugin='phonopy.phonopy',
 ).store()
 ```
@@ -148,18 +156,14 @@ code = InstalledCode(
 ::::
 
 :::{important}
-Make sure to replace `/path/to/phonopy` with the actual absolute path to the `phonopy` binary.
-
-If you have it in a different python environment, make also sure to source the environment correctly.
-This can be done specifying the *preprend_text* for the code.
-:::
-
-:::{hint}
-You can find it by simply typing:
+The CLI command and Python script above will automatically find the first `phonopy` binary in your `PATH` directories using the `which` command:
 
 ```console
-$ which phonopy
+which phonopy
 ```
+
+If you have installed `phonopy` in a different python environment, make sure to pass the correct filepath to the executable and activate the environment correctly.
+The latter can be done by adding the required commands to the `preprend_text` of the code.
 :::
 
 For more detailed information, please refer to the documentation [on setting up codes](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/run_codes.html#how-to-setup-a-code).
