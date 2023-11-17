@@ -123,7 +123,7 @@ In this example, we will setup the `phonopy` code that is installed on the compu
 To setup a particular Phonopy code, use the ``verdi`` CLI of ``aiida-core``.
 
 ```console
-$ verdi code create core.code.installed -n --computer localhost --label phonopy --default-calc-job-plugin phoonpy.phonopy --filepath-executable /path/to/phonopy
+$ verdi code create core.code.installed -n --computer localhost --label phonopy --default-calc-job-plugin phonopy.phonopy --filepath-executable /path/to/phonopy
 ```
 :::
 
