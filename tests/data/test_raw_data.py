@@ -32,6 +32,19 @@ def test_raw_attributes(generate_raw_data):
 
 
 @pytest.mark.usefixtures('aiida_profile')
+def test_raw_with_no_symmetries(generate_raw_data):
+    """Test `RawData` `is_symmetry` behaviour.
+
+    Here we expect that `is_symmetry=False` gives `primitive_matrix = diag(1,1,1)`.
+    """
+    from numpy import eye
+
+    raw_data = generate_raw_data(inputs={'is_symmetry': False})
+    assert not raw_data.is_symmetry
+    assert raw_data.primitive_matrix.tolist() == eye(3).tolist()
+
+
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize(
     'pbc', (
         (True, True, True),

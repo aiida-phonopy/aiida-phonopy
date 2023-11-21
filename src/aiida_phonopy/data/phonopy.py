@@ -2,6 +2,8 @@
 """Module defining the class which wraps the :class:`phonopy.Phonopy` main class."""
 from __future__ import annotations
 
+from typing import Union
+
 import numpy as np
 from phonopy import Phonopy
 
@@ -103,7 +105,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
             the_forces = None
         return the_forces
 
-    def set_residual_forces(self, forces: list | np.ndarray):
+    def set_residual_forces(self, forces: Union[list, np.ndarray]):
         """Set the residual forces of the pristine supercell.
 
         :param forces: (atoms in supercell, 3) array shape
@@ -160,7 +162,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
 
     def set_forces(
         self,
-        sets_of_forces: list | np.ndarray | None = None,
+        sets_of_forces: Union[list, np.ndarray, None] = None,
         dict_of_forces: dict | None = None,
         forces_index: int | None = None
     ):

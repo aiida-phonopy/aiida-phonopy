@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import Union
 
 from aiida import orm
 from aiida.orm.nodes.data import ArrayData
@@ -16,7 +17,7 @@ from aiida_phonopy.calculations.functions.link_structures import (
 )
 
 
-def _get_valid_matrix(matrix: list | np.ndarray) -> np.ndarray:
+def _get_valid_matrix(matrix: Union[list, np.ndarray]) -> np.ndarray:
     """Get and validate the `supercell_matrix` and `primitive_matrix` inputs.
 
     :param matrix: (3,1) or (3,3) shape array
@@ -57,8 +58,8 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
     def __init__(
         self,
-        structure: orm.StructureData | None = None,
-        phonopy_atoms: PhonopyAtoms | None = None,
+        structure: Union[orm.StructureData, None] = None,
+        phonopy_atoms: Union[PhonopyAtoms, None] = None,
         supercell_matrix: list | None = None,
         primitive_matrix: list | None = None,
         symprec: float = 1e-05,
@@ -126,10 +127,11 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
         # Important that is the last to be specified since, if "auto" is passed,
         # a phonopy instance is generated to get the primitive structure.
-        if not primitive_matrix is None:
+        if primitive_matrix is not None:
             self._set_primitive_matrix(primitive_matrix)
         else:
-            self._set_primitive_matrix('auto')
+            value = 'auto' if self.is_symmetry else np.eye(3)
+            self._set_primitive_matrix(value)
 
     @property
     def phonopy_version(self) -> str:
@@ -240,7 +242,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         """
         return self.base.attributes.get('supercell_matrix')
 
-    def _set_supercell_matrix(self, value: list | np.ndarray):
+    def _set_supercell_matrix(self, value: Union[list, np.ndarray]):
         """Set the Phonopy supercell matrix.
 
         :param value: (3,3) or (3,1) shape array
@@ -261,7 +263,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         """
         return self.base.attributes.get('primitive_matrix')
 
-    def _set_primitive_matrix(self, value: list | np.ndarray):
+    def _set_primitive_matrix(self, value: Union[list, np.ndarray, str]):
         """Set the primitive matrix.
 
         :param value: (3,3) or (3,1) shape array, or 'auto"
@@ -478,7 +480,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         return cells_maps
 
     @property
-    def dielectric(self) -> np.ndarray | None:
+    def dielectric(self) -> Union[np.ndarray, None]:
         """Get the high-frequency dielectric tensor in Cartesian coordinates."""
         try:
             value = self.base.attributes.get('dielectric')
@@ -487,7 +489,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             value = None
         return value
 
-    def set_dielectric(self, dielectric: list | np.ndarray):
+    def set_dielectric(self, dielectric: Union[list, np.ndarray]):
         """Set the high-frequency dielectric tensor in Cartesian coordinates.
 
         .. note: it is assumed that the reference system is the same of the primitive cell.
@@ -528,7 +530,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             value = None
         return value
 
-    def set_born_charges(self, born_charges: list | np.ndarray):
+    def set_born_charges(self, born_charges: Union[list, np.ndarray]):
         """Set the Born effective charge tensors in Cartesian coordinates.
 
         ..note:
