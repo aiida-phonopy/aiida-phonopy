@@ -57,7 +57,7 @@ def generate_preprocess_data(
     structure: orm.StructureData,
     displacement_generator: Union[orm.Dict, None] = None,
     supercell_matrix: Union[orm.List, None] = None,
-    primitive_matrix: Union[orm.List, None] = None,
+    primitive_matrix: Union[orm.List, orm.Str, None] = None,
     symprec: Union[orm.Float, None] = None,
     is_symmetry: Union[orm.Bool, None] = None,
     distinguish_kinds: Union[orm.Bool, None] = None,
