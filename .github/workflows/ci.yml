@@ -23,7 +23,7 @@ jobs:
         -   name: Set up Python
             uses: actions/setup-python@v2
             with:
-                python-version: '3.8'
+                python-version: '3.9'
 
         -   name: Install python dependencies
             run: pip install -e .[pre-commit,tests]
@@ -39,12 +39,10 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                -   python-version: '3.8'
-                    phonopy-version: '2.14.0'
                 -   python-version: '3.9'
-                    phonopy-version: '2.15.0'
+                    phonopy-version: '2.19.0'
                 -   python-version: '3.10'
-                    phonopy-version: '2.16.3'
+                    phonopy-version: '2.20.0'
 
         services:
             rabbitmq:
