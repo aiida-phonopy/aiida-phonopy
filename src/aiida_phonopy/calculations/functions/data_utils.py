@@ -2,6 +2,8 @@
 """Calcfunctions Utils for aiida-phonopy DataTypes."""
 from __future__ import annotations
 
+from typing import Union
+
 from aiida import orm
 from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
@@ -53,12 +55,12 @@ def get_displacements(preprocess_data) -> orm.ArrayData:
 @calcfunction
 def generate_preprocess_data(
     structure: orm.StructureData,
-    displacement_generator: orm.Dict | None = None,
-    supercell_matrix: orm.List | None = None,
-    primitive_matrix: orm.List | None = None,
-    symprec: orm.Float | None = None,
-    is_symmetry: orm.Bool | None = None,
-    distinguish_kinds: orm.Bool | None = None,
+    displacement_generator: Union[orm.Dict, None] = None,
+    supercell_matrix: Union[orm.List, None] = None,
+    primitive_matrix: Union[orm.List, orm.Str, None] = None,
+    symprec: Union[orm.Float, None] = None,
+    is_symmetry: Union[orm.Bool, None] = None,
+    distinguish_kinds: Union[orm.Bool, None] = None,
 ):
     """Return a complete stored PreProcessData node.
 
@@ -103,8 +105,6 @@ def generate_preprocess_data(
             kwargs['primitive_matrix'] = primitive_matrix.get_list()
         if isinstance(primitive_matrix, orm.Str):
             kwargs['primitive_matrix'] = primitive_matrix.value
-    else:
-        kwargs['primitive_matrix'] = 'auto'
 
     if supercell_matrix is not None:
         kwargs['supercell_matrix'] = supercell_matrix.get_list()
@@ -147,7 +147,10 @@ def get_preprocess_with_new_displacements(preprocess_data, displacement_generato
 
 @calcfunction
 def generate_phonopy_data(
-    preprocess_data, nac_parameters: orm.ArrayData | None = None, forces_index: orm.Int | None = None, **forces_dict
+    preprocess_data,
+    nac_parameters: Union[orm.ArrayData, None] = None,
+    forces_index: Union[orm.Int, None] = None,
+    **forces_dict
 ):
     """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
@@ -236,7 +239,10 @@ class CalcfunctionMixin:
         )
 
     def generate_phonopy_data(
-        self, nac_parameters: orm.ArrayData | None = None, forces_index: orm.Int | None = None, **forces_dict
+        self,
+        nac_parameters: Union[orm.ArrayData, None] = None,
+        forces_index: Union[orm.Int, None] = None,
+        **forces_dict
     ):
         """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 

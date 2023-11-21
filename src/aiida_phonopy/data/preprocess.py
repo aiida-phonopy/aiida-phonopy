@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from typing import Union
 
 from aiida import orm
 import numpy as np
@@ -24,8 +25,8 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
 
     def __init__(
         self,
-        structure: orm.StructureData | None = None,
-        phonopy_atoms: PhonopyAtoms | None = None,
+        structure: Union[orm.StructureData, None] = None,
+        phonopy_atoms: Union[PhonopyAtoms, None] = None,
         supercell_matrix: list | None = None,
         primitive_matrix: list | None = None,
         symprec: float = 1e-05,

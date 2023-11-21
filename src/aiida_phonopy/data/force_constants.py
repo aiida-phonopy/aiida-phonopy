@@ -2,6 +2,8 @@
 """Module defining the class for force constants data."""
 from __future__ import annotations
 
+from typing import Union
+
 from aiida.orm import StructureData
 import numpy as np
 from phonopy.structure.cells import PhonopyAtoms
@@ -18,8 +20,8 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
 
     def __init__(
         self,
-        structure: StructureData | None = None,
-        phonopy_atoms: PhonopyAtoms | None = None,
+        structure: Union[StructureData, None] = None,
+        phonopy_atoms: Union[PhonopyAtoms, None] = None,
         supercell_matrix: list | None = None,
         primitive_matrix: list | None = None,
         symprec: float = 1e-05,
