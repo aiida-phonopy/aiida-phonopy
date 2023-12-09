@@ -1,5 +1,42 @@
 # Changelog
 
+## v1.1.4 - 2023-12-09
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.4...v1.1.3)
+
+Minor release that solves a small bug, improves documentation and typing.
+
+- Fixes:
+  - `RawData` was not settings the `primitive_matrix` when `is_symmetry = False`, since `Phonopy` doesn't specify it in this case; the solution is to set it to `diag(1,1,1)` when the symmetry is turned off (https://github.com/aiida-phonopy/aiida-phonopy/commit/6ef9e8e10e5d6ea6a27f75b4c38b255f3c8e9d84)
+  - Typo in the "Get Started" documentation (https://github.com/aiida-phonopy/aiida-phonopy/commit/57327f534a32bb1beda8596711d148f50f68e1db)
+
+- Docs:
+  - Improvements to the "Get Started" page (https://github.com/aiida-phonopy/aiida-phonopy/commit/57327f534a32bb1beda8596711d148f50f68e1db)
+
+- Tests:
+  - Add more tests for the data types (https://github.com/aiida-phonopy/aiida-phonopy/commit/6ef9e8e10e5d6ea6a27f75b4c38b255f3c8e9d84)
+
+- New contributors:
+  - @mbercx made his first contribution to the repo :tada:
+
+## v1.1.3 - 2023-05-24
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.3...v1.1.2)
+
+Minor release that solves a small bug.
+
+- Fixes:
+  - `generate_preprocess_data` had a typo in the typing which made validation to crash (https://github.com/aiida-phonopy/aiida-phonopy/commit/d2c32cf25ebe469797feab46d7e50dde4e7baba3)
+
+## v1.1.2 - 2023-05-22
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.2...v1.1.1)
+
+Minor release that solves a small bug.
+
+- Fixes:
+  - `PhonopyCalculation` crashed when `force_constants` was used as input (https://github.com/aiida-phonopy/aiida-phonopy/commit/449447aa19a495edc6a28b0333a5e6d8e1f868bb)
+
 ## v1.1.1 - 2023-05-10
 
 [full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.1...v1.1.0)
