@@ -359,7 +359,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
                 'structure', 'supercell_matrix', 'primitive_matrix', 'symprec', 'is_symmetry', 'displacement_generator'
             ]:
                 if input_ in self.inputs:
-                    preprocess_inputs.update({input: self.inputs[input_]})
+                    preprocess_inputs.update({input_: self.inputs[input_]})
             preprocess = PreProcessData.generate_preprocess_data(**preprocess_inputs)
 
         self.ctx.preprocess_data = preprocess
