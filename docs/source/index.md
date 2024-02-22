@@ -25,6 +25,7 @@ tutorials/index
 howto/index
 topics/index
 reference/index
+citeus
 ```
 
 ::::{grid}
@@ -163,6 +164,8 @@ To the reference guides
 # How to cite
 
 If you use this plugin for your research, please cite the following works:
+
+> Lorenzo Bastonero and Nicola Marzari, [*Automated all-functionals infrared and Raman spectra*](https://arxiv.org/abs/2308.04308) (2023)
 
 > Atsushi Togo and Isao Tanaka, {{ phonopy_paper }}, Scripta Materialia **108**, 1-5 (2015)
 
