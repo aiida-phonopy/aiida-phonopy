@@ -1,9 +1,14 @@
 # `aiida-phonopy`
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![PyPI version](https://badge.fury.io/py/aiida-phonopy.svg)](https://badge.fury.io/py/aiida-phonopy)
-[![Docs status](https://readthedocs.org/projects/aiida-phonopy/badge)](http://aiida-phonopy.readthedocs.io/)
 
 This is the official AiiDA plugin for [Phonopy](https://phonopy.github.io/phonopy/index.html).
+
+|    | |
+|-----|----------------------------------------------------------------------------|
+|Latest release| [![PyPI version](https://badge.fury.io/py/aiida-phonopy.svg)](https://badge.fury.io/py/aiida-phonopy)[![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-phonopy.svg)](https://pypi.python.org/pypi/aiida-phonopy) |
+|Getting help| [![Docs status](https://readthedocs.org/projects/aiida-phonopy/badge)](http://aiida-phonopy.readthedocs.io/) [![Discourse status](https://img.shields.io/discourse/status?server=https%3A%2F%2Faiida.discourse.group%2F)](https://aiida.discourse.group/)
+|Build status| [![Build Status](https://github.com/aiida-phonopy/aiida-phonopy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aiida-phonopy/aiida-phonopy/actions) [![Coverage Status](https://codecov.io/gh/aiida-phonopy/aiida-phonopy/branch/main/graph/badge.svg)](https://codecov.io/gh/aiida-phonopy/aiida-phonopy) |
+|Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-phonopy.svg?style=flat)](https://pypistats.org/packages/aiida-phonopy) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiida-phonopy/aiida-phonopy.svg)](https://github.com/aiida-phonopy/aiida-phonopy/pulse)
+|Community|  [![Discourse](https://img.shields.io/discourse/topics?server=https%3A%2F%2Faiida.discourse.group%2F&logo=discourse)](https://aiida.discourse.group/)
 
 ## Compatibility
 
