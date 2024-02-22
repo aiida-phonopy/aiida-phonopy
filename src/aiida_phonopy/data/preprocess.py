@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=not-context-manager
 """Module defining the class for managing the frozen phonon structure."""
 from __future__ import annotations
 
