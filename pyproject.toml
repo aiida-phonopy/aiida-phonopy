@@ -43,10 +43,13 @@ pre-commit = [
     'toml',
 ]
 tests = [
+    'ase',
     'pgtest~=1.3',
     'pytest~=6.0',
+    'coverage[toml]',
+    'pytest-cov',
     'pytest-regressions~=2.3',
-    'ase',
+    'pytest-timeout',
 ]
 docs = [
     'myst-nb~=1.0.0rc0',
