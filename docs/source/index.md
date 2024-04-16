@@ -165,7 +165,7 @@ To the reference guides
 
 If you use this plugin for your research, please cite the following works:
 
-> Lorenzo Bastonero and Nicola Marzari, [*Automated all-functionals infrared and Raman spectra*](https://arxiv.org/abs/2308.04308) (2023)
+> Lorenzo Bastonero and Nicola Marzari, [*Automated all-functionals infrared and Raman spectra*](https://doi.org/10.1038/s41524-024-01236-3), npj Computational Materials **10**, 55 (2024)
 
 > Atsushi Togo and Isao Tanaka, {{ phonopy_paper }}, Scripta Materialia **108**, 1-5 (2015)
 
