@@ -41,7 +41,7 @@ If you use this plugin for your research, please cite the following works:
 
 * S. P. Huber _et al._, [*AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*](https://doi.org/10.1038/s41597-020-00638-4), Scientific Data **7**, 300 (2020)
 
-* M. Uhrin _et al._, [*Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*](https://www.sciencedirect.com/science/article/pii/S0010465522001746), Computational Materials Science **187**, 110086 (2021)
+* M. Uhrin _et al._, [*Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*](https://www.sciencedirect.com/science/article/pii/S0927025620305772), Computational Materials Science **187**, 110086 (2021)
 
 Please, also cite the underlying Quantum ESPRESSO and Phonopy codes references.
 
