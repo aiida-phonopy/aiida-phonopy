@@ -30,6 +30,7 @@ requires-python = '>=3.8'
 dependencies = [
     "aiida-core>=2.0.0,<3.0.0",
     "phonopy>=2.19,<3.0.0",
+    "aiida-pythonjob~=0.1",
 ]
 
 [project.urls]
@@ -79,6 +80,7 @@ docs = [
 
 [project.entry-points.'aiida.workflows']
 'phonopy.phonopy' = 'aiida_phonopy.workflows.phonopy:PhonopyWorkChain'
+'phonopy.ase' = 'aiida_phonopy.workflows.ase:PhonopyAseWorkChain'
 
 [tool.flit.module]
 name = 'aiida_phonopy'

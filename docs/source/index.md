@@ -53,6 +53,12 @@ An AiiDA plugin package to integrate the {{ phonopy }} software.
 Compute and store phonon related properties of materials with the popular open source {{ phonopy }} code
 with automatic data provenance provided by AiiDA.
 
+```{note} New in version 1.2.0
+:class: admonition-new
+New automated workflow to compute phonons using _any_ ASE calculator! \
+Check out the {py:class}`~aiida_phonopy.workflows.ase.PhonopyAseWorkChain` and the new tutorial!
+```
+
 **{{ aiida_phonopy }} version:** {{ release }}
 
 :::
@@ -169,8 +175,7 @@ If you use this plugin for your research, please cite the following works:
 
 > Atsushi Togo and Isao Tanaka, {{ phonopy_paper }}, Scripta Materialia **108**, 1-5 (2015)
 
-> Sebastiaan. P. Huber, Spyros Zoupanos, Martin Uhrin, Leopold Talirz, Leonid Kahle, Rico Häuselmann, Dominik Gresch, Tiziano Müller, Aliaksandr V. Yakutovich, Casper W. Andersen, Francisco F. Ramirez, Carl S. Adorf, Fernando Gargiulo, Snehal Kumbhar, Elsa Passaro, Conrad Johnston, Andrius Merkys, Andrea Cepellotti, Nicolas Mounet, Nicola Marzari, Boris Kozinsky, and Giovanni Pizzi,
-[*AiiDA 1.0, a scalable computational infrastructure for automated
+> Sebastiaan. P. Huber _et al._, [*AiiDA 1.0, a scalable computational infrastructure for automated
 reproducible workflows and data provenance*](https://doi.org/10.1038/s41597-020-00638-4),
 Scientific Data **7**, 300 (2020)
 
