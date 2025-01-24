@@ -227,6 +227,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         ))
         spec.output('force_constants', valid_type=ForceConstantsData, required=False,
             help='The matrix of force constants computed with finite displacements.')
+        spec.expose_outputs(PhonopyCalculation, namespace='output_phonopy', namespace_options={'required': False})
 
         spec.exit_code(400, 'ERROR_SUB_PROCESS_FAILED',
             message='At least one sub processe did not finish successfully.')
