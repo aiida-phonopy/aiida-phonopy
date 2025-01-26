@@ -53,11 +53,10 @@ An AiiDA plugin package to integrate the {{ phonopy }} software.
 Compute and store phonon related properties of materials with the popular open source {{ phonopy }} code
 with automatic data provenance provided by AiiDA.
 
-```{note} New in version 1.2.0
-:class: admonition-new
+:::{versionadded} 1.2.0
 New automated workflow to compute phonons using _any_ ASE calculator! \
 Check out the {py:class}`~aiida_phonopy.workflows.ase.PhonopyAseWorkChain` and the new tutorial!
-```
+:::
 
 **{{ aiida_phonopy }} version:** {{ release }}
 

@@ -12,10 +12,9 @@ We devised the tutorials to gradually add more and more detailed features that y
 
 Go to one of the tutorials!
 
-```{note} Added in version 1.2.0
-:class: admonition-added
-Added new tutorial and workflow!
-```
+:::{versionadded} 1.2.0
+Added new tutorial and workflow: {py:class}`~aiida_phonopy.workflows.ase.PhonopyAseWorkChain`!
+:::
 
 - [ASE workflow tutorial](../phonopy_ase.ipynb): get starting with using in a general way the package, starting from defining the structure of a cubic silicon, to computing its phonon band structure.
 - [Basic tutorial](../basic.ipynb): get starting with using in a general way the package, starting from defining the structure of a cubic silicon, to computing its phonon band structure.
