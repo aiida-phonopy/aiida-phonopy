@@ -231,6 +231,8 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
 
         spec.exit_code(400, 'ERROR_SUB_PROCESS_FAILED',
             message='At least one sub processe did not finish successfully.')
+        spec.exit_code(401, 'ERROR_PHONOPY_CALCULATION_FAILED',
+            message='The PhonopyCalculation did not finish successfully.')
         # yapf: enable
 
     @classmethod
