@@ -48,7 +48,7 @@ def fixture_localhost(aiida_localhost):
 def fixture_code(fixture_localhost):
     """Return a `Code` instance configured to run calculations of given entry point on localhost `Computer`."""
 
-    def _fixture_code(entry_point_name):
+    def _fixture_code(entry_point_name, filepath='/bin/true'):
         from aiida.common import exceptions
         from aiida.orm import InstalledCode, load_code
 
@@ -60,7 +60,7 @@ def fixture_code(fixture_localhost):
             return InstalledCode(
                 label=label,
                 computer=fixture_localhost,
-                filepath_executable='/bin/true',
+                filepath_executable=filepath,
                 default_calc_job_plugin=entry_point_name,
             )
 

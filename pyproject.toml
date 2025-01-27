@@ -30,6 +30,8 @@ requires-python = '>=3.8'
 dependencies = [
     "aiida-core>=2.0.0,<3.0.0",
     "phonopy>=2.19,<3.0.0",
+    "aiida-pythonjob~=0.1",
+    "seekpath",
 ]
 
 [project.urls]
@@ -52,7 +54,7 @@ tests = [
     'pytest-timeout',
 ]
 docs = [
-    'myst-nb~=1.0.0rc0',
+    'myst-nb~=1.0',
     'jupytext>=1.11.2,<1.15.0',
     'sphinx~=6.2.1',
     'sphinx-copybutton~=0.5.2',
@@ -61,7 +63,7 @@ docs = [
     'sphinx-design~=0.4.1',
     'sphinxcontrib-details-directive~=0.1.0',
     'sphinx-autoapi~=3.0.0',
-    'myst_parser~=1.0.0',
+    'myst-parser~=3.0.0',
     'sphinx-togglebutton',
 ]
 
@@ -79,6 +81,7 @@ docs = [
 
 [project.entry-points.'aiida.workflows']
 'phonopy.phonopy' = 'aiida_phonopy.workflows.phonopy:PhonopyWorkChain'
+'phonopy.ase' = 'aiida_phonopy.workflows.ase:PhonopyAseWorkChain'
 
 [tool.flit.module]
 name = 'aiida_phonopy'
@@ -116,8 +119,6 @@ good-names = [
     "j",
     "k",
     "l",
-    "dph0_",
-    "nlo_",
 ]
 
 [tool.pylint.master]
@@ -154,3 +155,24 @@ column_limit = 120
 dedent_closing_brackets = true
 indent_dictionary_value = false
 split_arguments_when_comma_terminated = true
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist =
+    py{39,310,311,312}
+    py39-pre-commit
+
+[testenv]
+description = Run the pytest tests
+usedevelop = True
+extras = tests
+commands = pytest {posargs}
+
+[testenv:py39-pre-commit]
+description = Run the pre-commit checks
+extras =
+    tests
+    pre-commit
+commands = pre-commit run {posargs}
+"""

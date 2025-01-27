@@ -3,49 +3,12 @@
 from abc import ABCMeta
 
 from aiida import orm
-from aiida.engine import WorkChain
+from aiida.common import AttributeDict
+from aiida.engine import WorkChain, if_
 
+from aiida_phonopy.calculations.phonopy import PhonopyCalculation
 from aiida_phonopy.data import ForceConstantsData, PhonopyData, PreProcessData
-
-
-def validate_matrix(value, _):
-    """Validate the `supercell_matrix` and `primitive_matrix` inputs."""
-    import numpy as np
-
-    if not isinstance(value, (list, orm.List, np.ndarray)):
-        return 'value is not of the right type; only `list`, `aiida.orm.List` and `numpy.ndarray`'
-
-    if isinstance(value, np.ndarray):
-        value = value.tolist()
-
-    if not len(value) == 3:
-        return 'need exactly 3 diagonal elements or 3x3 arrays.'
-
-    for row in value:
-        if isinstance(row, list):
-            if not len(row) in [0, 3]:
-                return 'matrix need to have 3x1 or 3x3 shape.'
-            for element in row:
-                if not isinstance(element, (int, float)):
-                    return (
-                        f'type `{type(element)}` of {element} is not an accepted '
-                        'type in matrix; only `int` and `float` are valid.'
-                    )
-
-
-def validate_positive_integer(value, _):
-    """Validate that `value` is positive."""
-    if not value.value > 0:
-        return f'{value} is not positive.'
-
-
-def validate_nac(value, _):
-    """Validate that `value` is positive."""
-    try:
-        value.get_array('dielectric')
-        value.get_array('born_charges')
-    except KeyError:
-        return 'data does not contain `dieletric` and/or `born_charges` arraynames.'
+from aiida_phonopy.utils.validators import validate_matrix, validate_nac
 
 
 def validate_inputs(inputs, _):
@@ -190,120 +153,87 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
     @classmethod
     def define(cls, spec):
         """Define inputs, outputs, and outline."""
+        # yapf: disable
         super().define(spec)
 
-        spec.input(
-            'preprocess_data',
-            valid_type=(PhonopyData, PreProcessData),
-            required=False,
-            help='The preprocess data for frozen phonon calcualtion.'
-        )
-        spec.input(
-            'structure', valid_type=orm.StructureData, required=False, help='The structure at equilibrium volume.'
-        )
-        spec.input(
-            'supercell_matrix',
-            valid_type=orm.List,
-            required=False,
-            validator=validate_matrix,
+        spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
+            help='If `True`, work directories of all called calculation will be cleaned at the end of execution.')
+        spec.input('preprocess_data', valid_type=(PhonopyData, PreProcessData), required=False,
+            help='The preprocess data for frozen phonon calcualtion.')
+        spec.input('structure', valid_type=orm.StructureData, required=False,
+            help='The structure at equilibrium volume.')
+        spec.input('supercell_matrix', valid_type=orm.List, required=False, validator=validate_matrix,
             help=(
                 'The matrix used to generate the supercell from the input '
                 'structure in the List format. Allowed shapes are 3x1 and 3x3 lists.'
-            ),
-        )
-        spec.input(
-            'primitive_matrix',
-            valid_type=orm.List,
-            required=False,
-            validator=validate_matrix,
+        ))
+        spec.input('primitive_matrix', valid_type=orm.List, required=False, validator=validate_matrix,
             help=(
                 'The matrix used to generate the primitive cell from the input '
                 'structure in the List format. Allowed shapes are 3x1 and 3x3 lists.'
-            ),
-        )
-        spec.input(
-            'symmetry_tolerance',
-            valid_type=orm.Float,
-            required=False,
-            help='Symmetry tolerance for space group analysis on the input structure.',
-        )
-        spec.input(
-            'is_symmetry',
-            valid_type=orm.Bool,
-            required=False,
-            help='Whether using or not the space group symmetries.',
-        )
-        spec.input(
-            'displacement_generator',
-            valid_type=orm.Dict,
-            required=False,
+        ))
+        spec.input('symmetry_tolerance', valid_type=orm.Float, required=False,
+            help='Symmetry tolerance for space group analysis on the input structure.')
+        spec.input('is_symmetry', valid_type=orm.Bool, required=False,
+            help='Whether using or not the space group symmetries.')
+        spec.input('displacement_generator', valid_type=orm.Dict, required=False,
             validator=cls._validate_displacements,
             help=(
                 'Info for displacements generation. The following flags are allowed:\n ' +
                 '\n '.join(f'{flag_name}' for flag_name in cls._ENABLED_DISPLACEMENT_GENERATOR_FLAGS)
-            ),
-        )
-        spec.input(
-            'fc_options',
-            valid_type=orm.Dict,
-            required=False,
-            validator=cls._validate_fc_options,
+        ))
+        spec.input('fc_options', valid_type=orm.Dict, required=False, validator=cls._validate_fc_options,
             help=(
                 'Options for force constants calculation (optional). The following flags are allowed:\n ' +
                 '\n '.join(f'{flag_name}' for flag_name in cls._ENABLED_FC_OPTIONS_FLAGS)
-            ),
-        )
-        spec.input(
-            'nac_parameters',
-            valid_type=orm.ArrayData,
-            required=False,
-            validator=validate_nac,
-            help='Non-analytical parameters.',
-        )
-        spec.input_namespace(
-            'options',
-            help='Options for how to run the workflow.',
-        )
-        spec.input(
-            'options.run_parallel_nac_forces',
-            valid_type=bool,
-            required=False,
-            non_db=True,
-            default=True,
-            help='Whether running nac parameters and forces calculations in parallel.',
-        )
+        ))
+        spec.input('nac_parameters', valid_type=orm.ArrayData, required=False, validator=validate_nac,
+            help='Non-analytical parameters.')
+        spec.input_namespace('settings', help='Settings for how to run the workflow.')
+        spec.input('settings.run_parallel_nac_forces', valid_type=bool, required=False, non_db=True, default=True,
+            help='Whether running nac parameters and forces calculations in parallel.')
+        spec.expose_inputs(PhonopyCalculation, namespace='phonopy', exclude=['phonopy_data', 'force_constants'],
+            namespace_options={
+                'required': False, 'populate_defaults': False,
+                'help': (
+                    'Inputs for the `PhonopyCalculation` that will'
+                    'be used to calculate the inter-atomic force constants, or for post-processing.'
+                )
+            })
         spec.inputs.validator = validate_inputs
 
-        spec.output_namespace(
-            'supercells',
-            valid_type=orm.StructureData,
-            dynamic=True,
-            required=False,
-            help='The supercells with displacements.'
+        spec.outline(
+            cls.setup,
+            cls.run_supercells,
+            cls.run_forces,
+            cls.inspect_forces,
+            cls.run_results,
+            if_(cls.should_run_phonopy)(
+              cls.run_phonopy,
+              cls.inspect_phonopy,
+            ),
         )
-        spec.output_namespace(
-            'supercells_forces',
-            valid_type=orm.ArrayData,
-            required=True,
-            help='The forces acting on the atoms of each supercell.'
-        )
-        spec.output_namespace(
-            'supercells_energies', valid_type=orm.Float, required=False, help='The total energy of each supercell.'
-        )
-        spec.output(
-            'output_phonopy_data',
-            valid_type=PhonopyData,
+
+        spec.output_namespace('supercells', valid_type=orm.StructureData, dynamic=True, required=False,
+            help='The supercells with displacements.')
+        spec.output_namespace('supercells_forces', valid_type=orm.ArrayData, required=True,
+            help='The forces acting on the atoms of each supercell.')
+        spec.output_namespace('supercells_energies', valid_type=orm.Float, required=False,
+            help='The total energy of each supercell.')
+        spec.output('phonopy_data', valid_type=PhonopyData, required=False,
             help=(
                 'The phonopy data with supercells displacements, forces and (optionally)'
                 'nac parameters to use in the post-processing calculation.'
-            )
-        )
-        spec.output(
-            'output_force_constants',
-            valid_type=ForceConstantsData,
-            required=False,
-            help='The matrix of force constants computed with finite displacements.'
-        )
+        ))
+        spec.output('force_constants', valid_type=ForceConstantsData, required=False,
+            help='The matrix of force constants computed with finite displacements.')
+        spec.expose_outputs(PhonopyCalculation, namespace='output_phonopy', namespace_options={'required': False})
+
+        spec.exit_code(400, 'ERROR_SUB_PROCESS_FAILED',
+            message='At least one sub processe did not finish successfully.')
+        spec.exit_code(401, 'ERROR_PHONOPY_CALCULATION_FAILED',
+            message='The PhonopyCalculation did not finish successfully.')
+        # yapf: enable
 
     @classmethod
     def _validate_displacements(cls, value, _):
@@ -363,3 +293,79 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
             preprocess = PreProcessData.generate_preprocess_data(**preprocess_inputs)
 
         self.ctx.preprocess_data = preprocess
+
+    def run_supercells(self):
+        """Run supercell with displacements."""
+        supercells = self.ctx.preprocess_data.calcfunctions.get_supercells_with_displacements()
+        self.ctx.supercells = list(supercells.items())
+        self.out('supercells', supercells)
+
+    def run_forces(self):
+        """Run the forces for each supercell."""
+        raise NotImplementedError
+
+    def inspect_forces(self):
+        """Inspect the calculation of forces for each supercell."""
+        raise NotImplementedError
+
+    def run_results(self):
+        """Gather the supercell forces and output the results."""
+        kwargs = {**self.outputs['supercells_forces']}
+
+        if 'nac_parameters' in self.inputs:
+            kwargs['nac_parameters'] = self.inputs.nac_parameters
+
+        self.ctx.phonopy_data = self.ctx.preprocess_data.calcfunctions.generate_phonopy_data(**kwargs)
+        self.out('phonopy_data', self.ctx.phonopy_data)
+
+    def should_run_phonopy(self):
+        """Return whether to run a PhonopyCalculation."""
+        return 'phonopy' in self.inputs
+
+    def run_phonopy(self):
+        """Run a `PhonopyCalculation` to get the force constants."""
+        inputs = AttributeDict(self.exposed_inputs(PhonopyCalculation, namespace='phonopy'))
+        inputs.phonopy_data = self.ctx.phonopy_data
+
+        key = 'phonopy_calculation'
+        inputs.metadata.call_link_label = key
+
+        future = self.submit(PhonopyCalculation, **inputs)
+        self.report(f'submitting `PhonopyCalculation` <PK={future.pk}>')
+        self.to_context(**{key: future})
+
+    def inspect_phonopy(self):
+        """Inspect that the `PhonopyCalculation` finished successfully."""
+        calc = self.ctx.phonopy_calculation
+
+        if calc.is_finished_ok:
+            try:
+                self.ctx.force_constants = calc.outputs.output_force_constants
+            except AttributeError:
+                self.report('WARNING: no force constants in output')
+        else:
+            self.report(f'PhonopyCalculation failed with exit status {calc.exit_status}')
+            return self.exit_codes.ERROR_PHONOPY_CALCULATION_FAILED
+
+        self.out_many(self.exposed_outputs(calc, PhonopyCalculation, namespace='output_phonopy'))
+
+    def on_terminated(self):
+        """Clean the working directories of all child calculations if `clean_workdir=True` in the inputs."""
+        super().on_terminated()
+
+        if self.inputs.clean_workdir.value is False:
+            self.report('remote folders will not be cleaned')
+            return
+
+        cleaned_calcs = []
+
+        for called_descendant in self.node.called_descendants:
+            if isinstance(called_descendant, orm.CalcJobNode):
+                try:
+                    called_descendant.outputs.remote_folder._clean()  # pylint: disable=protected-access
+                    cleaned_calcs.append(called_descendant.pk)
+                except (IOError, OSError, KeyError):
+                    pass
+
+        if cleaned_calcs:
+            self.report(f"cleaned remote folders of calculations: {' '.join(map(str, cleaned_calcs))}")
