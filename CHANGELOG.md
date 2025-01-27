@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.2.0 - 2024-01-27
+
+[full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.2.0...v1.1.4)
+
+### ✨ New features
+
+- `PhonopyAseWorkChain`: automated phonons using _any_ ASE calculator (ideal for ML potentials).
+
+### 🗑️ Deprecations
+
+- Deprecate python v3.8 and lower.
+
+### 📚 Documentation
+
+- Added tutorials
+
+### ⬆️ Update dependencies
+
+- Add `aiida-pythonjob` as dependency to run ASE on remote computers (e.g. ML calculators).
+- Update python dependencies up to v3.12.
+
+
 ## v1.1.4 - 2023-12-09
 
 [full changelog](https://github.com/aiida-phonopy/aiida-phonopy/compare/v1.1.4...v1.1.3)
