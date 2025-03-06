@@ -85,10 +85,11 @@ jobs:
                     pip-${{ matrix.python-version }}-tests
 
         -   name: Setup Conda
-            uses: s-weigand/setup-conda@v1
+            uses: conda-incubator/setup-miniconda@v3
             with:
                 python-version: ${{ matrix.python-version }}
-                conda-channels: conda-forge
+                channels: conda-forge
+                auto-activate-base: true
 
         -   name: Set up Phonopy # ${{ matrix.phonopy-version }}
             run: conda install -y phonopy
