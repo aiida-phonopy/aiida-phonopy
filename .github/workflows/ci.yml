@@ -36,11 +36,12 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
-            fail-fast: false
             matrix:
-                include:
-                -   python-version: '3.9'
-                -   python-version: '3.12'
+                python-version: ['3.9', '3.12']
+
+        defaults:
+            run:
+                shell: bash -l {0}
 
         services:
             rabbitmq:

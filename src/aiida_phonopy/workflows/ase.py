@@ -101,7 +101,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         if max_number_of_atoms is not None:
             spglib_cell, _, _ = structure_to_spglib_tuple(builder.structure)
             spglib_dataset = spglib.get_symmetry_dataset(spglib_cell)
-            to_conv = spglib_dataset.transformation_matrix  # to conventional cell
+            to_conv = spglib_dataset['transformation_matrix']  # to conventional cell
             matrix = estimate_supercell_matrix(spglib_dataset, max_number_of_atoms)
             supercell_matrix = np.dot(np.linalg.inv(to_conv), np.diag(matrix)).tolist()
             builder.supercell_matrix = orm.List(supercell_matrix)
