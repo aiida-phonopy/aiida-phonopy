@@ -9,11 +9,11 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-        -   uses: actions/checkout@v1
+        -   uses: actions/checkout@v4
 
         -   name: Cache python dependencies
             id: cache-pip
-            uses: actions/cache@v1
+            uses: actions/cache@v4
             with:
                 path: ~/.cache/pip
                 key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
@@ -36,11 +36,12 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
-            fail-fast: false
             matrix:
-                include:
-                -   python-version: '3.9'
-                -   python-version: '3.12'
+                python-version: ['3.9', '3.12']
+
+        defaults:
+            run:
+                shell: bash -l {0}
 
         services:
             rabbitmq:
@@ -49,11 +50,11 @@ jobs:
                 -   5672:5672
 
         steps:
-        -   uses: actions/checkout@v2
+        -   uses: actions/checkout@v4
 
         -   name: Cache python dependencies
             id: cache-pip
-            uses: actions/cache@v1
+            uses: actions/cache@v4
             with:
                 path: ~/.cache/pip
                 key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
@@ -61,10 +62,11 @@ jobs:
                     pip-${{ matrix.python-version }}-tests
 
         -   name: Setup Conda
-            uses: s-weigand/setup-conda@v1
+            uses: conda-incubator/setup-miniconda@v3
             with:
                 python-version: ${{ matrix.python-version }}
-                conda-channels: conda-forge
+                channels: conda-forge
+                auto-activate-base: true
 
         -   name: Set up Phonopy # ${{ matrix.phonopy-version }}
             run: conda install -y phonopy
