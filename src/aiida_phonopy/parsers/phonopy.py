@@ -335,7 +335,7 @@ class PhonopyParser(Parser):
         import re
 
         # Loading the data
-        data = {key: file[key][:] for key in file.keys()}
+        data = {key: file[key][:] for key in file.keys() if key != 'natom'}
 
         # Initializing the bands object and setting the reciprocal lattice from the unitcell.
         if 'phonopy_data' in self.node.inputs:
