@@ -394,7 +394,7 @@ def generate_example_phonopy_data():
         phyaml = os.path.join(basepath, 'fixtures', 'phonopy', 'phonopy.yaml')
         fsets = os.path.join(basepath, 'fixtures', 'phonopy', 'FORCE_SETS')
 
-        ph = phonopy.load(phyaml, force_sets_filename=fsets)
+        ph = phonopy.load(phyaml, force_sets_filename=fsets, fc_calculator='traditional', log_level=2)
 
         preprocess_data = PreProcessData(phonopy_atoms=ph.unitcell, supercell_matrix=[3, 3, 3])
         preprocess_data.set_displacements_from_dataset(dataset=ph.dataset)
@@ -423,7 +423,7 @@ def generate_force_constants():
         phyaml = os.path.join(basepath, 'fixtures', 'phonopy', 'phonopy.yaml')
         fsets = os.path.join(basepath, 'fixtures', 'phonopy', 'FORCE_SETS')
 
-        ph = phonopy.load(phyaml, force_sets_filename=fsets)
+        ph = phonopy.load(phyaml, force_sets_filename=fsets, fc_calculator='traditional', log_level=2)
         ph.produce_force_constants()
 
         fc_data = ForceConstantsData(
