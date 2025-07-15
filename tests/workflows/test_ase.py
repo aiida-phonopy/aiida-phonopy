@@ -10,7 +10,7 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
     """Generate an instance of a `PhonopyAseWorkChain`."""
 
     def _generate_workchain_phonopy_ase(append_inputs=None, phonon_inputs=None, return_inputs=False):
-        from aiida.orm import Dict, PortableCode
+        from aiida.orm import Dict, InstalledCode
         from ase.calculators.lj import LennardJones
 
         from aiida_phonopy.workflows.ase import PhonopyAseWorkChain
@@ -20,8 +20,8 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
         if not shutil.which('phonopy'):
             phonopy_inputs = None
         else:
-            code = PortableCode(
-                # computer=fixture_localhost,
+            code = InstalledCode(
+                computer=fixture_localhost,
                 filepath_executable=shutil.which('phonopy'),
                 input_plugin_name='phonopy.phonopy',
                 label='phonopy',
