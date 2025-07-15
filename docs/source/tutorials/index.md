@@ -18,7 +18,7 @@ Added new tutorial and workflow: {py:class}`~aiida_phonopy.workflows.ase.Phonopy
 
 - [ASE workflow tutorial](../phonopy_ase.ipynb): get starting with using in a general way the package, starting from defining the structure of a cubic silicon, to computing its phonon band structure.
 - [Basic tutorial](../basic.ipynb): get starting with using in a general way the package, starting from defining the structure of a cubic silicon, to computing its phonon band structure.
-- [Intermidiate tutorial](../intermidiate.ipynb): learn the concept of non-analytical constants for polar insulators, important for interpolating the phonon band structure.
+- [Intermidiate tutorial](../intermediate.ipynb): learn the concept of non-analytical constants for polar insulators, important for interpolating the phonon band structure.
 - [Advanced tutorial](../advanced.ipynb): dedicated to learn more advanced options that you might need during your research.
 
 ```{toctree}
@@ -26,7 +26,7 @@ Added new tutorial and workflow: {py:class}`~aiida_phonopy.workflows.ase.Phonopy
 :hidden: true
 
 ../basic.ipynb
-../../intermidiate.ipynb
+../../intermediate.ipynb
 ../../advanced.ipynb
 ../../phonopy_ase.ipynb
 ```
