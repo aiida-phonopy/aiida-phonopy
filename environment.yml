@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python=3.9
   - pip
-  - aiida-core~=2.3.0
+  - aiida-core~=2.3.0,!=2.7.0
   - xmltodict
   - jupyterlab=3
   - jupyterlab-myst
