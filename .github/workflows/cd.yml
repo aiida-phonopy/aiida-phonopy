@@ -54,20 +54,18 @@ jobs:
     tests:
 
         needs: [validate-release-tag]
+
         runs-on: ubuntu-latest
 
         strategy:
-            fail-fast: false
             matrix:
-                include:
-                -   python-version: '3.9'
-                -   python-version: '3.10'
-                -   python-version: '3.11'
-                -   python-version: '3.12'
+                python-version: ['3.9', '3.10', '3.11', '3.12']
+
+        defaults:
+            run:
+                shell: bash -l {0}
 
         services:
-            postgres:
-                image: postgres:12
             rabbitmq:
                 image: rabbitmq:latest
                 ports:
