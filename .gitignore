@@ -47,7 +47,7 @@ docker-compose.yml
 
 .DS_Store
 docs/source/_build
-docs/source/reference
+docs/source/reference/*
 _archive/
 _aiida_path
 _aiida_workdir

@@ -21,9 +21,10 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
             phonopy_inputs = None
         else:
             code = InstalledCode(
-                label='phonopy',
                 computer=fixture_localhost,
                 filepath_executable=shutil.which('phonopy'),
+                input_plugin_name='phonopy.phonopy',
+                label='phonopy',
                 default_calc_job_plugin='phonopy.phonopy',
             )
             phonopy_inputs = {
