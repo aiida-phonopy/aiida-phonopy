@@ -1,3 +1,15 @@
+## v1.2.1
+
+Patch release to avoid aiida-core v2.7.0 that ships with a mysterious behaviour that makes
+some PhonopyCalculation to crash. Tests are also updated due to phonopy new default
+calculation for force constants that makes use of an other package that is still under active developments and does not manage to reproduce/interpolate the old default behaviour.
+
+### ⬆️ Update dependencies
+
+- Do not support aiida-core v2.7.0 due to mysterious bug that makes PhonopyCalculation to crash.
+
+
+
 # Changelog
 
 ## v1.2.0 - 2024-01-27
