@@ -4,6 +4,7 @@ This is the official AiiDA plugin for [Phonopy](https://phonopy.github.io/phonop
 
 |    | |
 |-----|----------------------------------------------------------------------------|
+| Reference | [![DOI](https://img.shields.io/badge/DOI-10.1038/s41524024012363-purple.svg)](https://doi.org/10.1038/s41524-024-01236-3) |
 |Latest release| [![PyPI version](https://badge.fury.io/py/aiida-phonopy.svg)](https://badge.fury.io/py/aiida-phonopy)[![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-phonopy.svg)](https://pypi.python.org/pypi/aiida-phonopy) |
 |Getting help| [![Docs status](https://readthedocs.org/projects/aiida-phonopy/badge)](http://aiida-phonopy.readthedocs.io/) [![Discourse status](https://img.shields.io/discourse/status?server=https%3A%2F%2Faiida.discourse.group%2F)](https://aiida.discourse.group/)
 |Build status| [![Build Status](https://github.com/aiida-phonopy/aiida-phonopy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aiida-phonopy/aiida-phonopy/actions) [![Coverage Status](https://codecov.io/gh/aiida-phonopy/aiida-phonopy/branch/main/graph/badge.svg)](https://codecov.io/gh/aiida-phonopy/aiida-phonopy) |
