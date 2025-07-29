@@ -57,7 +57,7 @@ with automatic data provenance provided by AiiDA.
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-phonopy.svg)](https://pypi.python.org/pypi/aiida-phonopy)
 [![Build Status](https://github.com/aiida-phonopy/aiida-phonopy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aiida-phonopy/aiida-phonopy/actions)
 [![Docs status](https://readthedocs.org/projects/aiida-phonopy/badge)](http://aiida-phonopy.readthedocs.io/)
-[![DOI](https://img.shields.io/badge/DOI-10.1038/s41524024012363-purple.svg)](https://doi.org/10.1038/s41524-024-01236-3) 
+[![DOI](https://img.shields.io/badge/DOI-10.1038/s41524024012363-purple.svg)](https://doi.org/10.1038/s41524-024-01236-3)
 
 :::{versionadded} 1.2.0
 New automated workflow to compute phonons using _any_ ASE calculator! \
