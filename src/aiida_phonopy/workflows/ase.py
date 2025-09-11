@@ -13,10 +13,10 @@ from .phonopy import PhonopyWorkChain
 
 
 @calcfunction
-def get_forces_array(result: orm.Data) -> orm.ArrayData:
+def get_forces_array(result: orm.ArrayData) -> orm.ArrayData:
     """Convert the forces from a PythonJob result to ArrayData."""
     array = orm.ArrayData()
-    array.set_array('forces', result.value)
+    array.set_array('forces', result.get_array('default'))
     return array
 
 
@@ -77,7 +77,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         # We need to define the function here to avoid validation error.
         # If would import this function from somewhere else, aiida-pythonjob
         # would serialize this function with a module path which raises an error.
-        def calculate_forces(calculator, atoms):
+        def calculate_forces(atoms):
             """Calculate the forces of an ASE Atoms structure given an ASE calculator."""
             atoms.calc = calculator
             return atoms.get_forces()
@@ -101,7 +101,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         if max_number_of_atoms is not None:
             spglib_cell, _, _ = structure_to_spglib_tuple(builder.structure)
             spglib_dataset = spglib.get_symmetry_dataset(spglib_cell)
-            to_conv = spglib_dataset['transformation_matrix']  # to conventional cell
+            to_conv = spglib_dataset.transformation_matrix  # to conventional cell
             matrix = estimate_supercell_matrix(spglib_dataset, max_number_of_atoms)
             supercell_matrix = np.dot(np.linalg.inv(to_conv), np.diag(matrix)).tolist()
             builder.supercell_matrix = orm.List(supercell_matrix)
@@ -116,9 +116,10 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         pythonjob_dict_inputs = prepare_pythonjob_inputs(
             function=calculate_forces,
             function_inputs={
-                'calculator': calculator,
+                # 'calculator': calculator,
                 'atoms': builder.structure.get_ase()
             },
+            register_pickle_by_value=True,
             **pythonjob_inputs
         )
 

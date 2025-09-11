@@ -7,7 +7,8 @@ import shutil
 
 import pytest
 
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+# pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+pytest_plugins = ['aiida.tools.pytest_fixtures']  # pylint: disable=invalid-name
 
 
 @pytest.fixture(scope='session')
