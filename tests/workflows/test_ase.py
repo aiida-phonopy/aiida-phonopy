@@ -11,7 +11,7 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
 
     def _generate_workchain_phonopy_ase(append_inputs=None, phonon_inputs=None, return_inputs=False):
         from aiida.orm import Dict, InstalledCode
-        from ase.calculators.lj import LennardJones
+        import ase.calculators.lj
 
         from aiida_phonopy.workflows.ase import PhonopyAseWorkChain
 
@@ -34,7 +34,7 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
 
         inputs = PhonopyAseWorkChain.get_populated_builder(
             structure=generate_structure(),
-            calculator=LennardJones(),
+            calculator=ase.calculators.lj.LennardJones(),
             max_number_of_atoms=40,
             pythonjob_inputs={'computer': fixture_localhost.hostname},
             phonopy_inputs=phonopy_inputs,
