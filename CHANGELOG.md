@@ -1,3 +1,14 @@
+## v1.3.0
+
+Minor release to support some breaking compatibilities with new versions of `phonopy` and `aiida-pythonjob`.
+We also address in passing some deprecation warnings from `phonopy`.
+
+### ⬆️ Update dependencies
+
+- Drop support for phonopy versions < 2.39.
+- Drop support for aiida-pythonjob versions < 0.3.
+
+
 ## v1.2.1
 
 Patch release to avoid aiida-core v2.7.0 that ships with a mysterious behaviour that makes
