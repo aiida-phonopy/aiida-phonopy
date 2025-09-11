@@ -387,8 +387,12 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         :type factor_nac: float
         :param kwargs: for internal use to set the primitive cell
         """
+        from phonopy.physical_units import get_physical_units
         from phonopy.structure.symmetry import symmetrize_borns_and_epsilon
-        from phonopy.units import Bohr, Hartree
+
+        units = get_physical_units()
+        Bohr = units.Bohr
+        Hartree = units.Hartree
 
         distinguish = kwargs.pop('distinguish', self.distinguish_kinds)
         unitcell = self._get_phonopy_atoms_unitcell(distinguish)
