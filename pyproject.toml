@@ -18,15 +18,16 @@ classifiers = [
     'Operating System :: POSIX :: Linux',
     'Operating System :: MacOS :: MacOS X',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
     'Topic :: Scientific/Engineering :: Physics',
     'Topic :: Scientific/Engineering :: Chemistry',
 ]
 keywords = ['aiida', 'phonopy', 'workflows']
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 dependencies = [
     "aiida-core~=2.0,!=2.7.0",
     "phonopy~=2.39",

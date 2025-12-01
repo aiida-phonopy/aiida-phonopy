@@ -23,7 +23,7 @@ jobs:
         -   name: Set up Python
             uses: actions/setup-python@v2
             with:
-                python-version: '3.9'
+                python-version: '3.10'
 
         -   name: Install python dependencies
             run: pip install -e .[pre-commit,tests]
@@ -37,7 +37,7 @@ jobs:
 
         strategy:
             matrix:
-                python-version: ['3.9', '3.12']
+                python-version: ['3.10', '3.12', '3.14']
 
         defaults:
             run:
@@ -87,6 +87,6 @@ jobs:
             uses: codecov/codecov-action@v3
             with:
                 token: ${{ secrets.CODECOV_TOKEN }}
-                name: pytests-phonopy3.10
+                name: pytests-phonopy3.12
                 flags: pytests
                 fail_ci_if_error: true
