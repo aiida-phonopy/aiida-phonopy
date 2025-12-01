@@ -3,10 +3,7 @@ version: 2
 build:
   os: ubuntu-22.04
   tools:
-    python: mambaforge-4.10
-
-conda:
-  environment: environment.yml
+    python: "3.11"
 
 python:
     install:
@@ -15,6 +12,8 @@ python:
           extra_requirements:
             - docs
 
+# Let the build fail if there are any warnings
 sphinx:
+    builder: html
     configuration: docs/source/conf.py
     fail_on_warning: false
