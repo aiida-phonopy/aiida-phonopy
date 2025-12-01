@@ -30,7 +30,7 @@ requires-python = '>=3.9'
 dependencies = [
     "aiida-core~=2.0,!=2.7.0",
     "phonopy~=2.39",
-    "aiida-pythonjob~=0.3",
+    "aiida-pythonjob~=0.4",
     "seekpath",
 ]
 
