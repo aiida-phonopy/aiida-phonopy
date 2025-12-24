@@ -1,5 +1,5 @@
 
-.. _topics:calculations:pw:
+.. _topics:calculations:phonopy:
 
 ``PhonopyCalculation`` (phonopy.phonopy)
 ----------------------------------------
