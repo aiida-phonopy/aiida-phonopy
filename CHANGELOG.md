@@ -1,3 +1,12 @@
+## v1.4.0
+
+Minor release to support Python 3.13 and drop 3.9, which is at end-of-life.
+
+### ⬆️ Update dependencies
+
+- Drop support for Python 3.9 and support 3.13.
+
+
 ## v1.3.0
 
 Minor release to support some breaking compatibilities with new versions of `phonopy` and `aiida-pythonjob`.
