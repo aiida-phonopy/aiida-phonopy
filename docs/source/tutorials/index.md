@@ -3,8 +3,8 @@
 
 ```{important}
 Before you get started, make sure that you have:
-* installed the ``aiida-phonopy`` package [see instructions](../installation/index.rst)
-* configured the ``phonopy`` [(see instructions)](../installation/index.rst)
+* installed the ``aiida-phonopy`` package [see instructions](../installation/index.md)
+* configured the ``phonopy`` [(see instructions)](../installation/index.md)
 ```
 
 In this section you will find some tutorials that you will guide you through how to use the aiida-phonopy package, from **zero** to **hero**!
