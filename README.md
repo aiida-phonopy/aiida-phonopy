@@ -13,12 +13,13 @@ This is the official AiiDA plugin for [Phonopy](https://phonopy.github.io/phonop
 
 ## Compatibility
 
-From `v0.7.0` this plugin does not support retro-compatibility with previous versions,
-due to a restructure of the package.
+From `v0.7.0` this plugin is not backward compatible with previous versions,
+due to a restructuring of the package.
 
 | Plugin | AiiDA | Phonopy |
 |-|-|-|
-| >=`v1.0.0` < v`2.0.0` | >=`v2.0.0` <`v3.0.0` |  >=`v2.14.0` <`v3.0.0` |
+| >=`v1.5.0` < v`2.0.0` | >=`v2.8.0` <`v3.0.0` |  >=`v3.0.0` <`v4.0.0` |
+| >=`v1.0.0` < v`1.5.0` | >=`v2.0.0` <`v3.0.0` |  >=`v2.14.0` <`v3.0.0` |
 | >=`v0.7.0` < v`1.0.0` | >=`v1.6.0` <`v2.0.0` |  >=`v2.14.0` <`v3.0.0` |
 
 ## Installation
@@ -38,7 +39,9 @@ If you use this plugin for your research, please cite the following works:
 
 * L. Bastonero and N. Marzari, [*Automated all-functionals infrared and Raman spectra*](https://doi.org/10.1038/s41524-024-01236-3), npj Computational Materials **10**, 55 (2024)
 
-* A. Togo and I. Tanaka, [*First principles phonon calculations in materials science*](http://dx.doi.org/10.1016/j.scriptamat.2015.07.021), Scripta Materialia **108**, 1-5 (2015)
+* A. Togo, L. Chaput, T. Tadano, and Isao Tanaka, [*Implementation strategies in phonopy and phono3py*](https://dx.doi.org/10.1088/1361-648X/acd831), J. Phys. Condens. Matter **35**, 353001-1-22 (2023)
+
+* A. Togo, [*First-principles Phonon Calculations with Phonopy and Phono3py*](https://doi.org/10.7566/JPSJ.92.012001), J. Phys. Soc. Jpn. **92**, 012001-1-21 (2023)
 
 * S. P. Huber _et al._, [*AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*](https://doi.org/10.1038/s41597-020-00638-4), Scientific Data **7**, 300 (2020)
 

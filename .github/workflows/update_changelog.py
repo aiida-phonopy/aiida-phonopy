@@ -51,7 +51,7 @@ def update_changelog():
     latest_tag = re.findall(r'(v\d\.\d\.\d)\n', tags)[-1]
 
     print(f'🔄 Comparing with latest tag `{latest_tag}`.')
-    commits = subprocess.run(['git', 'log', "--pretty=format:'%h|%H|%s'", '--', f'{latest_tag}..origin/main'],
+    commits = subprocess.run(['git', 'log', "--pretty=format:'%h|%H|%s'", f'{latest_tag}..origin/main'],
                              capture_output=True,
                              check=True,
                              encoding='utf-8').stdout

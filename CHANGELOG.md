@@ -1,3 +1,17 @@
+## v1.5.0
+
+Minor release to support the new versions of aiida-core and phonopy. Phonopy changed its major number, although the changes for this code are not breaking.
+
+### ‼️ Breaking changes
+
+* Deps: support phonopy 3.x[[dec44a2](https://github.com/aiida-phonopy/aiida-phonopy/commit/dec44a2c2de7d25180a219c0d3257bacc904d8cd)]
+
+### ⬆️ Update dependencies
+
+* Deps: support phonopy 3.x[[dec44a2](https://github.com/aiida-phonopy/aiida-phonopy/commit/dec44a2c2de7d25180a219c0d3257bacc904d8cd)]
+* Deps: support aiida-core 2.8[[8fcd1a5](https://github.com/aiida-phonopy/aiida-phonopy/commit/8fcd1a5a487d51d69d64014dd39daf59c4274504)]
+
+
 ## v1.4.0
 
 Minor release to support Python 3.13 and drop 3.9, which is at end-of-life.
