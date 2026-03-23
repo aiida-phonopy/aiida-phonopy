@@ -1,3 +1,12 @@
+## v1.6.0
+
+Minor release to support Python 3.14.
+
+### ⬆️ Update dependencies
+
+* Python: support 3.14 [[048f7ae](https://github.com/aiida-phonopy/aiida-phonopy/commit/048f7aee8ddeca4727e77dc19f2b0db16995c85b)]
+
+
 ## v1.5.0
 
 Minor release to support the new versions of aiida-core and phonopy. Phonopy changed its major number, although the changes for this code are not breaking.
