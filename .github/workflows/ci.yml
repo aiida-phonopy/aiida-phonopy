@@ -9,7 +9,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-        -   uses: actions/checkout@v4
+        -   uses: actions/checkout@v5
 
         -   name: Cache python dependencies
             id: cache-pip
@@ -50,7 +50,7 @@ jobs:
                 -   5672:5672
 
         steps:
-        -   uses: actions/checkout@v4
+        -   uses: actions/checkout@v5
 
         -   name: Cache python dependencies
             id: cache-pip
