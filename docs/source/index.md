@@ -176,7 +176,9 @@ If you use this plugin for your research, please cite the following works:
 
 > Lorenzo Bastonero and Nicola Marzari, [*Automated all-functionals infrared and Raman spectra*](https://doi.org/10.1038/s41524-024-01236-3), npj Computational Materials **10**, 55 (2024)
 
-> Atsushi Togo and Isao Tanaka, {{ phonopy_paper }}, Scripta Materialia **108**, 1-5 (2015)
+> A. Togo, L. Chaput, T. Tadano, and Isao Tanaka, [*Implementation strategies in phonopy and phono3py*](https://dx.doi.org/10.1088/1361-648X/acd831), J. Phys. Condens. Matter **35**, 353001-1-22 (2023)
+
+> A. Togo, [*First-principles Phonon Calculations with Phonopy and Phono3py*](https://doi.org/10.7566/JPSJ.92.012001), J. Phys. Soc. Jpn. **92**, 012001-1-21 (2023)
 
 > Sebastiaan. P. Huber _et al._, [*AiiDA 1.0, a scalable computational infrastructure for automated
 reproducible workflows and data provenance*](https://doi.org/10.1038/s41597-020-00638-4),
