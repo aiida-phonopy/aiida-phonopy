@@ -28,9 +28,9 @@ classifiers = [
 keywords = ['aiida', 'phonopy', 'workflows']
 requires-python = '>=3.10'
 dependencies = [
-    "aiida-core~=2.0,!=2.7.0",
+    "aiida-core~=2.8",
     "phonopy~=2.39",
-    "aiida-pythonjob~=0.4",
+    "aiida-pythonjob~=0.5",
     "seekpath",
 ]
 
