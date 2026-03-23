@@ -366,7 +366,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             'cell': self.cell,
             'positions': self.positions,
             'masses': self.masses,
-            'magmoms': self.magnetic_moments
+            'magnetic_moments': self.magnetic_moments
         }
         if distinguish_kinds:
             kwargs.update({'numbers': self.numbers})

@@ -360,8 +360,6 @@ class PhonopyCalculation(CalcJob):
 
     def write_phonopy_info(self, folder):
         """Write in `folder` the `phonopy.yaml` file."""
-        from phonopy.interface.phonopy_yaml import PhonopyYaml
-
         kwargs = {}
 
         if 'settings' in self.inputs:
@@ -375,10 +373,8 @@ class PhonopyCalculation(CalcJob):
         elif 'force_constants' in self.inputs:
             ph = self.inputs.force_constants.get_phonopy_instance(**kwargs)
 
-        # Setting the phonopy yaml obtject to produce yaml lines
-        # .. note: this does not write the force constants
-        phpy_yaml = PhonopyYaml()
-        phpy_yaml.set_phonon_info(ph)
+        # Setting the phonopy yaml object to produce yaml text
+        phpy_yaml = ph.to_phonopy_yaml()
         phpy_yaml_txt = str(phpy_yaml)
 
         with folder.open(self._DEFAULT_PHONOPY_FILE, 'w', encoding='utf8') as handle:
