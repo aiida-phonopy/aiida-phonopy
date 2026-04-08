@@ -80,14 +80,15 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         def calculate_forces(atoms):
             """Calculate forces for an ASE Atoms using an ASE calculator.
 
-            Notes:
-                In distributed execution (e.g. aiida-pythonjob), passing a pre-instantiated
-                ASE calculator can be problematic if it creates temporary directories during
-                instantiation (e.g. `ase.calculators.lammpsrun.LAMMPS`). Those paths will not
-                exist on the remote worker.
+            Notes
+            -----
+            In distributed execution (e.g. aiida-pythonjob), passing a pre-instantiated
+            ASE calculator can be problematic if it creates temporary directories during
+            instantiation (e.g. `ase.calculators.lammpsrun.LAMMPS`). Those paths will not
+            exist on the remote worker.
 
-                To avoid this, `calculator` may be provided as a factory (callable returning
-                an ASE Calculator), and it will be instantiated here on the worker.
+            To avoid this, `calculator` may be provided as a factory (callable returning
+            an ASE Calculator), and it will be instantiated here on the worker.
             """
             from ase.calculators.calculator import Calculator as AseCalculator
             import os
@@ -112,7 +113,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
                     for f in (calc.parameters.get('files', []) or []):
                         if os.path.isfile(f):
                             shutil.copy(f, os.path.join(new_tmp_dir, os.path.basename(f)))
-            except Exception:
+            except (AttributeError, KeyError, OSError, TypeError):
                 # Do not fail force evaluation due to tmp-dir repair issues.
                 pass
 
