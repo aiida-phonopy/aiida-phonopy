@@ -89,20 +89,20 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
 
             To avoid this, `calculator` may be provided as a factory (callable returning
             an ASE Calculator), and it will be instantiated here on the worker.
+
             """
-            from ase.calculators.calculator import Calculator as AseCalculator
             import os
             import shutil
             import tempfile
+
+            from ase.calculators.calculator import Calculator as AseCalculator
 
             calc = calculator
             if not isinstance(calc, AseCalculator):
                 if callable(calc):
                     calc = calc()
                 else:
-                    raise TypeError(
-                        '`calculator` must be an ASE Calculator instance or a factory returning one'
-                    )
+                    raise TypeError('`calculator` must be an ASE Calculator instance or a factory returning one')
 
             # Best-effort fix for calculators pickled with non-existing tmp_dir (common for LAMMPSRun)
             try:
@@ -119,7 +119,6 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
 
             atoms.calc = calc
             return atoms.get_forces()
-
 
         builder = cls.get_builder()
 
