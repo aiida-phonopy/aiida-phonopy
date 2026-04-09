@@ -35,7 +35,8 @@ writes `band.png`.
 
 ## Notes
 
-- Update `pythonjob_inputs["computer"]`, queue name, and scheduler options for
+- Update `pythonjob_inputs["code"]`, queue name, and scheduler options for
   your environment.
 - Ensure `phonopy@localhost` exists in your AiiDA profile, or replace it with
   your configured code label.
+- Ensure your remote code can visit the calculator you need.
