@@ -44,7 +44,7 @@ inputs = PhonopyAseWorkChain.get_populated_builder(
     calculator=make_lammps_calculator,
     max_number_of_atoms=200,
     pythonjob_inputs={
-        "computer": "sugon-4",
+        "code": load_code("python3@sugon-4"),
         "upload_files": {
             potential_path.name: str(potential_path),
         },
