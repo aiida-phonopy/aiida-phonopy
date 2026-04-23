@@ -9,7 +9,7 @@ import pytest
 def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_workchain, generate_structure):
     """Generate an instance of a `PhonopyAseWorkChain`."""
 
-    def _generate_workchain_phonopy_ase(append_inputs=None, phonon_inputs=None, return_inputs=False):
+    def _generate_workchain_phonopy_ase(append_inputs=None, phonon_inputs=None, return_inputs=False, calculator=None):
         from aiida.orm import Dict, InstalledCode
         import ase.calculators.lj
 
@@ -32,9 +32,12 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
                 'parameters': Dict({'band': 'auto'}),
             }
 
+        if calculator is None:
+            calculator = ase.calculators.lj.LennardJones()
+
         inputs = PhonopyAseWorkChain.get_populated_builder(
             structure=generate_structure(),
-            calculator=ase.calculators.lj.LennardJones(),
+            calculator=calculator,
             max_number_of_atoms=40,
             pythonjob_inputs={'computer': fixture_localhost.hostname},
             phonopy_inputs=phonopy_inputs,
@@ -60,6 +63,22 @@ def test_run(generate_workchain_phonopy_ase):
     from aiida.engine import run_get_node
 
     results, node = run_get_node(generate_workchain_phonopy_ase())
+    assert node.is_finished_ok
+
+    phonopy_data = results['phonopy_data'].get_phonopy_instance()
+    phonopy_data.produce_force_constants()
+
+    assert 'phonon_bands' in results['output_phonopy']
+
+
+def test_run_with_calculator_factory(generate_workchain_phonopy_ase):
+    """Run workchain with calculator as a factory callable (for remote PythonJob / tmp-dir calculators)."""
+    import ase.calculators.lj
+    from aiida.engine import run_get_node
+
+    results, node = run_get_node(
+        generate_workchain_phonopy_ase(calculator=lambda: ase.calculators.lj.LennardJones())
+    )
     assert node.is_finished_ok
 
     phonopy_data = results['phonopy_data'].get_phonopy_instance()

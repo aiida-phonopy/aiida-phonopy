@@ -127,7 +127,6 @@ load-plugins = ['pylint_aiida']
 ignore-paths= [
     'tests/*',
     'docs/*',
-    'examples/Remote_calculator/*',
 ]
 
 [tool.pylint.format]
