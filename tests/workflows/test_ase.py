@@ -73,12 +73,10 @@ def test_run(generate_workchain_phonopy_ase):
 
 def test_run_with_calculator_factory(generate_workchain_phonopy_ase):
     """Run workchain with calculator as a factory callable (for remote PythonJob / tmp-dir calculators)."""
-    import ase.calculators.lj
     from aiida.engine import run_get_node
+    import ase.calculators.lj
 
-    results, node = run_get_node(
-        generate_workchain_phonopy_ase(calculator=lambda: ase.calculators.lj.LennardJones())
-    )
+    results, node = run_get_node(generate_workchain_phonopy_ase(calculator=lambda: ase.calculators.lj.LennardJones()))
     assert node.is_finished_ok
 
     phonopy_data = results['phonopy_data'].get_phonopy_instance()
