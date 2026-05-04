@@ -2,9 +2,11 @@
 
 # Cite
 
-If you use this plugin for your research, please cite the following works:
+If you use this plugin for your research, please cite the following work:
 
 > Lorenzo Bastonero and Nicola Marzari, [*Automated all-functionals infrared and Raman spectra*](https://doi.org/10.1038/s41524-024-01236-3), npj Computational Materials **10**, 55 (2024)
+
+Please, cite also the respective Phonopy and AiiDA references:
 
 > A. Togo, L. Chaput, T. Tadano, and Isao Tanaka, [*Implementation strategies in phonopy and phono3py*](https://dx.doi.org/10.1088/1361-648X/acd831), J. Phys. Condens. Matter **35**, 353001-1-22 (2023)
 

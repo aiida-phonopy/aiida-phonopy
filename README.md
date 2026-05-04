@@ -35,9 +35,11 @@ or when installing from source:
 
 ## How to cite
 
-If you use this plugin for your research, please cite the following works:
+If you use this plugin for your research, please cite the following work:
 
 * L. Bastonero and N. Marzari, [*Automated all-functionals infrared and Raman spectra*](https://doi.org/10.1038/s41524-024-01236-3), npj Computational Materials **10**, 55 (2024)
+
+Please, also cite the respective Phonopy and AiiDA references:
 
 * A. Togo, L. Chaput, T. Tadano, and Isao Tanaka, [*Implementation strategies in phonopy and phono3py*](https://dx.doi.org/10.1088/1361-648X/acd831), J. Phys. Condens. Matter **35**, 353001-1-22 (2023)
 
@@ -47,13 +49,10 @@ If you use this plugin for your research, please cite the following works:
 
 * M. Uhrin _et al._, [*Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*](https://www.sciencedirect.com/science/article/pii/S0927025620305772), Computational Materials Science **187**, 110086 (2021)
 
-Please, also cite the underlying Quantum ESPRESSO and Phonopy codes references.
-
 ## License
 
 The `aiida-phonopy` plugin package is released under the MIT license.
 See the `LICENSE.txt` file for more details.
-
 
 ## Acknowlegements
 
