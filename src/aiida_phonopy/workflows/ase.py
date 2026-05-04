@@ -75,11 +75,47 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         import spglib
 
         # We need to define the function here to avoid validation error.
-        # If would import this function from somewhere else, aiida-pythonjob
+        # If we would import this function from somewhere else, aiida-pythonjob
         # would serialize this function with a module path which raises an error.
         def calculate_forces(atoms):
-            """Calculate the forces of an ASE Atoms structure given an ASE calculator."""
-            atoms.calc = calculator
+            """Calculate forces for an ASE Atoms using an ASE calculator.
+
+            ..note:: for distributed execution (e.g. aiida-pythonjob), passing a pre-instantiated
+            ASE calculator can be problematic if it creates temporary directories during
+            instantiation (e.g. `ase.calculators.lammpsrun.LAMMPS`). Those paths will not
+            exist on the remote worker.
+
+            To avoid this, `calculator` may be provided as a factory (callable returning
+            an ASE Calculator), and it will be instantiated on the worker.
+            """
+            import os
+            import shutil
+            import tempfile
+
+            from ase.calculators.calculator import Calculator as AseCalculator
+
+            calc = calculator
+            if not isinstance(calc, AseCalculator):
+                if callable(calc):
+                    calc = calc()
+                else:
+                    raise TypeError('`calculator` must be an ASE Calculator instance or a factory returning one')
+
+            # Best-effort fix for calculators pickled with non-existing tmp_dir (common for LAMMPSRun)
+            try:
+                tmp_dir = calc.parameters.get('tmp_dir', None)
+                if tmp_dir and not os.path.isdir(tmp_dir):
+                    new_tmp_dir = tempfile.mkdtemp(prefix='LAMMPS-')
+                    calc.parameters['tmp_dir'] = new_tmp_dir
+                    for f in (calc.parameters.get('files', []) or []):
+                        if os.path.isfile(f):
+                            shutil.copy(f, os.path.join(new_tmp_dir, os.path.basename(f)))
+            except (AttributeError, KeyError, OSError, TypeError):
+                # Do not fail force evaluation due to tmp-dir repair issues.
+                pass
+
+            atoms.calc = calc
+
             return atoms.get_forces()
 
         builder = cls.get_builder()
