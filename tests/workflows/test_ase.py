@@ -58,7 +58,7 @@ def test_validation(generate_workchain_phonopy_ase):
 def test_run(generate_workchain_phonopy_ase):
     """Test if the validation and the population of inputs works.
 
-    .. note:: this is really running the workchain, so it might take a while.
+    ..note:: this is really running the workchain, so it might take a while.
     """
     from aiida.engine import run_get_node
 
@@ -72,7 +72,10 @@ def test_run(generate_workchain_phonopy_ase):
 
 
 def test_run_with_calculator_factory(generate_workchain_phonopy_ase):
-    """Run workchain with calculator as a factory callable (for remote PythonJob / tmp-dir calculators)."""
+    """Run workchain with calculator as a factory callable (for remote PythonJob / tmp-dir calculators).
+
+    ..note:: this is really running the workchain, so it might take a while.
+    """
     from aiida.engine import run_get_node
     import ase.calculators.lj
 

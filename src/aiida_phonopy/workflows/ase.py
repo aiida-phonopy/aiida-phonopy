@@ -75,21 +75,18 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
         import spglib
 
         # We need to define the function here to avoid validation error.
-        # If would import this function from somewhere else, aiida-pythonjob
+        # If we would import this function from somewhere else, aiida-pythonjob
         # would serialize this function with a module path which raises an error.
         def calculate_forces(atoms):
             """Calculate forces for an ASE Atoms using an ASE calculator.
 
-            Notes
-            -----
-            In distributed execution (e.g. aiida-pythonjob), passing a pre-instantiated
+            ..note:: for distributed execution (e.g. aiida-pythonjob), passing a pre-instantiated
             ASE calculator can be problematic if it creates temporary directories during
             instantiation (e.g. `ase.calculators.lammpsrun.LAMMPS`). Those paths will not
             exist on the remote worker.
 
             To avoid this, `calculator` may be provided as a factory (callable returning
-            an ASE Calculator), and it will be instantiated here on the worker.
-
+            an ASE Calculator), and it will be instantiated on the worker.
             """
             import os
             import shutil
@@ -118,6 +115,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
                 pass
 
             atoms.calc = calc
+
             return atoms.get_forces()
 
         builder = cls.get_builder()
