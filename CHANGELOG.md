@@ -1,3 +1,17 @@
+## v1.7.0
+
+Minor release to support remote ASE calculator instantiation, useful for ML and classical potentials.
+
+### ✨ New features
+### 👌 Improvements
+
+* `PhonopyAse`: support calculator factories for PythonJob [[39b7e34](https://github.com/aiida-phonopy/aiida-phonopy/commit/39b7e34a2691985f80902a6c1344e7b8bdcf6630)]
+
+### 📚 Documentation
+
+* Update citation references [[237b985](https://github.com/aiida-phonopy/aiida-phonopy/commit/237b98576b3972b32f3922437e208a2287753801)]
+
+
 ## v1.6.0
 
 Minor release to support Python 3.14.
