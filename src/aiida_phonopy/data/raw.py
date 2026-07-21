@@ -140,10 +140,10 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
     def _set_phonopy_version(self):
         """Set the installed Phonopy version."""
-        from phonopy.version import __version__ as the_phonopy_version
+        import phonopy
 
-        self._if_can_modify()
-        self.base.attributes.set('phonopy_version', the_phonopy_version)
+        self._if_can_modify()  # pylint: disable=protected-access
+        self.base.attributes.set('phonopy_version', phonopy.__version__)
 
     @property
     def numbers(self) -> np.ndarray:

@@ -115,6 +115,7 @@ def test_phonopy_minimal(generate_calc_job_node, generate_parser, generate_minim
     entry_point_parser = 'phonopy.phonopy'
 
     attributes = {'retrieve_temporary_list': ['phonopy.yaml']}
+    attributes = {'retrieve_temporary_list': []}
 
     node = generate_calc_job_node(
         entry_point_calc_job,
@@ -137,7 +138,7 @@ def test_phonopy_bands(generate_calc_job_node, generate_parser, generate_band_in
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
-    attributes = {'retrieve_temporary_list': ['phonopy.yaml', 'band.hdf5']}
+    attributes = {'retrieve_temporary_list': ['band.hdf5']}
 
     node = generate_calc_job_node(
         entry_point_calc_job,
@@ -161,7 +162,7 @@ def test_phonopy_dos(generate_calc_job_node, generate_parser, generate_dos_input
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
-    attributes = {'retrieve_temporary_list': ['phonopy.yaml', 'total_dos.dat']}
+    attributes = {'retrieve_temporary_list': ['total_dos.dat']}
 
     node = generate_calc_job_node(
         entry_point_calc_job,
@@ -185,7 +186,7 @@ def test_phonopy_pdos(generate_calc_job_node, generate_parser, generate_pdos_inp
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
-    attributes = {'retrieve_temporary_list': ['phonopy.yaml', 'projected_dos.dat']}
+    attributes = {'retrieve_temporary_list': ['projected_dos.dat']}
 
     node = generate_calc_job_node(
         entry_point_calc_job,
@@ -242,7 +243,6 @@ def test_phonopy_outputs(
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
-    temporary_list += ['phonopy.yaml']
     attributes = {'retrieve_temporary_list': temporary_list}
 
     node = generate_calc_job_node(
@@ -269,7 +269,7 @@ def test_phonopy_phonopy_missing(generate_calc_job_node, generate_parser, genera
     entry_point_calc_job = 'phonopy.phonopy'
     entry_point_parser = 'phonopy.phonopy'
 
-    attributes = {'retrieve_temporary_list': ['phonopy.yaml']}
+    attributes = {'retrieve_temporary_list': []}
 
     node = generate_calc_job_node(
         entry_point_calc_job,

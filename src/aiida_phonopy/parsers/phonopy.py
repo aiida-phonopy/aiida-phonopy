@@ -45,6 +45,8 @@ class PhonopyParser(Parser):
             # We should implement `filenames` depending whether they were
             # put in the retrieved or in the temporary folder.
             filenames = os.listdir(retrieved_temporary_folder)
+        else:
+            filenames = []
 
         # Parse the stdout
         parsed_stdout, logs_stdout, exit_code_stdout = self.parse_stdout()

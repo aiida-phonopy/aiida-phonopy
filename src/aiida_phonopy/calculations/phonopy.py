@@ -37,7 +37,8 @@ class PhonopyCalculation(CalcJob):
 
     _DEFAULT_INPUT_FILE = 'aiida.in'
     _DEFAULT_OUTPUT_FILE = 'aiida.out'
-    _DEFAULT_PHONOPY_FILE = 'phonopy.yaml'
+    _DEFAULT_PHONOPY_FILE = 'phonopy_disp.yaml'
+    _DEFAULT_SUMMARY_FILE = 'phonopy.yaml'
 
     _INPUT_SUBFOLDER = './'
     _OUTPUT_SUBFOLDER = './'
@@ -303,7 +304,7 @@ class PhonopyCalculation(CalcJob):
         self.write_calculation_input(folder, parameters, filename)
 
         # from phonopy recommendations, filename of the inputs configuration goes first
-        calculation_cmds.append([filename])
+        calculation_cmds.append(['--config', filename])
 
         # ================= retreiving phonopy output files ===================
 
@@ -311,15 +312,19 @@ class PhonopyCalculation(CalcJob):
         # Animation files and `phonopy.yaml` can be retrieved preparing
         # the `settings` input namespace accordingly.
         retrieve_list.append(self.inputs.metadata.options.output_filename)
+        retrieve_list.append(self.inputs.metadata.options.input_filename)
+
         if settings.pop('keep_animation_files', None):
             for format_ in ['jmol', 'xyz', 'xyz_jmol', 'arc', 'ascii']:
                 retrieve_list.append(f'anime.{format_}')
             retrieve_list.append('APOSCAR-*')
 
-        if settings.pop('keep_phonopy_yaml', False):
+        if settings.pop('keep_phonopy_yaml', True):
             retrieve_list.append(self._DEFAULT_PHONOPY_FILE)
         else:
             retrieve_temporary_list.append(self._DEFAULT_PHONOPY_FILE)
+
+        retrieve_list.append(self._DEFAULT_SUMMARY_FILE)
 
         # Retrieving everything and raising error from parser if something is missing.
         for value in self._OUTPUTS.values():
@@ -359,7 +364,7 @@ class PhonopyCalculation(CalcJob):
         return None
 
     def write_phonopy_info(self, folder):
-        """Write in `folder` the `phonopy.yaml` file."""
+        """Write in `folder` the `phonopy_disp.yaml` file."""
         kwargs = {}
 
         if 'settings' in self.inputs:
