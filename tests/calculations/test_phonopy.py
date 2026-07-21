@@ -5,6 +5,7 @@ from aiida import orm
 from aiida.common import datastructures
 import pytest
 
+from aiida_phonopy.calculations.phonopy import PhonopyCalculation
 from aiida_phonopy.utils.resources import get_default_options
 
 
@@ -45,9 +46,11 @@ def test_phonopy_default(fixture_sandbox, generate_calc_job, generate_inputs):
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
-    raw_inputs = ['phonopy.yaml', 'aiida.in']
+    raw_inputs = [
+        PhonopyCalculation._DEFAULT_INPUT_FILE,
+        PhonopyCalculation._DEFAULT_PHONOPY_FILE,
+    ]
     retrieve_temporary_list = [
-        'phonopy.yaml',
         'force_constants.hdf5',
         'band.hdf5',
         'qpoints.hdf5',
@@ -60,7 +63,12 @@ def test_phonopy_default(fixture_sandbox, generate_calc_job, generate_inputs):
         'total_dos.dat',
         'projected_dos.dat',
     ]
-    retrieve_list = ['aiida.out']
+    retrieve_list = [
+        PhonopyCalculation._DEFAULT_INPUT_FILE,
+        PhonopyCalculation._DEFAULT_PHONOPY_FILE,
+        PhonopyCalculation._DEFAULT_SUMMARY_FILE,
+        PhonopyCalculation._DEFAULT_OUTPUT_FILE,
+    ]
 
     # Check the attributes of the returned `CalcInfo`
     assert isinstance(calc_info, datastructures.CalcInfo)
@@ -86,9 +94,11 @@ def test_phonopy_with_fc(fixture_sandbox, generate_calc_job, generate_inputs, ge
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
-    raw_inputs = ['phonopy.yaml', 'aiida.in']
+    raw_inputs = [
+        PhonopyCalculation._DEFAULT_INPUT_FILE,
+        PhonopyCalculation._DEFAULT_PHONOPY_FILE,
+    ]
     retrieve_temporary_list = [
-        'phonopy.yaml',
         'band.hdf5',
         'qpoints.hdf5',
         'mesh.hdf5',
@@ -100,7 +110,12 @@ def test_phonopy_with_fc(fixture_sandbox, generate_calc_job, generate_inputs, ge
         'total_dos.dat',
         'projected_dos.dat',
     ]
-    retrieve_list = ['aiida.out']
+    retrieve_list = [
+        PhonopyCalculation._DEFAULT_INPUT_FILE,
+        PhonopyCalculation._DEFAULT_PHONOPY_FILE,
+        PhonopyCalculation._DEFAULT_SUMMARY_FILE,
+        PhonopyCalculation._DEFAULT_OUTPUT_FILE,
+    ]
 
     # Check the attributes of the returned `CalcInfo`
     assert isinstance(calc_info, datastructures.CalcInfo)
@@ -123,7 +138,7 @@ def test_phonopy_cmdsline(fixture_sandbox, generate_calc_job, generate_inputs):
     parameters = orm.Dict({'band': 'auto', 'writedm': False})
     inputs = generate_inputs(parameters=parameters)
 
-    cmd = ['aiida.in']
+    cmd = ['--config', PhonopyCalculation._DEFAULT_INPUT_FILE]
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
