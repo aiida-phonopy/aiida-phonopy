@@ -1,3 +1,13 @@
+## v1.8.0
+
+Minor release to support phonopy v4.0, as it introduces some breaking changes in the CLI. The API would be in principle backward compatible, but in order to not create confusion, we support the version that support both API and CLI.
+
+### ⬆️ Update dependencies
+
+* Deps: drop phonopy v3.x, support phonopy v4.x [[abfdd7d](https://github.com/aiida-phonopy/aiida-phonopy/commit/abfdd7d16fdfe476a55934216d82f7a296f3fcc8)]
+
+
+
 ## v1.7.0
 
 Minor release to support remote ASE calculator instantiation, useful for ML and classical potentials.
