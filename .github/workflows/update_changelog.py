@@ -1,6 +1,6 @@
 #!/bin/bash
-# -*- coding: utf-8 -*-
 """Script for automatically updating the `CHANGELOG.md` based on the commits since the latest release tag."""
+
 from pathlib import Path
 import re
 import subprocess
@@ -51,23 +51,24 @@ def update_changelog():
     latest_tag = re.findall(r'(v\d\.\d\.\d)\n', tags)[-1]
 
     print(f'🔄 Comparing with latest tag `{latest_tag}`.')
-    commits = subprocess.run(['git', 'log', "--pretty=format:'%h|%H|%s'", f'{latest_tag}..origin/main'],
-                             capture_output=True,
-                             check=True,
-                             encoding='utf-8').stdout
+    commits = subprocess.run(
+        ['git', 'log', "--pretty=format:'%h|%H|%s'", f'{latest_tag}..origin/main'],
+        capture_output=True,
+        check=True,
+        encoding='utf-8',
+    ).stdout
 
     pr_pattern = re.compile(r'\(\S(?P<pr_number>\d+)\)')
 
     changelog_message = f'## v{__version__}\n' + DEFAULT_CHANGELOG_SECTIONS
 
     for commit in commits.splitlines():
-
         # Remove the PR number from the commit message
         pr_match = pr_pattern.search(commit)
 
         if pr_match is not None:
             pr_number = pr_match.groupdict()['pr_number']
-            commit = commit.replace(fr'(#{pr_number})', '')
+            commit = commit.replace(rf'(#{pr_number})', '')
 
         # Add the commit hash (short) to link to the changelog
         commit = commit.strip("'")

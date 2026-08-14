@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Module defining the class which wraps the :class:`phonopy.Phonopy` main class."""
+
 from __future__ import annotations
 
 from typing import Union
@@ -10,7 +10,7 @@ from phonopy import Phonopy
 from .preprocess import PreProcessData
 
 
-class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
+class PhonopyData(PreProcessData):
     """Class wrapping the :class:`phonopy.Phonopy` class.
 
     It represents the final Data node status of a frozen phonon calculaiton.
@@ -143,7 +143,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
         except (KeyError, AttributeError):
             pass
 
-        if not 'forces_1' in self.get_arraynames():
+        if 'forces_1' not in self.get_arraynames():
             return
 
         try:
@@ -151,9 +151,9 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
             the_forces = np.zeros((nsupercells)).tolist()
             for i in range(nsupercells):
                 if self.forces_index is not None:
-                    the_forces[i] = self.get_array(f'forces_{i+1}')[self.forces_index]
+                    the_forces[i] = self.get_array(f'forces_{i + 1}')[self.forces_index]
                 else:
-                    the_forces[i] = self.get_array(f'forces_{i+1}')
+                    the_forces[i] = self.get_array(f'forces_{i + 1}')
             the_forces = np.array(the_forces)
         except (KeyError, AttributeError):
             return
@@ -164,7 +164,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
         self,
         sets_of_forces: Union[list, np.ndarray, None] = None,
         dict_of_forces: dict | None = None,
-        forces_index: int | None = None
+        forces_index: int | None = None,
     ):
         """Set forces per each supercell with displacement in the dataset.
 
@@ -209,7 +209,7 @@ class PhonopyData(PreProcessData):  # pylint: disable=too-many-ancestors
                     raise ValueError(f'{key} is not correct. Expected `forces_num` as key')
             # Third, store
             for key, value in dict_of_forces.items():
-                new_key = f"forces_{int(key.split('_')[-1])}"
+                new_key = f'forces_{int(key.split("_")[-1])}'
                 self.set_array(new_key, np.array(value))
 
         if forces_index is not None:

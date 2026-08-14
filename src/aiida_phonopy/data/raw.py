@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Module defining the base class for other Data types."""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -38,7 +38,7 @@ def _get_valid_matrix(matrix: Union[list, np.ndarray]) -> np.ndarray:
 
     for row in matrix:
         if isinstance(row, list):
-            if not len(row) in [0, 3]:
+            if len(row) not in [0, 3]:
                 raise ValueError('matrix need to have (3,1) or (3,3) shape.')
             for element in row:
                 if not isinstance(element, (int, float)):
@@ -53,7 +53,7 @@ def _get_valid_matrix(matrix: Union[list, np.ndarray]) -> np.ndarray:
     return valid_matrix
 
 
-class RawData(ArrayData):  # pylint: disable=too-many-ancestors
+class RawData(ArrayData):
     """Base class containing the information for the other phonon related data types."""
 
     def __init__(
@@ -65,7 +65,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         symprec: float = 1e-05,
         is_symmetry: bool = True,
         distinguish_kinds: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """Instantiate the class.
 
@@ -117,7 +117,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         self._set_distinguish_kinds(distinguish_kinds)  # crucial before setting symbols/names!
         self._set_symbols_and_names()
 
-        if not supercell_matrix is None:
+        if supercell_matrix is not None:
             self._set_supercell_matrix(supercell_matrix)
         else:
             self._set_supercell_matrix(np.eye(3))
@@ -142,7 +142,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
         """Set the installed Phonopy version."""
         import phonopy
 
-        self._if_can_modify()  # pylint: disable=protected-access
+        self._if_can_modify()
         self.base.attributes.set('phonopy_version', phonopy.__version__)
 
     @property
@@ -205,14 +205,16 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
     def _set_unitcell_attributes(self, phonopy_atoms: PhonopyAtoms, pbc: tuple[bool, bool, bool]):
         """Set the attributes for full reproducibility of the `PhonopyAtoms` class."""
         self._if_can_modify()
-        self.base.attributes.set_many({
-            'numbers': phonopy_atoms.numbers,
-            'masses': phonopy_atoms.masses,
-            'positions': phonopy_atoms.positions,
-            'cell': phonopy_atoms.cell,
-            'magnetic_moments': phonopy_atoms.magnetic_moments,
-            'pbc': pbc,
-        })
+        self.base.attributes.set_many(
+            {
+                'numbers': phonopy_atoms.numbers,
+                'masses': phonopy_atoms.masses,
+                'positions': phonopy_atoms.positions,
+                'cell': phonopy_atoms.cell,
+                'magnetic_moments': phonopy_atoms.magnetic_moments,
+                'pbc': pbc,
+            }
+        )
 
     def _set_symbols_and_names(self):
         """Set the `symbols` and `names`."""
@@ -366,7 +368,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             'cell': self.cell,
             'positions': self.positions,
             'masses': self.masses,
-            'magnetic_moments': self.magnetic_moments
+            'magnetic_moments': self.magnetic_moments,
         }
         if distinguish_kinds:
             kwargs.update({'numbers': self.numbers})
@@ -406,7 +408,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
             supercell_matrix=self.supercell_matrix,
             primitive_matrix=primitive_matrix,
             symprec=self.symprec,
-            is_symmetry=self.is_symmetry
+            is_symmetry=self.is_symmetry,
         )
 
         # Non-analytical parameters
@@ -565,7 +567,7 @@ class RawData(ArrayData):  # pylint: disable=too-many-ancestors
 
     def has_nac_parameters(self) -> bool:
         """Return wheter or not the Data has non-analytical constants."""
-        return (self.dielectric is not None and self.born_charges is not None)
+        return self.dielectric is not None and self.born_charges is not None
 
     def _if_can_modify(self):
         """Check if the object is stored and raise an error if so. To use in every setter."""

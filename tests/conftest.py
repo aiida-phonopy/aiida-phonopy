@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,too-many-statements
 """Initialise a text database and profile for pytest."""
+
 from collections.abc import Mapping
 import os
 import shutil
 
 import pytest
 
-# pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
-pytest_plugins = ['aiida.tools.pytest_fixtures']  # pylint: disable=invalid-name
+# pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 
 @pytest.fixture(scope='session')
@@ -77,7 +76,6 @@ def serialize_builder():
     """
 
     def serialize_data(data):
-        # pylint: disable=too-many-return-statements
         from aiida.orm import AbstractCode, BaseType, Data, Dict, KpointsData, RemoteData
         from aiida.plugins import DataFactory
 
@@ -114,12 +112,12 @@ def serialize_builder():
                 return data.get_kpoints_mesh()
 
         if isinstance(data, Data):
-            return data.base.caching._get_hash()  # pylint: disable=protected-access
+            return data.base.caching._get_hash()
 
         return data
 
     def _serialize_builder(builder):
-        return serialize_data(builder._inputs(prune=True))  # pylint: disable=protected-access
+        return serialize_data(builder._inputs(prune=True))
 
     return _serialize_builder
 
@@ -196,7 +194,7 @@ def generate_calc_job_node(fixture_localhost):
 
         if test_name is not None:
             basepath = os.path.dirname(os.path.abspath(__file__))
-            filename = os.path.join(entry_point_name[len('phonopy.'):], test_name)
+            filename = os.path.join(entry_point_name[len('phonopy.') :], test_name)
             filepath_folder = os.path.join(basepath, 'parsers', 'fixtures', filename)
             # filepath_input = os.path.join(filepath_folder, "aiida.in")
 
@@ -307,6 +305,7 @@ def generate_raw_data(generate_structure):
     def _generate_raw_data(structure_id='silicon', pbc=[True, True, True], inputs=None):
         """Return a `RawData`."""
         from aiida_phonopy.data.raw import RawData
+
         structure = generate_structure(structure_id=structure_id, pbc=pbc)
 
         if inputs is None:
@@ -331,6 +330,7 @@ def generate_preprocess_data(generate_structure):
     def _generate_preprocess_data(structure_id='silicon', pbc=[True, True, True], inputs=None):
         """Return a `PreProcessData`."""
         from aiida_phonopy.data.preprocess import PreProcessData
+
         structure = generate_structure(structure_id=structure_id, pbc=pbc)
 
         if inputs is None:
@@ -363,8 +363,11 @@ def generate_phonopy_data(generate_preprocess_data):
         phonopy_data = PhonopyData(preprocess_data=preprocess_data)
 
         if forces is None:
-            phonopy_data.set_forces([[[1., 0., 0.], [-1., 0., 0.]]  # 1st displacement
-                                     ])
+            phonopy_data.set_forces(
+                [
+                    [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]  # 1st displacement
+                ]
+            )
         else:
             phonopy_data.set_forces(forces)
 

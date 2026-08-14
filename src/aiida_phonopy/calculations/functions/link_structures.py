@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Functions for linking PhonopyAtoms and StructureData."""
+
 from __future__ import annotations
 
 from aiida.orm import StructureData

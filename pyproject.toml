@@ -1,6 +1,6 @@
 [build-system]
-requires = ['flit_core>=3.4,<4']
-build-backend = 'flit_core.buildapi'
+requires = ['hatchling']
+build-backend = 'hatchling.build'
 
 [project]
 name = 'aiida-phonopy'
@@ -40,10 +40,7 @@ Source = "https://github.com/aiida-phonopy/aiida-phonopy"
 
 [project.optional-dependencies]
 pre-commit = [
-    'pre-commit~=2.17',
-    'pylint==2.17.2',
-    'pylint-aiida~=0.1.1',
-    'toml',
+    'pre-commit>=4.3.0',
 ]
 tests = [
     'ase',
@@ -68,6 +65,11 @@ docs = [
     'sphinx-togglebutton',
 ]
 
+[dependency-groups]
+dev = [
+  "aiida-phonopy[docs,tests,pre-commit]",
+]
+
 [project.entry-points.'aiida.data']
 'phonopy.raw' = 'aiida_phonopy.data.raw:RawData'
 'phonopy.preprocess' = 'aiida_phonopy.data.preprocess:PreProcessData'
@@ -84,96 +86,82 @@ docs = [
 'phonopy.phonopy' = 'aiida_phonopy.workflows.phonopy:PhonopyWorkChain'
 'phonopy.ase' = 'aiida_phonopy.workflows.ase:PhonopyAseWorkChain'
 
-[tool.flit.module]
-name = 'aiida_phonopy'
+[tool.hatch.build.targets.wheel]
+packages = ['src/aiida_phonopy']
 
-[tool.flit.sdist]
+[tool.hatch.build.targets.sdist]
 exclude = [
-    'tests/',
-    'docs/',
+  'docs/',
+  'examples/',
+  'tests/',
 ]
 
-[tool.flynt]
+[tool.hatch.version]
+path = 'src/aiida_phonopy/__init__.py'
+
+[tool.hatch.envs.default]
+installer = 'uv'
+
+[tool.hatch.envs.pre-commit]
+features = ["pre-commit"]
+scripts.install = 'pre-commit install'
+scripts.run = 'pre-commit run {args}'
+
+[tool.hatch.envs.hatch-test]
+features = ["tests"]
+randomize = false
+parallel = false
+run = "pytest {args}"
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+[tool.hatch.envs.docs]
+features = ["docs"]
+scripts.clean = 'make -C docs clean'
+scripts.build = 'make -C docs html'
+scripts.view = 'make -C docs view'
+
+[tool.ruff]
 line-length = 120
-fail-on-change = true
-
-[tool.isort]
-force_sort_within_sections = true
-include_trailing_comma = true
-line_length = 120
-multi_line_output = 3
-
-[tool.pydocstyle]
-ignore = [
-    'D104',
-    'D203',
-    'D213'
+extend-exclude = ['*.ipynb']
+lint.ignore = [
+    "ARG002",  # https://docs.astral.sh/ruff/rules/unused-method-argument/
+    "ARG004",  # https://docs.astral.sh/ruff/rules/unused-static-method-argument/
+    "B028",    # https://docs.astral.sh/ruff/rules/no-explicit-stacklevel/
+    "BLE001",  # https://docs.astral.sh/ruff/rules/blind-except/
+    "EM101",   # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+    "EM102",   # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+    "EXE001",  # https://docs.astral.sh/ruff/rules/shebang-not-executable/
+    "FA100",   # https://docs.astral.sh/ruff/rules/future-rewritable-type-annotation/
+    "FBT001",  # https://docs.astral.sh/ruff/rules/boolean-type-hint-positional-argument/
+    "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
+    "G004",    # https://docs.astral.sh/ruff/rules/logging-f-string/
+    "N805",    # https://docs.astral.sh/ruff/rules/invalid-first-argument-name-for-method/
+    "PERF401", # https://docs.astral.sh/ruff/rules/manual-list-comprehension/
+    "PLR2004", # https://docs.astral.sh/ruff/rules/magic-value-comparison/
+    "RUF005",  # https://docs.astral.sh/ruff/rules/collection-literal-concatenation/
+    "RUF012",  # https://docs.astral.sh/ruff/rules/mutable-class-default/
+    "RET503",  # https://docs.astral.sh/ruff/rules/implicit-return/
+    "S110",    # https://docs.astral.sh/ruff/rules/try-except-pass/
+    "S318",    # https://docs.astral.sh/ruff/rules/suspicious-xml-mini-dom-usage/
+    "S314",    # https://docs.astral.sh/ruff/rules/suspicious-xml-element-tree-usage/
+    "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/
+    "TRY004",  # https://docs.astral.sh/ruff/rules/type-check-without-type-error/
+    "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
+    "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
-
-[tool.pylint.basic]
-good-names = [
-    "_",
-    "x",
-    "y",
-    "z",
-    "i",
-    "j",
-    "k",
-    "l",
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
+    "PT009",   # https://docs.astral.sh/ruff/rules/pytest-unittest-assertion/
+    "PT011",   # https://docs.astral.sh/ruff/rules/pytest-raises-too-broad/
+    "PT027",   # https://docs.astral.sh/ruff/rules/pytest-unittest-raises-assertion/
+    "S101",    # https://docs.astral.sh/ruff/rules/assert/
+    "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
 ]
+"docs/**/*.py" = ["ALL"]
+"examples/**/*.py" = ["ALL"]
 
-[tool.pylint.master]
-load-plugins = ['pylint_aiida']
-ignore-paths= [
-    'tests/*',
-    'docs/*',
-]
-
-[tool.pylint.format]
-max-line-length = 120
-
-[tool.pylint.messages_control]
-disable = [
-    'protected-access',
-    'duplicate-code',
-    'import-outside-toplevel',
-    'inconsistent-return-statements',
-    'invalid-name',
-    'no-member',
-    'too-many-arguments',
-    'too-many-branches',
-    'too-many-locals',
-    'too-many-statements',
-    'too-many-public-methods',
-    'arguments-differ',
-]
-
-[tool.yapf]
-align_closing_bracket_with_visual_indent = true
-based_on_style = 'google'
-coalesce_brackets = true
-column_limit = 120
-dedent_closing_brackets = true
-indent_dictionary_value = false
-split_arguments_when_comma_terminated = true
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist =
-    py{39,310,311,312}
-    py39-pre-commit
-
-[testenv]
-description = Run the pytest tests
-usedevelop = True
-extras = tests
-commands = pytest {posargs}
-
-[testenv:py39-pre-commit]
-description = Run the pre-commit checks
-extras =
-    tests
-    pre-commit
-commands = pre-commit run {posargs}
-"""
+[tool.ruff.format]
+quote-style = "single"

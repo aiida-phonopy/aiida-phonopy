@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida_phonopy.data` module."""
 
 import numpy as np
@@ -14,7 +13,7 @@ def test_raw_attributes(generate_raw_data):
 
     assert raw_data.numbers.tolist() == [14, 14]
     assert raw_data.masses.tolist() == [28.0855, 28.0855]
-    assert raw_data.positions.tolist() == [[0., 0., 0.], [param / 4.0, param / 4.0, param / 4.0]]
+    assert raw_data.positions.tolist() == [[0.0, 0.0, 0.0], [param / 4.0, param / 4.0, param / 4.0]]
     assert raw_data.cell.tolist() == cell
     assert raw_data.magnetic_moments is None
     assert raw_data.symbols == ['Si', 'Si']
@@ -46,7 +45,8 @@ def test_raw_with_no_symmetries(generate_raw_data):
 
 @pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize(
-    'pbc', (
+    'pbc',
+    (
         (True, True, True),
         (True, True, False),
         (True, False, True),
@@ -54,7 +54,7 @@ def test_raw_with_no_symmetries(generate_raw_data):
         (True, False, False),
         (False, True, False),
         (False, False, True),
-    )
+    ),
 )
 def test_pbc(generate_raw_data, pbc):
     """Test `RawData` with different PBC."""
@@ -75,9 +75,9 @@ def test_raw_attributes_with_kinds(generate_raw_data):
 
     assert raw_data.numbers.tolist() == [1, 2]
     assert raw_data.masses.tolist() == [28.0855, 28.0855]
-    assert raw_data.positions.tolist() == [[0., 0., 0.], [param / 4.0, param / 4.0, param / 4.0]]
+    assert raw_data.positions.tolist() == [[0.0, 0.0, 0.0], [param / 4.0, param / 4.0, param / 4.0]]
     assert raw_data.cell.tolist() == cell
-    assert raw_data.magnetic_moments == None
+    assert raw_data.magnetic_moments is None
     assert raw_data.symbols == ['Si', 'Si']
     assert raw_data.names == ['A', 'B']
     assert raw_data.kinds_map is not None
@@ -87,6 +87,7 @@ def test_raw_attributes_with_kinds(generate_raw_data):
 def test_raw_methods(generate_raw_data):
     """Test `RawData` methods."""
     from phonopy import Phonopy
+
     raw_data = generate_raw_data(structure_id='silicon-with-names')
     phonopy_istance = raw_data.get_phonopy_instance()
 
@@ -119,7 +120,7 @@ def test_valid_nacs(generate_raw_data):
     bcs = np.zeros((2, 3, 3))
     raw_data.set_born_charges(bcs)
 
-    assert raw_data.has_nac_parameters() == True
+    assert raw_data.has_nac_parameters()
 
     raw_data.get_phonopy_instance()
     raw_data.get_phonopy_instance(symmetrize_nac=False)

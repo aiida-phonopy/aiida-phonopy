@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Load and populate a temporary profile with a computer and code."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -55,7 +56,6 @@ def load_temp_profile(
     profile = get_profile()
 
     if not (profile and profile.name == name):
-
         if wipe_previous and repo_path.exists():
             shutil.rmtree(repo_path)
         if wipe_previous and workdir_path.exists():

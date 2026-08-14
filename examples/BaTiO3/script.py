@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Simple script for running a PhonopyCalculation."""
+
 from aiida import load_profile, orm
 from aiida.engine import submit
 import phonopy
@@ -29,11 +30,9 @@ def main():
         'phonopy_data': phonopy_data,
         'metadata': {
             'options': {
-                'resources': {
-                    'num_machines': 1
-                },
+                'resources': {'num_machines': 1},
             }
-        }
+        },
     }
 
     submit(PhonopyCalculation, **inputs)

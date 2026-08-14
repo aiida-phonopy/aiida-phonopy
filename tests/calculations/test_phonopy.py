@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name
 """Tests for :class:`aiida_phonopy.calculations.PhonopyCalculation`."""
+
 from aiida import orm
 from aiida.common import datastructures
 import pytest
@@ -29,9 +28,7 @@ def generate_inputs(
             'code': fixture_code('phonopy'),
             'phonopy_data': phonopy_data,
             'parameters': parameters,
-            'metadata': {
-                'options': get_default_options()
-            },
+            'metadata': {'options': get_default_options()},
         }
 
         return ret_dic

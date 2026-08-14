@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`~aiida_phonopy.data` module."""
+
 import pytest
 
 
@@ -7,7 +7,7 @@ import pytest
 def test_phonopy_attributes(generate_phonopy_data):
     """Test `PhonopyData` attributes."""
     phonopy_data = generate_phonopy_data()
-    assert phonopy_data.forces.tolist() == [[[1., 0., 0.], [-1., 0., 0.]]]
+    assert phonopy_data.forces.tolist() == [[[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]]
 
 
 @pytest.mark.usefixtures('aiida_profile')

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Test for the :mod:`~aiida_phonopy.workflows.ase` module."""
+
 import shutil
 
 import pytest

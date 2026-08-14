@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilities to deal with various mapping data structures."""
 
 
@@ -13,13 +12,15 @@ def get_logging_container():
     """
     from aiida.common import AttributeDict
 
-    return AttributeDict({
-        'debug': [],
-        'info': [],
-        'warning': [],
-        'error': [],
-        'critical': [],
-    })
+    return AttributeDict(
+        {
+            'debug': [],
+            'info': [],
+            'warning': [],
+            'error': [],
+            'critical': [],
+        }
+    )
 
 
 def _case_transform_dict(dictionary: dict, dict_name: str, func_name, transform):

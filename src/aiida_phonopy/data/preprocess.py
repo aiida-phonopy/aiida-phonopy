@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=not-context-manager
 """Module defining the class for managing the frozen phonon structure."""
+
 from __future__ import annotations
 
 import copy
@@ -16,7 +15,7 @@ from aiida_phonopy.calculations.functions.link_structures import phonopy_atoms_t
 from .raw import RawData
 
 
-class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
+class PreProcessData(RawData):
     """Class for pre-processing of frozen-phonon calculations.
 
     This class is designed for handling the pre-process information regarding
@@ -33,7 +32,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         symprec: float = 1e-05,
         is_symmetry: bool = True,
         distinguish_kinds: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """Instantiate the class.
 
@@ -73,6 +72,7 @@ class PreProcessData(RawData):  # pylint: disable=too-many-ancestors
         message = '`displacement_dataset` stored in the database will be deprecated in v2.0.0'
         try:
             import warnings
+
             the_dataset = self.base.attributes.get('displacement_dataset')
             warnings.warn(message, DeprecationWarning)
             return the_dataset

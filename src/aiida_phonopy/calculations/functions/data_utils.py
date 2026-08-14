@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Calcfunctions Utils for aiida-phonopy DataTypes."""
+
 from __future__ import annotations
 
 from typing import Union
@@ -9,8 +9,15 @@ from aiida.engine import calcfunction
 from aiida.plugins import DataFactory
 
 __all__ = (
-    'get_unitcell', 'get_primitive', 'get_supercell', 'get_supercells_with_displacements', 'get_displacements',
-    'get_preprocess_with_new_displacements', 'generate_preprocess_data', 'generate_phonopy_data', 'CalcfunctionMixin'
+    'get_unitcell',
+    'get_primitive',
+    'get_supercell',
+    'get_supercells_with_displacements',
+    'get_displacements',
+    'get_preprocess_with_new_displacements',
+    'generate_preprocess_data',
+    'generate_phonopy_data',
+    'CalcfunctionMixin',
 )
 
 
@@ -150,7 +157,7 @@ def generate_phonopy_data(
     preprocess_data,
     nac_parameters: Union[orm.ArrayData, None] = None,
     forces_index: Union[orm.Int, None] = None,
-    **forces_dict
+    **forces_dict,
 ):
     """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
@@ -242,7 +249,7 @@ class CalcfunctionMixin:
         self,
         nac_parameters: Union[orm.ArrayData, None] = None,
         forces_index: Union[orm.Int, None] = None,
-        **forces_dict
+        **forces_dict,
     ):
         """Create a PhonopyData node from a PreProcess(Phonopy)Data node.
 
