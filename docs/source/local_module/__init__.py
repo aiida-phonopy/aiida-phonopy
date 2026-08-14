@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A module of code related to the tutorial."""
+
 import os
 import pathlib
 import warnings

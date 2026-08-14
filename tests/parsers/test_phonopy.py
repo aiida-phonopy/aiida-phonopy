@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the `PhonopyPpParser` class."""
 
 from aiida import orm
@@ -22,11 +21,9 @@ def generate_phonopy_calculation_inputs(fixture_code, generate_example_phonopy_d
             'phonopy_data': generate_example_phonopy_data(),
             'metadata': {
                 'options': {
-                    'resources': {
-                        'num_machines': 1
-                    },
+                    'resources': {'num_machines': 1},
                 }
-            }
+            },
         }
 
         return inputs
@@ -48,10 +45,10 @@ def generate_alas_phonopy_data():
         cell = np.diag((param, param, param)).tolist()
 
         structure = orm.StructureData(cell=cell)
-        structure.append_atom(position=(0., 0., 0.), symbols='Al')
-        structure.append_atom(position=(0., 0.5, 0.5), symbols='Al')
-        structure.append_atom(position=(0.5, 0., 0.5), symbols='Al')
-        structure.append_atom(position=(0.5, 0.5, 0.), symbols='Al')
+        structure.append_atom(position=(0.0, 0.0, 0.0), symbols='Al')
+        structure.append_atom(position=(0.0, 0.5, 0.5), symbols='Al')
+        structure.append_atom(position=(0.5, 0.0, 0.5), symbols='Al')
+        structure.append_atom(position=(0.5, 0.5, 0.0), symbols='Al')
         structure.append_atom(position=(0.25, 0.25, 0.25), symbols='As')
         structure.append_atom(position=(0.25, 0.75, 0.75), symbols='As')
         structure.append_atom(position=(0.75, 0.75, 0.25), symbols='As')
@@ -88,11 +85,7 @@ def generate_dos_inputs(generate_alas_phonopy_data):
     """Return only those inputs that the parser will expect to be there."""
     return {
         'phonopy_data': generate_alas_phonopy_data(),
-        'parameters': orm.Dict({
-            'DOS': True,
-            'MESH': 50,
-            'WRITE_MESH': False
-        }),
+        'parameters': orm.Dict({'DOS': True, 'MESH': 50, 'WRITE_MESH': False}),
     }
 
 
@@ -101,11 +94,7 @@ def generate_pdos_inputs(generate_alas_phonopy_data):
     """Return only those inputs that the parser will expect to be there."""
     return {
         'phonopy_data': generate_alas_phonopy_data(),
-        'parameters': orm.Dict({
-            'PDOS': 'Al',
-            'MESH': 50,
-            'WRITE_MESH': False
-        }),
+        'parameters': orm.Dict({'PDOS': 'Al', 'MESH': 50, 'WRITE_MESH': False}),
     }
 
 
@@ -208,36 +197,49 @@ def test_phonopy_pdos(generate_calc_job_node, generate_parser, generate_pdos_inp
 @pytest.mark.parametrize(
     ('parameters', 'test_name', 'output_results', 'temporary_list'),
     (
-        ({
-            'FORCE_CONSTANTS': 'write'
-        }, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
-        ({
-            'WRITE_FORCE_CONSTANTS': True
-        }, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
-        ({
-            'BAND': 'AUTO'
-        }, 'default_outputs_band', ['phonon_bands'], ['band.hdf5']),
-        ({
-            'TPROP': True,
-            'MESH': 50,
-            'WRITE_MESH': False,
-        }, 'default_outputs_tprop', ['thermal_properties'], ['thermal_properties.yaml']),
-        ({
-            'TPROP': True,
-            'MESH': 50,
-            'WRITE_MESH': True,
-        }, 'default_outputs_mesh', ['thermal_properties', 'qpoints_mesh'], ['thermal_properties.yaml', 'mesh.hdf5']),
-        ({
-            'QPOINTS': [1, 1, 1, 2, 2, 2]
-        }, 'default_outputs_qpoints', ['qpoints'], ['qpoints.hdf5']),
-        ({
-            'IRREPS': [0, 0, 0],
-        }, 'default_outputs_irreps', ['irreducible_representations'], ['irreps.yaml']),
+        ({'FORCE_CONSTANTS': 'write'}, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
+        ({'WRITE_FORCE_CONSTANTS': True}, 'default_outputs_fc', ['output_force_constants'], ['force_constants.hdf5']),
+        ({'BAND': 'AUTO'}, 'default_outputs_band', ['phonon_bands'], ['band.hdf5']),
+        (
+            {
+                'TPROP': True,
+                'MESH': 50,
+                'WRITE_MESH': False,
+            },
+            'default_outputs_tprop',
+            ['thermal_properties'],
+            ['thermal_properties.yaml'],
+        ),
+        (
+            {
+                'TPROP': True,
+                'MESH': 50,
+                'WRITE_MESH': True,
+            },
+            'default_outputs_mesh',
+            ['thermal_properties', 'qpoints_mesh'],
+            ['thermal_properties.yaml', 'mesh.hdf5'],
+        ),
+        ({'QPOINTS': [1, 1, 1, 2, 2, 2]}, 'default_outputs_qpoints', ['qpoints'], ['qpoints.hdf5']),
+        (
+            {
+                'IRREPS': [0, 0, 0],
+            },
+            'default_outputs_irreps',
+            ['irreducible_representations'],
+            ['irreps.yaml'],
+        ),
     ),
 )
 def test_phonopy_outputs(
-    generate_calc_job_node, generate_parser, generate_phonopy_calculation_inputs, parameters, test_name, output_results,
-    temporary_list, tmpdir
+    generate_calc_job_node,
+    generate_parser,
+    generate_phonopy_calculation_inputs,
+    parameters,
+    test_name,
+    output_results,
+    temporary_list,
+    tmpdir,
 ):
     """Test a `phonopy` calculation with different outputs."""
     entry_point_calc_job = 'phonopy.phonopy'

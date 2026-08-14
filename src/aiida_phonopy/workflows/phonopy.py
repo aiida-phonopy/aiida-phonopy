@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Abstract workflow for automatic frozen phonons calculations."""
+
 from abc import ABCMeta
 
 from aiida import orm
@@ -27,7 +27,7 @@ def validate_inputs(inputs, _):
     if given_inputs and 'structure' not in given_inputs:
         return 'a structure data is required'
 
-    if not given_inputs and not 'preprocess_data' in inputs:
+    if not given_inputs and 'preprocess_data' not in inputs:
         return 'at least one between `preprocess_data` and `structure` must be provided in input'
 
 
@@ -153,7 +153,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
     @classmethod
     def define(cls, spec):
         """Define inputs, outputs, and outline."""
-        # yapf: disable
+        # fmt: off
         super().define(spec)
 
         spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
@@ -233,7 +233,7 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
             message='At least one sub processe did not finish successfully.')
         spec.exit_code(401, 'ERROR_PHONOPY_CALCULATION_FAILED',
             message='The PhonopyCalculation did not finish successfully.')
-        # yapf: enable
+        # fmt: on
 
     @classmethod
     def _validate_displacements(cls, value, _):
@@ -286,7 +286,12 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         else:
             preprocess_inputs = {}
             for input_ in [
-                'structure', 'supercell_matrix', 'primitive_matrix', 'symprec', 'is_symmetry', 'displacement_generator'
+                'structure',
+                'supercell_matrix',
+                'primitive_matrix',
+                'symprec',
+                'is_symmetry',
+                'displacement_generator',
             ]:
                 if input_ in self.inputs:
                     preprocess_inputs.update({input_: self.inputs[input_]})
@@ -362,10 +367,10 @@ class PhonopyWorkChain(WorkChain, metaclass=ABCMeta):
         for called_descendant in self.node.called_descendants:
             if isinstance(called_descendant, orm.CalcJobNode):
                 try:
-                    called_descendant.outputs.remote_folder._clean()  # pylint: disable=protected-access
+                    called_descendant.outputs.remote_folder._clean()
                     cleaned_calcs.append(called_descendant.pk)
                 except (IOError, OSError, KeyError):
                     pass
 
         if cleaned_calcs:
-            self.report(f"cleaned remote folders of calculations: {' '.join(map(str, cleaned_calcs))}")
+            self.report(f'cleaned remote folders of calculations: {" ".join(map(str, cleaned_calcs))}')

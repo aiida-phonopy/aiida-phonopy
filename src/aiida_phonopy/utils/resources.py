@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilities for CalcJob resources."""
 
 
@@ -10,9 +9,7 @@ def get_default_options(max_num_machines=1, max_wallclock_seconds=300, with_mpi=
     :param with_mpi: whether to run the calculation with MPI enabled
     """
     return {
-        'resources': {
-            'num_machines': int(max_num_machines)
-        },
+        'resources': {'num_machines': int(max_num_machines)},
         'max_wallclock_seconds': int(max_wallclock_seconds),
         'withmpi': with_mpi,
     }

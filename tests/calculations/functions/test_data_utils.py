@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Tests for :mod:`calculations.functions.data_utils`."""
+
 from aiida import orm
 import numpy as np
 import pytest
@@ -49,8 +49,8 @@ def test_generate_preprocess_data(get_structure):
     preprocess = generate_preprocess_data(**inputs)
 
     assert preprocess.symprec == 1e-4
-    assert preprocess.is_symmetry == True
-    assert preprocess.distinguish_kinds == True
+    assert preprocess.is_symmetry
+    assert preprocess.distinguish_kinds
     assert preprocess.supercell_matrix == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
     assert preprocess.primitive_matrix != [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
@@ -66,6 +66,6 @@ def test_generate_preprocess_data_with_no_sym(get_structure):
     preprocess = generate_preprocess_data(**inputs)
 
     assert preprocess.symprec == 1e-5
-    assert preprocess.is_symmetry == False
+    assert not preprocess.is_symmetry
     assert preprocess.supercell_matrix == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
     assert preprocess.primitive_matrix == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]

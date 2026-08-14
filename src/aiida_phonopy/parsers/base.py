@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """Defines a `Parser` base class for `aiida-phonopy`."""
+
 # All `Parser` implementations in `aiida-phonopy` must use this base class, not `aiida.parsers.Parser`.
 from aiida.parsers import Parser as _BaseParser
 
 __all__ = ('Parser',)
 
 
-class Parser(_BaseParser):  # pylint: disable=abstract-method
+class Parser(_BaseParser):
     """Custom `Parser` class for `aiida-phonopy` parser implementations."""
 
     def emit_logs(self, logging_dictionaries, ignore=None):
@@ -34,7 +34,6 @@ class Parser(_BaseParser):  # pylint: disable=abstract-method
         for logs in logging_dictionaries:
             for level, messages in logs.items():
                 for message in messages:
-
                     if message is None:
                         continue
 

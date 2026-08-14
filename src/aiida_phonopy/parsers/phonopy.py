@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Parsers of `PhonopyCalculation` output files."""
+
 from __future__ import annotations
 
 import os
@@ -191,7 +191,7 @@ class PhonopyParser(Parser):
             'qpoints': {'QPOINTS', 'WRITEDM'},
             'fc': {'WRITE_FORCE_CONSTANTS', 'FORCE_CONSTANTS'},
             'mod': {'MODULATION'},
-            'irreps': {'IRREPS', 'SHOW_IRREPS', 'LITTLE_COGROUP'}
+            'irreps': {'IRREPS', 'SHOW_IRREPS', 'LITTLE_COGROUP'},
         }
 
         for tag, value in parameters.items():
@@ -275,10 +275,12 @@ class PhonopyParser(Parser):
             pdos_list,
             [
                 'Projected DOS',
-            ] * len(pdos_list),
+            ]
+            * len(pdos_list),
             [
                 '1/THz',
-            ] * len(pdos_list),
+            ]
+            * len(pdos_list),
         )
         pdos.label = 'Projected DOS'
 

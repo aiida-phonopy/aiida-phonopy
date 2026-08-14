@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Raw parsers of the phonopy output files."""
 
 from aiida_phonopy.utils.mapping import get_logging_container

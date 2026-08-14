@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Module defining the class for force constants data."""
+
 from __future__ import annotations
 
 from typing import Union
@@ -11,7 +11,7 @@ from phonopy.structure.cells import PhonopyAtoms
 from .raw import RawData
 
 
-class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
+class ForceConstantsData(RawData):
     """Self-contained class for force constants data and non-analytical constants.
 
     It stores also the structure information (unitcell, supercell, ...), for a
@@ -27,7 +27,7 @@ class ForceConstantsData(RawData):  # pylint: disable=too-many-ancestors
         symprec: float = 1e-05,
         is_symmetry: bool = True,
         distinguish_kinds: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """Instantiate the class.
 

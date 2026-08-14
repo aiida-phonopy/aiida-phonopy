@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """CalcJob for phonopy post-processing."""
+
 from aiida import orm
 from aiida.common import InputValidationError, datastructures
 from aiida.engine import CalcJob
@@ -30,7 +30,7 @@ class PhonopyCalculation(CalcJob):
         'mod': ('modulation.yaml', 'modulation'),
         # format: .dat
         'dos': ('total_dos.dat', 'total_phonon_dos'),
-        'pdos': ('projected_dos.dat', 'projected_phonon_dos')
+        'pdos': ('projected_dos.dat', 'projected_phonon_dos'),
     }
 
     _INPUT_FORCE_CONSTANTS = 'force_constants.hdf5'
@@ -118,7 +118,7 @@ class PhonopyCalculation(CalcJob):
     _BLOCKED_TAGS = [
         'DIM',
         'ATOM_NAME',
-        'MASS',  #??? from structure or also from here??
+        'MASS',  # ??? from structure or also from here??
         'MAGMOM',
         'CREATE_DISPLACEMENTS',
         'DISPLACEMENT_DISTANCE',
@@ -149,8 +149,8 @@ class PhonopyCalculation(CalcJob):
             required=True,
             help=(
                 'Phonopy parameters (`setting tags`) for post processing. '
-                'The following tags, along their type, are allowed:\n' +
-                '\n'.join(f'{tag_name}' for tag_name in cls._AVAILABLE_TAGS)
+                'The following tags, along their type, are allowed:\n'
+                + '\n'.join(f'{tag_name}' for tag_name in cls._AVAILABLE_TAGS)
             ),
             validator=cls._validate_parameters,
         )
@@ -158,13 +158,13 @@ class PhonopyCalculation(CalcJob):
             'phonopy_data',
             valid_type=PhonopyData,
             required=False,
-            help='The preprocess output info of a previous ForceConstantsWorkChain.'
+            help='The preprocess output info of a previous ForceConstantsWorkChain.',
         )
         spec.input(
             'force_constants',
             valid_type=ForceConstantsData,
             required=False,
-            help='Force constants of the input structure.'
+            help='Force constants of the input structure.',
         )
         spec.input('settings', valid_type=orm.Dict, required=False, help='Settings for phonopy calculation.')
         # spec.inputs.validator = cls._validate_inputs
@@ -199,7 +199,7 @@ class PhonopyCalculation(CalcJob):
             cls._OUTPUTS['tdispmat'][1],
             valid_type=orm.Dict,
             required=False,
-            help='Calculated thermal displacements matrices.'
+            help='Calculated thermal displacements matrices.',
         )
         spec.output(cls._OUTPUTS['mod'][1], valid_type=orm.Dict, required=False, help='Modulation information.')
 
@@ -210,17 +210,17 @@ class PhonopyCalculation(CalcJob):
         spec.exit_code(
             302,
             'ERROR_OUTPUT_STDOUT_MISSING',
-            message='The retrieved folder did not contain the required stdout output file.'
+            message='The retrieved folder did not contain the required stdout output file.',
         )
         spec.exit_code(
             303,
             'ERROR_OUTPUT_PHONOPY_MISSING',
-            message='The retrieved folder did not contain the required phonopy file.'
+            message='The retrieved folder did not contain the required phonopy file.',
         )
         spec.exit_code(
             304,
             'ERROR_OUTPUT_FILES_MISSING',
-            message='The retrieved folder did not contain one or more expected output files.'
+            message='The retrieved folder did not contain one or more expected output files.',
         )
         spec.exit_code(
             305, 'ERROR_BAD_INPUTS', message='No run mode has been selected.'
@@ -231,7 +231,7 @@ class PhonopyCalculation(CalcJob):
         spec.exit_code(
             312,
             'ERROR_OUTPUT_STDOUT_INCOMPLETE',
-            message='The stdout output file was incomplete probably because the calculation got interrupted.'
+            message='The stdout output file was incomplete probably because the calculation got interrupted.',
         )
 
         spec.exit_code(320, 'ERROR_OUTPUT_YAML_LOAD', message='The loading of yaml file got an unexpected error.')
@@ -252,12 +252,9 @@ class PhonopyCalculation(CalcJob):
             enabled_dict = cls._AVAILABLE_TAGS
             unknown_tags = set(value_dict.keys()) - set(enabled_dict.keys())
             if unknown_tags:
-                return (
-                    f"Unknown tags in 'parameters': {unknown_tags}, "
-                    f'allowed tags are {cls._AVAILABLE_TAGS.keys()}.'
-                )
+                return f"Unknown tags in 'parameters': {unknown_tags}, allowed tags are {cls._AVAILABLE_TAGS.keys()}."
             invalid_values = [
-                value_dict[key] for key in value_dict.keys() if not type(value_dict[key]) in enabled_dict[key]
+                value_dict[key] for key in value_dict.keys() if type(value_dict[key]) not in enabled_dict[key]
             ]
             if invalid_values:
                 return f'Parameters tags must be of the correct type; got invalid values {invalid_values}.'

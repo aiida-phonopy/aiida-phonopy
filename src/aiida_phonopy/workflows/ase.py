@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Workflow for automatic frozen phonons calculations using Phonopy and any ASE calculator."""
+
 from typing import Callable, Dict, List, Union
 
 from aiida import orm
@@ -31,7 +31,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
     @classmethod
     def define(cls, spec):
         """Define inputs, outputs, and outline."""
-        # yapf: disable
+        # fmt: off
         super().define(spec)
 
         spec.expose_inputs(PythonJob, namespace='pythonjob')
@@ -51,7 +51,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
               cls.inspect_phonopy,
             ),
         )
-        # yapf: enable
+        # fmt: on
 
     @classmethod
     def get_populated_builder(
@@ -107,7 +107,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
                 if tmp_dir and not os.path.isdir(tmp_dir):
                     new_tmp_dir = tempfile.mkdtemp(prefix='LAMMPS-')
                     calc.parameters['tmp_dir'] = new_tmp_dir
-                    for f in (calc.parameters.get('files', []) or []):
+                    for f in calc.parameters.get('files', []) or []:
                         if os.path.isfile(f):
                             shutil.copy(f, os.path.join(new_tmp_dir, os.path.basename(f)))
             except (AttributeError, KeyError, OSError, TypeError):
@@ -156,7 +156,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
                 'atoms': builder.structure.get_ase()
             },
             register_pickle_by_value=True,
-            **pythonjob_inputs
+            **pythonjob_inputs,
         )
 
         if phonopy_inputs is not None:
@@ -200,7 +200,7 @@ class PhonopyAseWorkChain(PhonopyWorkChain):
             if label.startswith('forces_'):
                 if calculation.is_finished_ok:
                     forces = calculation.outputs.result
-                    self.out(f"supercells_forces.forces_{label.split('_')[-1]}", get_forces_array(forces))
+                    self.out(f'supercells_forces.forces_{label.split("_")[-1]}', get_forces_array(forces))
                 else:
                     self.report(f'PythonJob with <PK={calculation.pk}> failed')
                     failed_runs.append(calculation.pk)
