@@ -36,4 +36,4 @@ html:
 
 
 view:
-	xdg-open $(BUILDDIR)/html/index.html
+	open $(BUILDDIR)/html/index.html

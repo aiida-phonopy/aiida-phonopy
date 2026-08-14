@@ -50,6 +50,11 @@ Please, also cite the respective Phonopy and AiiDA references:
 
 * M. Uhrin _et al._, [*Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*](https://www.sciencedirect.com/science/article/pii/S0927025620305772), Computational Materials Science **187**, 110086 (2021)
 
+## Contributing
+
+Great that you want to contribute!
+See the [developer guide in the documentation](https://aiida-phonopy.readthedocs.io/en/latest/reference/developer.html) for instructions.
+
 ## License
 
 The `aiida-phonopy` plugin package is released under the MIT license.
