@@ -1,6 +1,7 @@
 """Test for the :mod:`~aiida_phonopy.workflows.ase` module."""
 
 import shutil
+import sys
 
 import pytest
 
@@ -39,7 +40,13 @@ def generate_workchain_phonopy_ase(fixture_localhost, fixture_code, generate_wor
             structure=generate_structure(),
             calculator=calculator,
             max_number_of_atoms=40,
-            pythonjob_inputs={'computer': fixture_localhost.hostname},
+            pythonjob_inputs={
+                'computer': fixture_localhost.hostname,
+                # Run the job with the same interpreter as the test session: the pickled
+                # function must be unpickled by a compatible python having e.g. `cloudpickle`,
+                # which a bare `python3` resolved through the computer shell may not provide.
+                'command_info': {'filepath_executable': sys.executable},
+            },
             phonopy_inputs=phonopy_inputs,
         )
 
